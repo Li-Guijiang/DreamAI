@@ -38,17 +38,24 @@ source .venv/bin/activate
 
 When activated, your terminal prompt shows `(.venv)`.
 
-## 3. Install Dependencies
+## 3. Install the Project
 
 ```bash
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -e .
 ```
 
-For development (tests and linting):
+For development (tests, linting, and build tools):
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"
+```
+
+### Install a published release from GitHub Packages
+
+```bash
+# Export GITHUB_TOKEN (a token with package-read permission), then:
+pip install dream-ai --index-url https://pip.pkg.github.com/Li-Guijiang/DreamAI/simple
 ```
 
 ## 4. Configure the Model

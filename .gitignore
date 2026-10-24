@@ -45,6 +45,7 @@ Thumbs.db
 data/
 logs/
 *.log
+build_log.txt
 *.sqlite3
 *.db
 

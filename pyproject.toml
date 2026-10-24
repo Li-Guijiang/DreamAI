@@ -6,16 +6,21 @@ build-backend = "setuptools.build_meta"
 name = "dream-ai"
 version = "0.1.0"
 description = "Dream AI — an open-source, general-purpose AI assistant built around one shared dream."
-readme = "README.md"
-license = { file = "LICENSE" }
+readme = { file = "README.md", content-type = "text/markdown" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Li Guijiang", email = "li-guijiang@users.noreply.github.com" }]
 requires-python = ">=3.11"
-keywords = ["ai-agent", "llm", "general-purpose", "assistant", "open-source"]
+keywords = ["ai-agent", "llm", "general-purpose", "assistant", "open-source", "chatbot"]
 classifiers = [
+    "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
     "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
     "openai>=1.40,<2.0",
@@ -27,6 +32,12 @@ dev = ["pytest>=8.0", "ruff>=0.6"]
 
 [project.scripts]
 dream-ai = "dream_ai.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Li-Guijiang/DreamAI"
+Repository = "https://github.com/Li-Guijiang/DreamAI"
+Issues = "https://github.com/Li-Guijiang/DreamAI/issues"
+Changelog = "https://github.com/Li-Guijiang/DreamAI/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 include = ["dream_ai*"]

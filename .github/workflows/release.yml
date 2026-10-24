@@ -1,0 +1,58 @@
+name: Release & Publish to GitHub Packages
+
+# Triggered when a version tag (e.g. v0.1.0) is pushed.
+# Builds the sdist and wheel, publishes them to GitHub Packages, and creates
+# a GitHub Release with the built artifacts attached.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write   # create the GitHub Release
+  packages: write   # publish to GitHub Packages
+
+jobs:
+  release:
+    name: Build, publish, and release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      - name: Validate package metadata
+        run: twine check dist/*
+
+      - name: Publish to GitHub Packages
+        env:
+          TWINE_REPOSITORY_URL: https://pip.pkg.github.com/${{ github.repository }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: twine upload dist/*
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
