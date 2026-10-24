@@ -6,7 +6,7 @@ quality and a working deliverable matter more than deadlines.
 
 ---
 
-## `v0.1.0` — Conversation (current)
+## `v0.1.0` — Conversation (released)
 
 **Goal:** A working conversational loop through a pluggable provider, runnable
 locally with or without an API key.
@@ -32,21 +32,22 @@ locally with or without an API key.
 
 ---
 
-## `v0.2.0` — Memory
+## `v0.2.0` — Memory (current)
 
 **Goal:** Remember beyond a single session and recall what matters.
 
 ### Tasks
-- [ ] Persistent session history stored locally (JSON/SQLite)
-- [ ] User profile and preference memory
+- [x] Persistent session history stored locally (JSON)
+- [x] User preference memory, injected into the system prompt
+- [x] Memory management: inspect (`/memory`), forget (`/forget`), clear session (`/clear`)
 - [ ] Long-term memory retrieval over past conversations
 - [ ] Optional vector store for semantic recall
-- [ ] Memory management: forget, edit, inspect stored facts
 
 ### Acceptance criteria
-- Closing and reopening the CLI restores the previous conversation.
-- The agent recalls stated preferences in later sessions.
-- Memory backends implement the existing `Memory` interface.
+- [x] Closing and reopening the CLI restores the previous conversation.
+- [x] The agent recalls stated preferences in later sessions.
+- [x] Memory backends implement the existing `Memory` interface.
+- [ ] Semantic retrieval over past conversations (deferred to a later phase).
 
 ---
 

@@ -5,6 +5,25 @@ All notable changes to Dream AI are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-10-24
+
+### Added
+- Persistent session history stored in JSON and restored when the agent starts
+  again (`DREAMAI_PERSISTENCE`, `DREAMAI_DATA_DIR`).
+- Preference memory: remember user preferences across sessions and inject them
+  into the system prompt (`/remember`, `/memory`, `/forget`).
+- Agent factory that selects the in-memory or persistent backends from settings.
+- Atomic JSON persistence helpers shared by memory backends.
+- Tests covering session restore, clearing, preference recall, and persistence
+  disabled writing nothing to disk.
+
+### Changed
+- The CLI shows the memory mode at startup and the preference count in `/about`.
+- `Settings` gained `data_dir` and `persistence_enabled`.
+
+### Notes
+- Vector / semantic retrieval over past conversations is deferred to a later phase.
+
 ## [0.1.0] — 2026-10-24
 
 ### Added

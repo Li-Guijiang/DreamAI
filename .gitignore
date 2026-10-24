@@ -89,3 +89,8 @@ models/
 *.bin
 *.gguf
 *.safetensors
+
+# Local agent memory (session history and preferences)
+.dream_ai/
+session.json
+preferences.json

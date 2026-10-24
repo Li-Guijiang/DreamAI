@@ -77,6 +77,15 @@ Open `.env` and fill in:
 > Leave `DREAMAI_API_KEY` empty to run offline demo mode. The agent still
 > starts, but replies come from the local placeholder provider, not a real model.
 
+### Memory settings
+
+- `DREAMAI_PERSISTENCE`: `true` (default) saves the session history and
+  preferences to disk and restores them on the next start; `false` keeps
+  everything in memory for the current process only.
+- `DREAMAI_DATA_DIR`: directory for `session.json` and `preferences.json`.
+  Defaults to `~/.dream_ai`. Use a relative path such as `.dream_ai/` for a
+  project-scoped data folder.
+
 ## 5. Run Dream AI
 
 ```bash
@@ -88,8 +97,11 @@ Type a message and press Enter. Commands inside the chat:
 | Command | Action |
 |---|---|
 | `/help` | Show available commands |
-| `/clear` | Clear conversation history |
-| `/about` | Show provider and session info |
+| `/remember <text>` | Record a preference to long-term memory |
+| `/memory` | Show remembered preferences |
+| `/forget` | Clear all remembered preferences |
+| `/clear` | Clear the current conversation history |
+| `/about` | Show provider, session info, and remembered preferences |
 | `/quit` or `/exit` | Exit |
 
 ## 6. Run the Example

@@ -38,8 +38,8 @@ This is a long-term project. It is small today, but every great system starts as
 - [ ] Streaming responses
 
 ### Phase 2 — Memory (`v0.2`)
-- [ ] Persistent long-term memory
-- [ ] Preference and profile recall
+- [x] Persistent session history stored locally (JSON, restored on restart)
+- [x] User preferences remembered across sessions and injected into context
 - [ ] Retrieval-based memory (vector search)
 
 ### Phase 3 — Tool Use (`v0.3`)
@@ -80,7 +80,7 @@ The core depends only on small abstract interfaces, so hosted APIs, local open-s
 | Version | Milestone | Goal |
 |---------|-----------|------|
 | `v0.1.0` | **Conversation** | Working conversational loop through a pluggable provider |
-| `v0.2.0` | **Memory** | Session context plus persistent long-term memory |
+| `v0.2.0` | **Memory** | Persistent session history and preferences restored across restarts |
 | `v0.3.0` | **Tools** | Tool registry with search, file, and calculator utilities |
 | `v0.4.0` | **Autonomy** | Reasoning loop, task decomposition, multi-step planning |
 | `v1.0.0` | **Stable Assistant** | A reliable general-purpose personal agent |
@@ -154,6 +154,21 @@ Pre-built `sdist` and `wheel` archives for each release are attached to the
 
 Without an API key, Dream AI starts in **offline demo mode** so you can explore the CLI and conversation flow. See [docs/SETUP.md](./docs/SETUP.md) for a step-by-step guide.
 
+### Memory (v0.2)
+
+By default the session history and remembered preferences are saved to
+`~/.dream_ai/` and restored the next time Dream AI starts. In-chat commands:
+
+| Command | Action |
+|---|---|
+| `/remember <text>` | Record a preference to long-term memory |
+| `/memory` | Show remembered preferences |
+| `/forget` | Clear all remembered preferences |
+| `/clear` | Clear the current conversation history |
+
+Set `DREAMAI_PERSISTENCE=false` to keep everything in memory only, or change
+`DREAMAI_DATA_DIR` to choose where memory files are stored.
+
 ### Run the container image
 
 ```bash
@@ -179,11 +194,12 @@ repository's [Packages section](https://github.com/Li-Guijiang/DreamAI/pkgs/cont
 ```
 DreamAI/
 ├── dream_ai/
-│   ├── cli.py              # Command-line interface
+│   ├── cli.py              # Command-line interface and in-chat commands
 │   ├── config.py           # Environment-based settings
+│   ├── agent_factory.py    # Assembles the agent from settings
 │   ├── core/               # Agent, conversation
-│   ├── providers/           # Pluggable LLM backends
-│   ├── memory/             # Conversation and long-term memory
+│   ├── providers/          # Pluggable LLM backends
+│   ├── memory/             # Session history, preferences, persistence
 │   └── tools/              # Tool registry and capabilities
 ├── tests/                  # Unit and smoke tests
 ├── examples/               # Runnable examples

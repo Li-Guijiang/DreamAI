@@ -12,10 +12,10 @@ import argparse
 import dataclasses
 import sys
 
+from .agent_factory import build_agent
 from .config import Settings, load_settings
 from .core import DreamAIAgent
 from .exceptions import ConfigurationError, ProviderError
-from .providers import build_provider
 
 BANNER = r"""
   ____  ____  __  __    _    __  __ _____
@@ -28,6 +28,9 @@ BANNER = r"""
 HELP_TEXT = """\
 Available commands:
   /help            Show this help message
+  /remember <text> Record a preference to long-term memory
+  /memory          Show remembered preferences
+  /forget          Clear all remembered preferences
   /clear           Clear the conversation history
   /about           Show the active provider and session info
   /quit | /exit    Leave Dream AI
@@ -65,9 +68,10 @@ def _apply_overrides(settings: Settings, args: argparse.Namespace) -> Settings:
     return dataclasses.replace(settings, **updates) if updates else settings
 
 
-def _build_agent(settings: Settings) -> DreamAIAgent:
-    provider = build_provider(settings)
-    return DreamAIAgent(provider=provider, system_prompt=settings.system_prompt)
+def _print_memory_status(agent: DreamAIAgent, settings: Settings) -> None:
+    mode = "persistent" if settings.persistence_enabled else "in-memory"
+    location = settings.data_dir if settings.persistence_enabled else "session only"
+    print(f"Memory: {mode} ({location})\n")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -75,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
     settings = _apply_overrides(load_settings(), args)
 
     try:
-        agent = _build_agent(settings)
+        agent = build_agent(settings)
     except ConfigurationError as exc:
         print(f"Configuration error: {exc}", file=sys.stderr)
         return 2
@@ -93,6 +97,8 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(f"Connected via provider: {agent.provider_name}\n")
 
+    _print_memory_status(agent, settings)
+
     while True:
         try:
             user_input = input("you › ").strip()
@@ -104,21 +110,52 @@ def main(argv: list[str] | None = None) -> int:
             continue
 
         command = user_input.lower()
+
         if command in {"/quit", "/exit"}:
             print("Goodbye — keep dreaming.")
             return 0
+
         if command == "/help":
             print(HELP_TEXT)
             continue
+
+        if command.startswith("/remember"):
+            _, _, note = user_input.partition(" ")
+            note = note.strip()
+            if not note:
+                print("Usage: /remember <your preference>\n")
+                continue
+            agent.remember(note)
+            print("Saved to long-term memory.\n")
+            continue
+
+        if command == "/memory":
+            notes = agent.preference_notes
+            if not notes:
+                print("No preferences remembered yet. Use /remember <text>.\n")
+                continue
+            print("Remembered preferences:")
+            for index, note in enumerate(notes, start=1):
+                print(f"  {index}. {note}")
+            print()
+            continue
+
+        if command == "/forget":
+            agent.forget_preferences()
+            print("All remembered preferences cleared.\n")
+            continue
+
         if command in {"/clear", "/reset"}:
             agent.reset()
             print("Conversation history cleared.\n")
             continue
+
         if command == "/about":
             turns = sum(1 for msg in agent.history if msg["role"] == "user")
             print(f"Provider: {agent.provider_name}")
             print(f"Model: {settings.model}")
-            print(f"Messages sent this session: {turns}\n")
+            print(f"Messages sent this session: {turns}")
+            print(f"Preferences remembered: {len(agent.preference_notes)}\n")
             continue
 
         try:

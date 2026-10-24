@@ -32,8 +32,11 @@ loop. It contains no business logic.
 
 ### 4. Memory (`dream_ai/memory/`)
 - `base.py`: `Memory.append()`, `messages()`, `clear()`.
-- `session_memory.py`: in-memory session buffer (v0.1).
-- Persistent and vector memory arrive in `v0.2`.
+- `session_memory.py`: in-memory session buffer.
+- `persistent_session.py`: JSON-backed session history restored on restart.
+- `preferences.py`: long-term user preferences injected into the system prompt.
+- `storage.py`: atomic JSON read/write helpers shared by memory backends.
+- Vector retrieval memory arrives in a later phase.
 
 ### 5. Tools (`dream_ai/tools/`)
 - `base.py`: `Tool.name`, `Tool.description`, `Tool.run()`.
