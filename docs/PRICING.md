@@ -74,9 +74,9 @@
 
 ## Status
 
-- **Current state:** `v0.2` development; persistent session and preference
-  memory are in place; no hosted service exists.
-- **Next step toward plans:** finish `v0.3` tools before any hosted plan is
-  considered.
+- **Current state:** `v0.3` development; persistent memory and the tool layer
+  are in place; no hosted service exists.
+- **Next step toward plans:** finish `v0.4` autonomous planning before any
+  hosted plan is considered.
 - **Feedback:** Open an issue in the repository to suggest plan features or
   fair pricing.

@@ -23,6 +23,10 @@ def _settings(data_dir: Path, persistence: bool) -> Settings:
         system_prompt="You are Dream AI.",
         data_dir=data_dir,
         persistence_enabled=persistence,
+        tools_enabled=True,
+        file_access_enabled=False,
+        web_search_enabled=False,
+        workspace_dir=data_dir / "workspace",
     )
 
 

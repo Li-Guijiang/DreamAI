@@ -86,6 +86,10 @@ final6.txt
 commands.txt
 demo.txt
 demo2.txt
+demo_tool.txt
+demo_fs.txt
+v3check.txt
+_demo*.py
 cred_info.txt
 .git_cred_token.txt
 ghdocs.txt

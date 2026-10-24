@@ -39,9 +39,12 @@ loop. It contains no business logic.
 - Vector retrieval memory arrives in a later phase.
 
 ### 5. Tools (`dream_ai/tools/`)
-- `base.py`: `Tool.name`, `Tool.description`, `Tool.run()`.
-- `registry.py`: register, look up, and execute tools by name.
-- Real tools arrive in `v0.3`.
+- `base.py`: `Tool` schema — name, description, parameters, risk level, and
+  whether confirmation is required before running.
+- `registry.py`: register, look up, list, and execute tools by name.
+- `parser.py`: extract structured `<<TOOL {...}>>` calls from model text.
+- `factory.py`: register tools according to the permission switches in settings.
+- `builtin/`: calculator, clock, sandboxed file read/write, and web search.
 
 ## Data Flow (one chat turn)
 
@@ -70,9 +73,10 @@ CLI ──► Agent.chat(text)
 3. Register it in `build_provider()` in `providers/__init__.py`.
 
 ### Add a new tool
-1. Create a class implementing `Tool` in `dream_ai/tools/`.
-2. Implement `name`, `description`, and `run(**kwargs)`.
-3. Register it on the agent's `ToolRegistry`.
+1. Create a class implementing `Tool` in `dream_ai/tools/builtin/`.
+2. Implement `name`, `description`, `parameters`, and `run(**kwargs)`.
+3. Set `risk` and `requires_confirmation`; read-only safe tools default to `safe`.
+4. Register it in `tools/factory.py` behind the matching permission switch.
 
 ### Add a memory backend
 1. Implement the `Memory` interface.

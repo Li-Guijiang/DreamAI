@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import json
 import sys
+from typing import Any
 
 from .agent_factory import build_agent
 from .config import Settings, load_settings
 from .core import DreamAIAgent
-from .exceptions import ConfigurationError, ProviderError
+from .exceptions import ConfigurationError, ProviderError, ToolConfirmationRequired, ToolError
 
 BANNER = r"""
   ____  ____  __  __    _    __  __ _____
@@ -28,11 +30,14 @@ BANNER = r"""
 HELP_TEXT = """\
 Available commands:
   /help            Show this help message
+  /tools           List registered tools and their parameters
+  /tool <name> <json>  Run a tool with JSON arguments, e.g.
+                   /tool calculator {"expression": "2 * (3 + 4)"}
   /remember <text> Record a preference to long-term memory
   /memory          Show remembered preferences
   /forget          Clear all remembered preferences
   /clear           Clear the conversation history
-  /about           Show the active provider and session info
+  /about           Show provider, tools, session info, and preferences
   /quit | /exit    Leave Dream AI
 Type anything else to chat with Dream AI.
 """
@@ -71,7 +76,66 @@ def _apply_overrides(settings: Settings, args: argparse.Namespace) -> Settings:
 def _print_memory_status(agent: DreamAIAgent, settings: Settings) -> None:
     mode = "persistent" if settings.persistence_enabled else "in-memory"
     location = settings.data_dir if settings.persistence_enabled else "session only"
-    print(f"Memory: {mode} ({location})\n")
+    print(f"Memory: {mode} ({location})")
+    print(f"Tools: {len(agent.tool_names)} registered\n")
+
+
+def _print_tools(agent: DreamAIAgent) -> None:
+    schemas = agent.list_tools()
+    if not schemas:
+        print("No tools registered. Set DREAMAI_TOOLS_ENABLED=true to enable tools.\n")
+        return
+
+    print("Registered tools:")
+    for tool in schemas:
+        confirmation = " (needs confirmation)" if tool["requires_confirmation"] else ""
+        print(f"  - {tool['name']} [{tool['risk']}]{confirmation}")
+        print(f"      {tool['description']}")
+        required = tool["parameters"].get("required", [])
+        if required:
+            print(f"      arguments: {', '.join(required)}")
+    print()
+
+
+def _run_tool(agent: DreamAIAgent, rest: str) -> None:
+    rest = rest.strip()
+    if not rest:
+        print('Usage: /tool <name> <json>  e.g. /tool calculator {"expression": "2+3"}\n')
+        return
+
+    name, _, args_text = rest.partition(" ")
+    name = name.strip()
+    args_text = args_text.strip()
+
+    arguments: dict[str, Any] = {}
+    if args_text:
+        try:
+            parsed = json.loads(args_text)
+        except json.JSONDecodeError as exc:
+            print(f"⚠ Invalid tool arguments: {exc}\n")
+            return
+        if not isinstance(parsed, dict):
+            print("⚠ Tool arguments must be a JSON object.\n")
+            return
+        arguments = parsed
+
+    try:
+        result = agent.execute_tool(name, confirmed=False, **arguments)
+    except ToolConfirmationRequired as exc:
+        answer = input(f"Tool '{exc.tool_name}' will modify files. Confirm? [y/N] ").strip().lower()
+        if answer not in {"y", "yes"}:
+            print("Tool call cancelled.\n")
+            return
+        try:
+            result = agent.execute_tool(name, confirmed=True, **arguments)
+        except ToolError as tool_exc:
+            print(f"⚠ Tool error: {tool_exc}\n")
+            return
+    except ToolError as exc:
+        print(f"⚠ Tool error: {exc}\n")
+        return
+
+    print(f"tool › {result}\n")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -119,6 +183,15 @@ def main(argv: list[str] | None = None) -> int:
             print(HELP_TEXT)
             continue
 
+        if command == "/tools":
+            _print_tools(agent)
+            continue
+
+        if command.startswith("/tool"):
+            _, _, rest = user_input.partition(" ")
+            _run_tool(agent, rest)
+            continue
+
         if command.startswith("/remember"):
             _, _, note = user_input.partition(" ")
             note = note.strip()
@@ -154,6 +227,7 @@ def main(argv: list[str] | None = None) -> int:
             turns = sum(1 for msg in agent.history if msg["role"] == "user")
             print(f"Provider: {agent.provider_name}")
             print(f"Model: {settings.model}")
+            print(f"Tools: {len(agent.tool_names)} ({', '.join(agent.tool_names) or 'none'})")
             print(f"Messages sent this session: {turns}")
             print(f"Preferences remembered: {len(agent.preference_notes)}\n")
             continue

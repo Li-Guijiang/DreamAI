@@ -5,6 +5,33 @@ All notable changes to Dream AI are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-10-24
+
+### Added
+- Tool schema with parameters, risk level, and confirmation gate (`Tool`).
+- Built-in safe tools: `calculator` (AST allowlist arithmetic, no `eval`) and
+  `clock`.
+- Sandboxed `file_read` / `file_write` confined to a workspace directory;
+  writes require explicit confirmation; traversal and absolute paths are
+  rejected.
+- Opt-in `web_search` instant-answer tool implemented with the standard
+  library only.
+- Permission switches: `DREAMAI_TOOLS_ENABLED`, `DREAMAI_FILE_ACCESS_ENABLED`,
+  `DREAMAI_WEB_SEARCH_ENABLED`, `DREAMAI_WORKSPACE_DIR`.
+- Structured tool-call parser for `<<TOOL {...}>>` blocks; the agent can parse
+  and run calls embedded in model text.
+- CLI `/tools` and `/tool <name> <json>` commands; `/about` lists registered tools.
+- `examples/tool_demo.py` non-interactive tool demo.
+
+### Changed
+- The agent factory builds the tool registry from settings; the agent exposes
+  `list_tools`, `execute_tool`, `run_tool_calls`, and a provider-ready schema.
+
+### Notes
+- Native OpenAI function-calling (model-driven tool selection) arrives with a
+  hosted-model integration in a later phase; offline mode exposes tools through
+  the `/tool` command and the text parser.
+
 ## [0.2.0] — 2026-10-24
 
 ### Added

@@ -32,7 +32,7 @@ locally with or without an API key.
 
 ---
 
-## `v0.2.0` — Memory (current)
+## `v0.2.0` — Memory (released)
 
 **Goal:** Remember beyond a single session and recall what matters.
 
@@ -51,21 +51,23 @@ locally with or without an API key.
 
 ---
 
-## `v0.3.0` — Tools
+## `v0.3.0` — Tools (current)
 
 **Goal:** Let the agent act beyond text using a safe, modular tool registry.
 
 ### Tasks
-- [ ] Finalize tool schema: name, description, parameters, result format
-- [ ] Web search tool
-- [ ] Local file read/write tool (sandboxed paths)
-- [ ] Calculator and date/time utilities
-- [ ] Tool permission prompts and allowlists
-- [ ] Structured tool-call parsing from the model
+- [x] Finalize tool schema: name, description, parameters, risk level, result format
+- [x] Calculator and date/time utilities (safe, always registered)
+- [x] Local file read/write tool (sandboxed paths; writes require confirmation)
+- [x] Instant-answer web search tool (opt-in, network)
+- [x] Tool permission switches and allowlists via settings
+- [x] Structured tool-call parsing from model text
+- [ ] Native OpenAI function-calling loop driven by the hosted model
 
 ### Acceptance criteria
-- New tools are added by registering a class; no core rewrite required.
-- Dangerous or unapproved actions require explicit user confirmation.
+- [x] New tools are added by registering a class; no core rewrite required.
+- [x] Dangerous or unapproved actions require explicit user confirmation.
+- [x] File and network tools stay disabled until their switch is enabled.
 
 ---
 

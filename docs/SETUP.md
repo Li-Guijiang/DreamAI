@@ -86,6 +86,18 @@ Open `.env` and fill in:
   Defaults to `~/.dream_ai`. Use a relative path such as `.dream_ai/` for a
   project-scoped data folder.
 
+### Tool settings
+
+- `DREAMAI_TOOLS_ENABLED`: `true` (default) registers the tool registry;
+  `false` disables every tool.
+- `DREAMAI_FILE_ACCESS_ENABLED`: `false` (default). When `true`, `file_read`
+  and `file_write` are registered; paths are confined to the workspace
+  directory, and `file_write` asks for confirmation before changing files.
+- `DREAMAI_WEB_SEARCH_ENABLED`: `false` (default). When `true`, the instant
+  answer web search tool is registered; it needs network access.
+- `DREAMAI_WORKSPACE_DIR`: sandbox directory for file tools. Defaults to
+  `<data_dir>/workspace`.
+
 ## 5. Run Dream AI
 
 ```bash
@@ -97,18 +109,24 @@ Type a message and press Enter. Commands inside the chat:
 | Command | Action |
 |---|---|
 | `/help` | Show available commands |
+| `/tools` | List registered tools, risk level, and arguments |
+| `/tool <name> <json>` | Run a tool with JSON arguments |
 | `/remember <text>` | Record a preference to long-term memory |
 | `/memory` | Show remembered preferences |
 | `/forget` | Clear all remembered preferences |
 | `/clear` | Clear the current conversation history |
-| `/about` | Show provider, session info, and remembered preferences |
+| `/about` | Show provider, tools, session info, and remembered preferences |
 | `/quit` or `/exit` | Exit |
 
-## 6. Run the Example
+## 6. Run the Examples
 
 ```bash
 python examples/basic_chat.py
+python examples/tool_demo.py
 ```
+
+`tool_demo.py` lists the registered tools and runs the safe calculator and
+clock tools without any API key.
 
 ## 7. Run Tests and Lint
 

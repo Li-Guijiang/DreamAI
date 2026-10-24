@@ -30,6 +30,10 @@ class Settings:
     system_prompt: str
     data_dir: Path
     persistence_enabled: bool
+    tools_enabled: bool
+    file_access_enabled: bool
+    web_search_enabled: bool
+    workspace_dir: Path
 
     @property
     def hosted_configured(self) -> bool:
@@ -72,6 +76,9 @@ def load_settings() -> Settings:
     raw_data_dir = os.getenv("DREAMAI_DATA_DIR", "").strip()
     data_dir = Path(raw_data_dir) if raw_data_dir else _default_data_dir()
 
+    raw_workspace = os.getenv("DREAMAI_WORKSPACE_DIR", "").strip()
+    workspace_dir = Path(raw_workspace) if raw_workspace else data_dir / "workspace"
+
     return Settings(
         provider=provider,
         base_url=os.getenv("DREAMAI_BASE_URL", "https://api.deepseek.com/v1").strip(),
@@ -80,4 +87,8 @@ def load_settings() -> Settings:
         system_prompt=os.getenv("DREAMAI_SYSTEM_PROMPT", DEFAULT_SYSTEM_PROMPT).strip(),
         data_dir=data_dir,
         persistence_enabled=_truthy(os.getenv("DREAMAI_PERSISTENCE", "true")),
+        tools_enabled=_truthy(os.getenv("DREAMAI_TOOLS_ENABLED", "true")),
+        file_access_enabled=_truthy(os.getenv("DREAMAI_FILE_ACCESS_ENABLED", "false")),
+        web_search_enabled=_truthy(os.getenv("DREAMAI_WEB_SEARCH_ENABLED", "false")),
+        workspace_dir=workspace_dir,
     )

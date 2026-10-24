@@ -43,10 +43,11 @@ This is a long-term project. It is small today, but every great system starts as
 - [ ] Retrieval-based memory (vector search)
 
 ### Phase 3 — Tool Use (`v0.3`)
-- [x] Tool registry contract
-- [ ] Web search
-- [ ] File read/write
-- [ ] Calculator and built-in utilities
+- [x] Tool registry schema with parameters, risk level, and confirmation gate
+- [x] Calculator and clock utilities (safe, always available)
+- [x] Sandboxed file read/write (opt-in; writes require confirmation)
+- [x] Instant-answer web search (opt-in, network access)
+- [ ] Native model function-calling loop
 
 ### Phase 4 — Autonomous Planning (`v0.4`)
 - [ ] Reasoning loop: think → act → observe
@@ -81,7 +82,7 @@ The core depends only on small abstract interfaces, so hosted APIs, local open-s
 |---------|-----------|------|
 | `v0.1.0` | **Conversation** | Working conversational loop through a pluggable provider |
 | `v0.2.0` | **Memory** | Persistent session history and preferences restored across restarts |
-| `v0.3.0` | **Tools** | Tool registry with search, file, and calculator utilities |
+| `v0.3.0` | **Tools** | Safe calculator/clock, sandboxed file tools, optional web search with a confirmation gate |
 | `v0.4.0` | **Autonomy** | Reasoning loop, task decomposition, multi-step planning |
 | `v1.0.0` | **Stable Assistant** | A reliable general-purpose personal agent |
 | `Future` | **Self-hosted & owned** | Local open-source model deployment for full independence |
@@ -169,6 +170,21 @@ By default the session history and remembered preferences are saved to
 Set `DREAMAI_PERSISTENCE=false` to keep everything in memory only, or change
 `DREAMAI_DATA_DIR` to choose where memory files are stored.
 
+### Tools (v0.3)
+
+Safe tools (`calculator`, `clock`) are registered by default. File and web tools
+are opt-in through environment switches. In-chat commands:
+
+| Command | Action |
+|---|---|
+| `/tools` | List registered tools, risk level, and required arguments |
+| `/tool <name> <json>` | Run a tool, e.g. `/tool calculator {"expression": "2 * (3 + 4)"}` |
+
+`file_write` always asks for confirmation before changing files. Enable sandboxed
+file tools with `DREAMAI_FILE_ACCESS_ENABLED=true` and web search with
+`DREAMAI_WEB_SEARCH_ENABLED=true`; `DREAMAI_WORKSPACE_DIR` sets the file sandbox.
+Set `DREAMAI_TOOLS_ENABLED=false` to disable the whole registry.
+
 ### Run the container image
 
 ```bash
@@ -200,7 +216,7 @@ DreamAI/
 │   ├── core/               # Agent, conversation
 │   ├── providers/          # Pluggable LLM backends
 │   ├── memory/             # Session history, preferences, persistence
-│   └── tools/              # Tool registry and capabilities
+│   └── tools/              # Registry, built-in tools, call parser
 ├── tests/                  # Unit and smoke tests
 ├── examples/               # Runnable examples
 ├── docs/                   # Roadmap, architecture, plans, guides
