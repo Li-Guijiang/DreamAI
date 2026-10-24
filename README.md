@@ -104,8 +104,10 @@ the Release with auto-generated release notes.
   published to GitHub Packages and listed in the
   [Packages section](https://github.com/Li-Guijiang/DreamAI/pkgs/container/dream-ai).
 - **Package registry:** GitHub Packages does not host Python/pip packages, so the
-  `sdist` and `wheel` are attached to Releases here. A future public Python release
-  can be published to PyPI separately.
+  `sdist` and `wheel` are attached to Releases here. The PyPI publishing workflow
+  ([`python-publish.yml`](./.github/workflows/python-publish.yml)) is opt-in: it
+  builds distributions on demand and only publishes to PyPI once trusted
+  publishing is configured and the repository variable `ENABLE_PYPI_PUBLISH` is set.
 
 > Early-development versions are pre-release snapshots and may change before `v1.0.0`.
 
