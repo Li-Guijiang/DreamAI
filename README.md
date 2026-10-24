@@ -158,7 +158,7 @@ python -m dream_ai
 Pre-built `sdist` and `wheel` archives for each release are attached to the
 [Releases page](https://github.com/Li-Guijiang/DreamAI/releases).
 
-Without an API key, Dream AI starts in **offline demo mode** so you can explore the CLI and conversation flow. See [docs/SETUP.md](./docs/SETUP.md) for a step-by-step guide.
+Without an API key, Dream AI starts in **offline demo mode** so you can explore the CLI and conversation flow. See [docs/SETUP.md](./docs/SETUP.md) for a step-by-step guide. A Chinese beginner walkthrough lives in [docs/GUIDE.md](./docs/GUIDE.md).
 
 ### Memory (v0.2)
 
