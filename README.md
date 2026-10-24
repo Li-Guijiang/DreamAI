@@ -5,7 +5,6 @@
 [![Status: WIP](https://img.shields.io/badge/status-WIP-orange)](./README.md)
 [![CI](https://github.com/Li-Guijiang/DreamAI/actions/workflows/ci.yml/badge.svg)](https://github.com/Li-Guijiang/DreamAI/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Li-Guijiang/DreamAI?sort=semver)](https://github.com/Li-Guijiang/DreamAI/releases)
-[![GitHub Packages](https://img.shields.io/badge/package-GitHub%20Packages-blue)](https://github.com/Li-Guijiang/DreamAI/packages)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=white)](./README.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./docs/CONTRIBUTING.md)
@@ -88,13 +87,20 @@ The core depends only on small abstract interfaces, so hosted APIs, local open-s
 
 Detailed milestones and acceptance criteria: [docs/ROADMAP.md](./docs/ROADMAP.md).
 
-## 📦 Releases & Packages
+## 📦 Releases
 
-Dream AI ships versioned releases through GitHub Releases and publishes an installable Python package to GitHub Packages.
+Dream AI ships versioned releases through GitHub Releases. Each tagged version
+builds the sdist and wheel, validates metadata, and attaches both artifacts to
+the Release with auto-generated release notes.
 
-- **Releases:** Tagged versions (`vMAJOR.MINOR.PATCH`) appear on the [Releases page](https://github.com/Li-Guijiang/DreamAI/releases), each with built artifacts attached and auto-generated release notes.
-- **Packages:** The sdist and wheel for every tagged version are published to the [GitHub Packages registry](https://github.com/Li-Guijiang/DreamAI/packages).
-- **Automation:** Pushing a `v*` tag triggers [`release.yml`](./.github/workflows/release.yml), which builds the package, publishes it to Packages, and creates the Release — no manual packaging step required.
+- **Releases:** Tagged versions (`vMAJOR.MINOR.PATCH`) appear on the
+  [Releases page](https://github.com/Li-Guijiang/DreamAI/releases), with the
+  built `sdist` and `wheel` attached for download.
+- **Automation:** Pushing a `v*` tag triggers [`release.yml`](./.github/workflows/release.yml),
+  which builds the package and creates the Release — no manual packaging step required.
+- **Package registry:** GitHub Packages does not host Python/pip packages, so
+  distributions are attached to Releases here. A future public release can be
+  published to PyPI separately.
 
 > Early-development versions are pre-release snapshots and may change before `v1.0.0`.
 
@@ -116,7 +122,7 @@ Full plan definitions, feature matrix, and principles: [docs/PRICING.md](./docs/
 
 ## 🚀 Quick Start
 
-### Option A — Run from source (recommended for developers)
+### Run from source
 
 ```bash
 # 1. Clone the repository
@@ -139,16 +145,8 @@ pip install -e .
 python -m dream_ai
 ```
 
-### Option B — Install the package from GitHub Packages
-
-```bash
-# Requires a GitHub personal access token with package-read permission,
-# exported as GITHUB_TOKEN before running pip.
-pip install dream-ai --index-url https://pip.pkg.github.com/Li-Guijiang/DreamAI/simple
-
-# Configure .env, then launch the installed command:
-dream-ai
-```
+Pre-built `sdist` and `wheel` archives for each release are attached to the
+[Releases page](https://github.com/Li-Guijiang/DreamAI/releases).
 
 Without an API key, Dream AI starts in **offline demo mode** so you can explore the CLI and conversation flow. See [docs/SETUP.md](./docs/SETUP.md) for a step-by-step guide.
 

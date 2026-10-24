@@ -49,6 +49,22 @@ build_log.txt
 *.sqlite3
 *.db
 
+# Local diagnostics and transient files (never commit)
+runs.txt
+releases.txt
+jobs.txt
+diag.txt
+log_files.txt
+scopes.txt
+publish_error.txt
+verify.txt
+gitstate.txt
+cred_info.txt
+.git_cred_token.txt
+ghdocs.txt
+run_logs.zip
+run_logs/
+
 # Model / cache files (large binaries)
 .cache/
 models/

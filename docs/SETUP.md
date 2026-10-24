@@ -51,13 +51,6 @@ For development (tests, linting, and build tools):
 pip install -e ".[dev]"
 ```
 
-### Install a published release from GitHub Packages
-
-```bash
-# Export GITHUB_TOKEN (a token with package-read permission), then:
-pip install dream-ai --index-url https://pip.pkg.github.com/Li-Guijiang/DreamAI/simple
-```
-
 ## 4. Configure the Model
 
 Copy the example environment file:
