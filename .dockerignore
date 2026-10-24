@@ -1,0 +1,34 @@
+# Version control
+.git
+.github
+.gitignore
+.gitattributes
+
+# Python caches and local environments
+.venv/
+venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Non-runtime project content
+tests/
+docs/
+examples/
+assets/
+
+# Local secrets and transient files
+.env
+.env.local
+.env.*
+probe.txt
+*.log

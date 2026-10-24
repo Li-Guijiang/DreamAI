@@ -5,6 +5,7 @@
 [![Status: WIP](https://img.shields.io/badge/status-WIP-orange)](./README.md)
 [![CI](https://github.com/Li-Guijiang/DreamAI/actions/workflows/ci.yml/badge.svg)](https://github.com/Li-Guijiang/DreamAI/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Li-Guijiang/DreamAI?sort=semver)](https://github.com/Li-Guijiang/DreamAI/releases)
+[![Container](https://img.shields.io/badge/container-ghcr.io-blue?logo=docker&logoColor=white)](https://github.com/Li-Guijiang/DreamAI/pkgs/container/dream-ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=white)](./README.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./docs/CONTRIBUTING.md)
@@ -98,9 +99,12 @@ the Release with auto-generated release notes.
   built `sdist` and `wheel` attached for download.
 - **Automation:** Pushing a `v*` tag triggers [`release.yml`](./.github/workflows/release.yml),
   which builds the package and creates the Release — no manual packaging step required.
-- **Package registry:** GitHub Packages does not host Python/pip packages, so
-  distributions are attached to Releases here. A future public release can be
-  published to PyPI separately.
+- **Container image:** A multi-architecture image `ghcr.io/li-guijiang/dream-ai` is
+  published to GitHub Packages and listed in the
+  [Packages section](https://github.com/Li-Guijiang/DreamAI/pkgs/container/dream-ai).
+- **Package registry:** GitHub Packages does not host Python/pip packages, so the
+  `sdist` and `wheel` are attached to Releases here. A future public Python release
+  can be published to PyPI separately.
 
 > Early-development versions are pre-release snapshots and may change before `v1.0.0`.
 
@@ -150,6 +154,26 @@ Pre-built `sdist` and `wheel` archives for each release are attached to the
 
 Without an API key, Dream AI starts in **offline demo mode** so you can explore the CLI and conversation flow. See [docs/SETUP.md](./docs/SETUP.md) for a step-by-step guide.
 
+### Run the container image
+
+```bash
+# Pull the latest image from the GitHub Container Registry
+docker pull ghcr.io/li-guijiang/dream-ai:latest
+
+# Offline demo mode (no API key needed)
+docker run -it --rm ghcr.io/li-guijiang/dream-ai:latest
+
+# Connect a hosted model through environment variables
+docker run -it --rm \
+  -e DREAMAI_API_KEY=your-api-key \
+  -e DREAMAI_BASE_URL=https://api.deepseek.com/v1 \
+  -e DREAMAI_MODEL=deepseek-chat \
+  ghcr.io/li-guijiang/dream-ai:latest
+```
+
+The multi-architecture image (`linux/amd64`, `linux/arm64`) is listed under the
+repository's [Packages section](https://github.com/Li-Guijiang/DreamAI/pkgs/container/dream-ai).
+
 ## 📁 Project Structure
 
 ```
@@ -164,7 +188,9 @@ DreamAI/
 ├── tests/                  # Unit and smoke tests
 ├── examples/               # Runnable examples
 ├── docs/                   # Roadmap, architecture, plans, guides
-├── .github/workflows/      # CI and automated release/package workflows
+├── .github/workflows/      # CI, release, and container publishing workflows
+├── Dockerfile              # Container image definition
+├── .dockerignore           # Files excluded from the build context
 ├── assets/                 # Logos and media
 ├── pyproject.toml          # Package metadata, dependencies, tool config
 ├── CHANGELOG.md            # Versioned change history

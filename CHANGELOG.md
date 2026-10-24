@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release workflow: on a `v*` tag, build the `sdist` and `wheel`, validate
   metadata, and attach both archives to the GitHub Release.
 - Package metadata in `pyproject.toml` for standard sdist and wheel builds.
+- `Dockerfile` and `.dockerignore` for a non-root, slim container deployment.
+- Container workflow publishing a multi-architecture image to the GitHub
+  Container Registry on version tags and manual dispatch.
 
 ### Notes
 - This is the initial development skeleton (`v0.1`). Real model connectivity

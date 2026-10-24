@@ -62,6 +62,8 @@ gitstate.txt
 final_check.txt
 relcheck.txt
 ci_latest.txt
+probe.txt
+check.txt
 cred_info.txt
 .git_cred_token.txt
 ghdocs.txt
