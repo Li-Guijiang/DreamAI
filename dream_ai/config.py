@@ -48,14 +48,24 @@ class Settings:
 def _load_dotenv() -> None:
     """Load variables from `.env` if python-dotenv is installed.
 
-    The dependency is optional: if it is missing, environment variables from
-    the shell are still used.
+    The project-root `.env` is loaded first so configuration works regardless
+    of the current working directory; a `.env` in the current directory then
+    overrides it when present. The dependency is optional: if it is missing,
+    environment variables from the shell are still used.
     """
     try:
         from dotenv import load_dotenv
     except ImportError:  # pragma: no cover - optional dependency
         return
-    load_dotenv()
+
+    project_root = Path(__file__).resolve().parents[1]
+    project_env = project_root / ".env"
+    if project_env.is_file():
+        load_dotenv(project_env, override=False)
+
+    # Working-directory `.env` fills gaps only; existing shell environment
+    # variables and the project-root file are never overwritten.
+    load_dotenv(override=False)
 
 
 def _truthy(raw: str) -> bool:
