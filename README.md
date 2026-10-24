@@ -50,9 +50,12 @@ This is a long-term project. It is small today, but every great system starts as
 - [ ] Native model function-calling loop
 
 ### Phase 4 — Autonomous Planning (`v0.4`)
-- [ ] Reasoning loop: think → act → observe
-- [ ] Multi-step task decomposition
-- [ ] Autonomous execution of complex goals
+- [x] Reasoning loop: think → act → observe → reflect
+- [x] Multi-step task decomposition into an ordered plan
+- [x] Retry and recovery on failed steps
+- [x] User confirmation before irreversible actions
+- [x] Step budget to prevent runaway loops
+- [ ] Model-driven plan decomposition (native function-calling)
 
 ## 🏗️ Architecture
 
@@ -83,7 +86,7 @@ The core depends only on small abstract interfaces, so hosted APIs, local open-s
 | `v0.1.0` | **Conversation** | Working conversational loop through a pluggable provider |
 | `v0.2.0` | **Memory** | Persistent session history and preferences restored across restarts |
 | `v0.3.0` | **Tools** | Safe calculator/clock, sandboxed file tools, optional web search with a confirmation gate |
-| `v0.4.0` | **Autonomy** | Reasoning loop, task decomposition, multi-step planning |
+| `v0.4.0` | **Autonomy** | Think → act → observe → reflect loop, plan decomposition, retries, confirmation gate, and step budget |
 | `v1.0.0` | **Stable Assistant** | A reliable general-purpose personal agent |
 | `Future` | **Self-hosted & owned** | Local open-source model deployment for full independence |
 
@@ -187,6 +190,31 @@ file tools with `DREAMAI_FILE_ACCESS_ENABLED=true` and web search with
 `DREAMAI_WEB_SEARCH_ENABLED=true`; `DREAMAI_WORKSPACE_DIR` sets the file sandbox.
 Set `DREAMAI_TOOLS_ENABLED=false` to disable the whole registry.
 
+### Autonomy (v0.4)
+
+Dream AI can run a multi-step goal through a **think → act → observe → reflect**
+loop: it decomposes the objective into an ordered plan, calls tools, records every
+observation, reflects on each result, retries failed steps within budget, and asks
+for approval before protected actions. In-chat commands:
+
+| Command | Action |
+|---|---|
+| `/run <objective>` | Run an autonomous multi-step task and print the plan and outcome |
+| `/trace` | Review the plan, step status, and full trace of the last autonomous task |
+
+Configuration switches:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DREAMAI_AUTONOMY_ENABLED` | `true` | Master switch for autonomous mode |
+| `DREAMAI_MAX_STEPS` | `10` | Maximum tool actions before the loop stops to prevent runaway plans |
+| `DREAMAI_MAX_RETRIES` | `2` | Extra retries after a tool failure, per step |
+| `DREAMAI_AUTONOMY_VERBOSE` | `false` | Print every think/act/observe/reflect event live |
+
+> The v0.4 planner is a deterministic offline baseline: it maps simple time and
+> calculation intents to built-in tools. A model-driven plan arrives with native
+> function-calling in a later phase.
+
 ### Run the container image
 
 ```bash
@@ -218,7 +246,8 @@ DreamAI/
 │   ├── core/               # Agent, conversation
 │   ├── providers/          # Pluggable LLM backends
 │   ├── memory/             # Session history, preferences, persistence
-│   └── tools/              # Registry, built-in tools, call parser
+│   ├── tools/              # Registry, built-in tools, call parser
+│   └── autonomy/          # Planner, think→act→observe→reflect engine, trace
 ├── tests/                  # Unit and smoke tests
 ├── examples/               # Runnable examples
 ├── docs/                   # Roadmap, architecture, plans, guides

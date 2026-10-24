@@ -46,6 +46,15 @@ loop. It contains no business logic.
 - `factory.py`: register tools according to the permission switches in settings.
 - `builtin/`: calculator, clock, sandboxed file read/write, and web search.
 
+### 6. Autonomy (`dream_ai/autonomy/`)
+- `models.py`: `PlanStep`, `TraceEntry`, `ExecutionResult`, and lifecycle phases
+  (`think`, `act`, `observe`, `reflect`, `confirm`, `plan`, `done`, `abort`).
+- `planner.py`: `Planner` interface and the deterministic offline
+  `RuleBasedPlanner`; a future model-driven planner reuses the same interface.
+- `engine.py`: the think → act → observe → reflect loop. It enforces the step
+  budget, retries failed steps, asks for approval before protected actions, and
+  records an explainable trace for every action.
+
 ## Data Flow (one chat turn)
 
 ```
@@ -63,6 +72,31 @@ CLI ──► Agent.chat(text)
             ├─► Conversation.add_assistant(reply)
             │
             └─► return reply ──► CLI prints it
+```
+
+## Data Flow (one autonomous task)
+
+```
+Objective
+   │
+   ▼
+Agent.autonomous_task(objective)
+   │
+   ├─► record objective in session memory
+   │
+   ├─► Planner.decompose(objective) ──► ordered PlanStep list
+   │
+   └─► AutonomyEngine.run(plan)
+            │
+            ├─► think      ──► mark the next step active
+            ├─► confirm    ──► protected action waits for approval
+            ├─► act        ──► Agent.execute_tool(name, confirmed, **args)
+            ├─► observe    ──► record the tool output
+            ├─► reflect   ──► retry on failure, mark success/failure
+            └─► repeat until complete, budget exhausted, or cancelled
+   │
+   ├─► record final summary in session memory
+   └─► ExecutionResult (steps + trace) ──► CLI prints plan and summary
 ```
 
 ## Extension Points
@@ -83,9 +117,16 @@ CLI ──► Agent.chat(text)
 2. Keep the same `append / messages / clear` contract.
 3. Inject it into `Conversation` and `DreamAIAgent`.
 
+### Add a planner
+1. Create a class implementing `Planner` in `dream_ai/autonomy/`.
+2. Implement `decompose(objective) -> list[PlanStep]`.
+3. Pass it to `AutonomyEngine(..., planner=your_planner)`; the loop, budget,
+   retry, and confirmation logic stay unchanged.
+
 ## Future Architecture Notes
 
-- A reasoning loop (`v0.4`) will sit between the agent core and tools, deciding
-  when to call a tool, observe the result, and continue.
+- The v0.4 loop currently runs a deterministic offline planner; a hosted
+  model will later drive plan decomposition and native tool selection through
+  function-calling, reusing the same engine, trace, budget, and confirmation.
 - A future UI layer will call the same agent API instead of duplicating logic.
 - Local open-source models will be added as a provider for full self-hosting.

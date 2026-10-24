@@ -98,6 +98,17 @@ Open `.env` and fill in:
 - `DREAMAI_WORKSPACE_DIR`: sandbox directory for file tools. Defaults to
   `<data_dir>/workspace`.
 
+### Autonomy settings
+
+- `DREAMAI_AUTONOMY_ENABLED`: `true` (default) enables `/run` autonomous
+  tasks; `false` disables the multi-step loop entirely.
+- `DREAMAI_MAX_STEPS`: maximum number of tool actions per autonomous run
+  (default `10`). The loop stops when this budget is exhausted.
+- `DREAMAI_MAX_RETRIES`: extra retries after a tool failure, per plan step
+  (default `2`; `0` disables retries).
+- `DREAMAI_AUTONOMY_VERBOSE`: `false` (default). When `true`, every
+  think/act/observe/reflect event is printed live while a task runs.
+
 ## 5. Run Dream AI
 
 ```bash
@@ -109,13 +120,15 @@ Type a message and press Enter. Commands inside the chat:
 | Command | Action |
 |---|---|
 | `/help` | Show available commands |
+| `/run <objective>` | Run an autonomous multi-step task through the think → act → observe → reflect loop |
+| `/trace` | Review the plan, step status, and trace of the last autonomous task |
 | `/tools` | List registered tools, risk level, and arguments |
 | `/tool <name> <json>` | Run a tool with JSON arguments |
 | `/remember <text>` | Record a preference to long-term memory |
 | `/memory` | Show remembered preferences |
 | `/forget` | Clear all remembered preferences |
 | `/clear` | Clear the current conversation history |
-| `/about` | Show provider, tools, session info, and remembered preferences |
+| `/about` | Show provider, tools, autonomy, session info, and remembered preferences |
 | `/quit` or `/exit` | Exit |
 
 ## 6. Run the Examples
@@ -123,10 +136,12 @@ Type a message and press Enter. Commands inside the chat:
 ```bash
 python examples/basic_chat.py
 python examples/tool_demo.py
+python examples/autonomy_demo.py
 ```
 
 `tool_demo.py` lists the registered tools and runs the safe calculator and
-clock tools without any API key.
+clock tools without any API key. `autonomy_demo.py` runs a small autonomous
+task through the planner and loop and prints the plan, trace, and summary.
 
 ## 7. Run Tests and Lint
 

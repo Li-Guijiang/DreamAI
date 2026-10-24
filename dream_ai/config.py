@@ -34,6 +34,10 @@ class Settings:
     file_access_enabled: bool
     web_search_enabled: bool
     workspace_dir: Path
+    autonomy_enabled: bool = True
+    max_steps: int = 10
+    max_retries: int = 2
+    autonomy_verbose: bool = False
 
     @property
     def hosted_configured(self) -> bool:
@@ -57,6 +61,24 @@ def _load_dotenv() -> None:
 def _truthy(raw: str) -> bool:
     """Interpret a string as a boolean switch (default: true)."""
     return raw.strip().lower() not in _FALSE_VALUES
+
+
+def _positive_int(raw: str, default: int) -> int:
+    """Parse a positive integer, falling back to ``default`` when invalid."""
+    try:
+        value = int(raw.strip())
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def _nonnegative_int(raw: str, default: int) -> int:
+    """Parse a non-negative integer, falling back to ``default`` when invalid."""
+    try:
+        value = int(raw.strip())
+    except ValueError:
+        return default
+    return value if value >= 0 else default
 
 
 def _default_data_dir() -> Path:
@@ -91,4 +113,8 @@ def load_settings() -> Settings:
         file_access_enabled=_truthy(os.getenv("DREAMAI_FILE_ACCESS_ENABLED", "false")),
         web_search_enabled=_truthy(os.getenv("DREAMAI_WEB_SEARCH_ENABLED", "false")),
         workspace_dir=workspace_dir,
+        autonomy_enabled=_truthy(os.getenv("DREAMAI_AUTONOMY_ENABLED", "true")),
+        max_steps=_positive_int(os.getenv("DREAMAI_MAX_STEPS", "10"), 10),
+        max_retries=_nonnegative_int(os.getenv("DREAMAI_MAX_RETRIES", "2"), 2),
+        autonomy_verbose=_truthy(os.getenv("DREAMAI_AUTONOMY_VERBOSE", "false")),
     )

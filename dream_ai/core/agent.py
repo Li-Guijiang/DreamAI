@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..exceptions import ToolConfirmationRequired
+from ..autonomy import (
+    AutonomyEngine,
+    ConfirmationCallback,
+    EventCallback,
+    ExecutionResult,
+    PlanStep,
+)
+from ..exceptions import ConfigurationError, ToolConfirmationRequired
 from ..memory import InMemorySessionMemory, PreferenceMemory
 from ..memory.base import Memory
 from ..providers.base import LLMProvider
@@ -22,6 +29,9 @@ class DreamAIAgent:
         tools: ToolRegistry | None = None,
         memory: Memory | None = None,
         preferences: PreferenceMemory | None = None,
+        autonomy_enabled: bool = True,
+        autonomy_max_steps: int = 10,
+        autonomy_max_retries: int = 2,
     ) -> None:
         self._provider = provider
         self._preferences = preferences or PreferenceMemory()
@@ -30,6 +40,10 @@ class DreamAIAgent:
         self._memory = memory or InMemorySessionMemory(composed)
         self._conversation = Conversation(self._memory)
         self.tools = tools or ToolRegistry()
+        self._autonomy_enabled = autonomy_enabled
+        self._autonomy_max_steps = max(1, int(autonomy_max_steps))
+        self._autonomy_max_retries = max(0, int(autonomy_max_retries))
+        self._last_execution: ExecutionResult | None = None
 
     @property
     def provider_name(self) -> str:
@@ -55,6 +69,16 @@ class DreamAIAgent:
     def tool_names(self) -> list[str]:
         """Names of the currently registered tools."""
         return self.tools.names()
+
+    @property
+    def autonomy_enabled(self) -> bool:
+        """Whether autonomous multi-step execution is enabled."""
+        return self._autonomy_enabled
+
+    @property
+    def last_execution(self) -> ExecutionResult | None:
+        """Result of the most recent autonomous task, if one ran."""
+        return self._last_execution
 
     def remember(self, text: str) -> None:
         """Record a long-term preference."""
@@ -121,6 +145,42 @@ class DreamAIAgent:
                 }
             )
         return schema
+
+    # --- Autonomy ---------------------------------------------------------
+
+    def autonomous_task(
+        self,
+        objective: str,
+        plan: list[PlanStep] | None = None,
+        *,
+        max_steps: int | None = None,
+        max_retries: int | None = None,
+        confirmation_callback: ConfirmationCallback | None = None,
+        on_event: EventCallback | None = None,
+    ) -> ExecutionResult:
+        """Run an autonomous multi-step task and return an explainable result.
+
+        The objective is recorded in session memory, the plan executes through a
+        think → act → observe → reflect loop, and the final summary is recorded
+        back into the conversation.
+        """
+        if not self._autonomy_enabled:
+            raise ConfigurationError(
+                "Autonomous mode is disabled (DREAMAI_AUTONOMY_ENABLED=false)."
+            )
+
+        self._conversation.add_user(objective)
+        engine = AutonomyEngine(
+            self,
+            max_steps=max_steps if max_steps is not None else self._autonomy_max_steps,
+            max_retries=max_retries if max_retries is not None else self._autonomy_max_retries,
+            confirmation_callback=confirmation_callback,
+            on_event=on_event,
+        )
+        result = engine.run(objective, plan)
+        self._conversation.add_assistant(result.final_summary)
+        self._last_execution = result
+        return result
 
     # --- Internals ---------------------------------------------------------
 

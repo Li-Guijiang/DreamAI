@@ -61,7 +61,7 @@ class WebSearchTool(Tool):
         )
         url = f"{_ENDPOINT}?{params}"
         request = urllib.request.Request(
-            url, headers={"User-Agent": "DreamAI/0.3 (offline-friendly)"}
+            url, headers={"User-Agent": "DreamAI/0.4 (offline-friendly)"}
         )
         try:
             with urllib.request.urlopen(request, timeout=_TIMEOUT) as response:

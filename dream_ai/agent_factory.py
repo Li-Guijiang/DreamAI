@@ -35,4 +35,7 @@ def build_agent(settings: Settings) -> DreamAIAgent:
         memory=memory,
         preferences=preferences,
         tools=tools,
+        autonomy_enabled=settings.autonomy_enabled,
+        autonomy_max_steps=settings.max_steps,
+        autonomy_max_retries=settings.max_retries,
     )

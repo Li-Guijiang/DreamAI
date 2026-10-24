@@ -15,6 +15,7 @@ import sys
 from typing import Any
 
 from .agent_factory import build_agent
+from .autonomy import PlanStep, TraceEntry
 from .config import Settings, load_settings
 from .core import DreamAIAgent
 from .exceptions import ConfigurationError, ProviderError, ToolConfirmationRequired, ToolError
@@ -30,6 +31,8 @@ BANNER = r"""
 HELP_TEXT = """\
 Available commands:
   /help            Show this help message
+  /run <objective> Run an autonomous multi-step task (plan → act → observe → reflect)
+  /trace           Show the plan, steps, and trace of the last autonomous task
   /tools           List registered tools and their parameters
   /tool <name> <json>  Run a tool with JSON arguments, e.g.
                    /tool calculator {"expression": "2 * (3 + 4)"}
@@ -37,7 +40,7 @@ Available commands:
   /memory          Show remembered preferences
   /forget          Clear all remembered preferences
   /clear           Clear the conversation history
-  /about           Show provider, tools, session info, and preferences
+  /about           Show provider, tools, autonomy, session info, and preferences
   /quit | /exit    Leave Dream AI
 Type anything else to chat with Dream AI.
 """
@@ -77,6 +80,11 @@ def _print_memory_status(agent: DreamAIAgent, settings: Settings) -> None:
     mode = "persistent" if settings.persistence_enabled else "in-memory"
     location = settings.data_dir if settings.persistence_enabled else "session only"
     print(f"Memory: {mode} ({location})")
+    autonomy = "on" if settings.autonomy_enabled else "off"
+    print(
+        f"Autonomy: {autonomy} "
+        f"(max steps: {settings.max_steps}, retries: {settings.max_retries})"
+    )
     print(f"Tools: {len(agent.tool_names)} registered\n")
 
 
@@ -138,6 +146,86 @@ def _run_tool(agent: DreamAIAgent, rest: str) -> None:
     print(f"tool › {result}\n")
 
 
+# --- Autonomous mode ---------------------------------------------------------
+
+
+def _confirm_action(step: PlanStep, tool_name: str, arguments: dict[str, Any]) -> bool:
+    """Interactive approval gate for protected autonomous actions."""
+    print(f"⚠ Protected action '{tool_name}' {arguments}")
+    answer = input("Confirm this action? [y/N] ").strip().lower()
+    return answer in {"y", "yes"}
+
+
+def _print_event(entry: TraceEntry) -> None:
+    """Print one live autonomy trace event (verbose mode)."""
+    step = f"step {entry.step_index + 1}" if entry.step_index is not None else "plan"
+    print(f"  [{entry.phase.value}] {step}: {entry.content}")
+
+
+def _run_autonomous(agent: DreamAIAgent, settings: Settings, objective: str) -> None:
+    if not settings.autonomy_enabled:
+        print("⚠ Autonomous mode is disabled (DREAMAI_AUTONOMY_ENABLED=false).\n")
+        return
+    if not objective:
+        print(
+            "Usage: /run <objective>  e.g. "
+            "/run what time is it and calculate 12 * 7\n"
+        )
+        return
+
+    on_event = _print_event if settings.autonomy_verbose else None
+
+    try:
+        result = agent.autonomous_task(
+            objective,
+            confirmation_callback=_confirm_action,
+            on_event=on_event,
+        )
+    except ConfigurationError as exc:
+        print(f"⚠ {exc}\n")
+        return
+
+    if not settings.autonomy_verbose:
+        print("\nPlan:")
+        for index, step in enumerate(result.steps, start=1):
+            print(f"  {index}. [{step.status.value}] {step.title}")
+            if step.observation:
+                print(f"      observation: {step.observation}")
+            if step.error:
+                print(f"      error: {step.error}")
+        print()
+
+    print(result.final_summary)
+    print()
+
+
+def _print_trace(agent: DreamAIAgent) -> None:
+    result = agent.last_execution
+    if result is None:
+        print("No autonomous task has run yet. Use /run <objective>.\n")
+        return
+
+    print(f"Last task: {result.objective}")
+    print(
+        f"Status: {result.status.value} "
+        f"({len(result.succeeded_steps)}/{result.total_steps} steps succeeded)\n"
+    )
+
+    print("Plan:")
+    for index, step in enumerate(result.steps, start=1):
+        print(f"  {index}. [{step.status.value}] {step.title}")
+        if step.observation:
+            print(f"      observation: {step.observation}")
+        if step.error:
+            print(f"      error: {step.error}")
+
+    print("\nTrace:")
+    for entry in result.trace:
+        step = f"step {entry.step_index + 1}" if entry.step_index is not None else "—"
+        print(f"  [{entry.phase.value}] {step}: {entry.content}")
+    print()
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     settings = _apply_overrides(load_settings(), args)
@@ -181,6 +269,15 @@ def main(argv: list[str] | None = None) -> int:
 
         if command == "/help":
             print(HELP_TEXT)
+            continue
+
+        if command.startswith("/run"):
+            _, _, rest = user_input.partition(" ")
+            _run_autonomous(agent, settings, rest.strip())
+            continue
+
+        if command == "/trace":
+            _print_trace(agent)
             continue
 
         if command == "/tools":
@@ -228,6 +325,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Provider: {agent.provider_name}")
             print(f"Model: {settings.model}")
             print(f"Tools: {len(agent.tool_names)} ({', '.join(agent.tool_names) or 'none'})")
+            autonomy = "on" if agent.autonomy_enabled else "off"
+            print(
+                f"Autonomy: {autonomy} "
+                f"(max steps: {settings.max_steps}, retries: {settings.max_retries})"
+            )
+            if agent.last_execution:
+                print(f"Last autonomous task: {agent.last_execution.status.value}")
             print(f"Messages sent this session: {turns}")
             print(f"Preferences remembered: {len(agent.preference_notes)}\n")
             continue

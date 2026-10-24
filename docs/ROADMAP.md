@@ -51,7 +51,7 @@ locally with or without an API key.
 
 ---
 
-## `v0.3.0` — Tools (current)
+## `v0.3.0` — Tools (released)
 
 **Goal:** Let the agent act beyond text using a safe, modular tool registry.
 
@@ -71,20 +71,21 @@ locally with or without an API key.
 
 ---
 
-## `v0.4.0` — Autonomous Planning
+## `v0.4.0` — Autonomous Planning (current)
 
 **Goal:** Multi-step agent that decomposes goals and executes a plan.
 
 ### Tasks
-- [ ] Reasoning loop: think → act → observe → reflect
-- [ ] Task decomposition into ordered steps
-- [ ] Retry and recovery on failed steps
-- [ ] Plan review and user confirmation before irreversible actions
-- [ ] Token/step budget to prevent runaway loops
+- [x] Reasoning loop: think → act → observe → reflect
+- [x] Task decomposition into ordered steps
+- [x] Retry and recovery on failed steps
+- [x] Plan review and user confirmation before irreversible actions
+- [x] Token/step budget to prevent runaway loops
 
 ### Acceptance criteria
-- The agent can complete a multi-step request that combines memory and tools.
-- Every autonomous action is logged and explainable to the user.
+- [x] The agent can complete a multi-step request that combines memory and tools.
+- [x] Every autonomous action is logged and explainable to the user.
+- [ ] Model-driven plan decomposition and native function-calling (deferred).
 
 ---
 

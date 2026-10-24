@@ -74,9 +74,9 @@
 
 ## Status
 
-- **Current state:** `v0.3` development; persistent memory and the tool layer
-  are in place; no hosted service exists.
-- **Next step toward plans:** finish `v0.4` autonomous planning before any
-  hosted plan is considered.
+- **Current state:** `v0.4` development; persistent memory, the tool layer, and
+  the autonomous planning loop are in place; no hosted service exists.
+- **Next step toward plans:** stabilize the core toward `v1.0` before any hosted
+  plan is considered.
 - **Feedback:** Open an issue in the repository to suggest plan features or
   fair pricing.
