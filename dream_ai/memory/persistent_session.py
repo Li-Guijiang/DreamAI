@@ -9,9 +9,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..providers.local import DEMO_PREFIX
 from .base import Memory
 from .session_memory import InMemorySessionMemory
 from .storage import read_json, write_json_atomic
+
+
+def _is_demo_reply(message: dict[str, str]) -> bool:
+    """True for an offline placeholder assistant reply that must not persist."""
+    return (
+        message.get("role") == "assistant"
+        and (message.get("content") or "").strip().startswith(DEMO_PREFIX)
+    )
 
 
 class PersistentSessionMemory(Memory):
@@ -45,12 +54,20 @@ class PersistentSessionMemory(Memory):
         for message in data.get("messages", []):
             role = message.get("role")
             content = (message.get("content") or "").strip()
-            if role in {"user", "assistant"} and content:
+            if (
+                role in {"user", "assistant"}
+                and content
+                and not _is_demo_reply(message)
+            ):
                 self._core.append(role, content)
 
     def _persist(self) -> None:
         """Write the saved turns (excluding the system prompt) to disk."""
         if self._file is None:
             return
-        history = [m for m in self.messages() if m["role"] != "system"]
+        history = [
+            message
+            for message in self.messages()
+            if message["role"] != "system" and not _is_demo_reply(message)
+        ]
         write_json_atomic(self._file, {"messages": history})

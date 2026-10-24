@@ -5,6 +5,15 @@ All notable changes to Dream AI are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Offline placeholder replies are no longer persisted to session history and
+  are filtered out when restoring an old session, so demo replies cannot
+  pollute the context sent to a hosted model after an API key is configured.
+- The project-root `.env` is loaded regardless of the current working
+  directory; existing shell environment variables keep priority.
+
 ## [0.4.0] — 2026-10-24
 
 ### Added

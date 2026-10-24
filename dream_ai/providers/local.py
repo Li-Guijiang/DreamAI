@@ -11,6 +11,10 @@ from typing import Any
 
 from .base import LLMProvider
 
+# Prefix marking an offline placeholder reply. Persistent history strips these
+# so demo replies never pollute the context sent to a hosted model later.
+DEMO_PREFIX = "[Local demo mode]"
+
 
 class LocalEchoProvider(LLMProvider):
     """A lightweight offline stand-in for a real language model."""
@@ -28,7 +32,7 @@ class LocalEchoProvider(LLMProvider):
             return "I heard an empty message — please tell me what you need."
 
         return (
-            "[Local demo mode] This reply comes from the offline placeholder "
+            f"{DEMO_PREFIX} This reply comes from the offline placeholder "
             "provider, not a real model.\n"
             f"You have sent {history_turns} message(s) in this session.\n"
             f"You said: {last_user}\n"

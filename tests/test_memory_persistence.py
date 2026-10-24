@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from dream_ai.core import DreamAIAgent
 from dream_ai.exceptions import DreamAIError
 from dream_ai.memory import PersistentSessionMemory, PreferenceMemory
 from dream_ai.providers import LocalEchoProvider
+from dream_ai.providers.local import DEMO_PREFIX
 
 
 def _settings(data_dir: Path, persistence: bool) -> Settings:
@@ -54,6 +56,41 @@ def test_clear_persists_empty_history(tmp_path: Path) -> None:
     restored = PersistentSessionMemory("sys", tmp_path / "session.json")
 
     assert restored.messages() == [{"role": "system", "content": "sys"}]
+
+
+def test_demo_replies_are_not_persisted(tmp_path: Path) -> None:
+    memory = PersistentSessionMemory("sys", tmp_path / "session.json")
+    memory.append("user", "Hello")
+    memory.append("assistant", f"{DEMO_PREFIX} offline placeholder reply")
+
+    restored = PersistentSessionMemory("sys", tmp_path / "session.json")
+
+    assert [message["role"] for message in restored.messages()] == ["system", "user"]
+    assert all(DEMO_PREFIX not in message["content"] for message in restored.messages())
+
+
+def test_stale_demo_replies_are_filtered_on_restore(tmp_path: Path) -> None:
+    file_path = tmp_path / "session.json"
+    file_path.write_text(
+        json.dumps(
+            {
+                "messages": [
+                    {"role": "user", "content": "Hello"},
+                    {"role": "assistant", "content": f"{DEMO_PREFIX} old offline reply"},
+                    {"role": "user", "content": "Second question"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    restored = PersistentSessionMemory("sys", file_path)
+
+    assert [message["content"] for message in restored.messages()] == [
+        "sys",
+        "Hello",
+        "Second question",
+    ]
 
 
 # --- Preference memory -----------------------------------------------------
