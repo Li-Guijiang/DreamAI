@@ -21,7 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project documentation: README, roadmap, architecture, contributing guide,
   code of conduct, security policy, setup guide, and pricing vision.
 - MIT License.
+- CI workflow: Ruff lint and pytest across Python 3.11, 3.12, and 3.13.
+- Release workflow: on a `v*` tag, build the `sdist` and `wheel`, validate
+  metadata, and attach both archives to the GitHub Release.
+- Package metadata in `pyproject.toml` for standard sdist and wheel builds.
 
 ### Notes
 - This is the initial development skeleton (`v0.1`). Real model connectivity
   requires a configured API key; offline demo mode works without one.
+- The `dream_ai-0.1.0` `wheel` and `sdist` archives are attached to the
+  [v0.1.0 Release](https://github.com/Li-Guijiang/DreamAI/releases/tag/v0.1.0).
