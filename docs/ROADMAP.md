@@ -1,0 +1,117 @@
+# Dream AI Roadmap
+
+This roadmap organizes Dream AI into small, shippable phases. Each version
+has a clear goal, a task list, and acceptance criteria. Dates are not fixed —
+quality and a working deliverable matter more than deadlines.
+
+---
+
+## `v0.1.0` — Conversation (current)
+
+**Goal:** A working conversational loop through a pluggable provider, runnable
+locally with or without an API key.
+
+### Tasks
+- [x] Repository, package layout, and engineering configuration
+- [x] `Settings` loaded from environment / `.env`
+- [x] Abstract `LLMProvider` interface
+- [x] OpenAI-compatible hosted provider
+- [x] Offline local demo provider (fallback for tests and demos)
+- [x] In-memory session memory with system prompt
+- [x] `DreamAIAgent` composing provider + memory + tool slot
+- [x] CLI REPL with `/help`, `/clear`, `/about`, `/quit`
+- [x] Unit and smoke tests
+- [ ] Streaming token output
+- [ ] Configuration validation and clearer error messages
+
+### Acceptance criteria
+- `python -m dream_ai` starts and runs a multi-turn conversation offline.
+- With a valid API key, the same code path reaches a hosted model without
+  changing the agent core.
+- `pytest` passes locally.
+
+---
+
+## `v0.2.0` — Memory
+
+**Goal:** Remember beyond a single session and recall what matters.
+
+### Tasks
+- [ ] Persistent session history stored locally (JSON/SQLite)
+- [ ] User profile and preference memory
+- [ ] Long-term memory retrieval over past conversations
+- [ ] Optional vector store for semantic recall
+- [ ] Memory management: forget, edit, inspect stored facts
+
+### Acceptance criteria
+- Closing and reopening the CLI restores the previous conversation.
+- The agent recalls stated preferences in later sessions.
+- Memory backends implement the existing `Memory` interface.
+
+---
+
+## `v0.3.0` — Tools
+
+**Goal:** Let the agent act beyond text using a safe, modular tool registry.
+
+### Tasks
+- [ ] Finalize tool schema: name, description, parameters, result format
+- [ ] Web search tool
+- [ ] Local file read/write tool (sandboxed paths)
+- [ ] Calculator and date/time utilities
+- [ ] Tool permission prompts and allowlists
+- [ ] Structured tool-call parsing from the model
+
+### Acceptance criteria
+- New tools are added by registering a class; no core rewrite required.
+- Dangerous or unapproved actions require explicit user confirmation.
+
+---
+
+## `v0.4.0` — Autonomous Planning
+
+**Goal:** Multi-step agent that decomposes goals and executes a plan.
+
+### Tasks
+- [ ] Reasoning loop: think → act → observe → reflect
+- [ ] Task decomposition into ordered steps
+- [ ] Retry and recovery on failed steps
+- [ ] Plan review and user confirmation before irreversible actions
+- [ ] Token/step budget to prevent runaway loops
+
+### Acceptance criteria
+- The agent can complete a multi-step request that combines memory and tools.
+- Every autonomous action is logged and explainable to the user.
+
+---
+
+## `v1.0.0` — Stable Assistant
+
+**Goal:** A reliable, polished general-purpose personal agent.
+
+### Tasks
+- [ ] Stable public API and documented configuration
+- [ ] Settings and memory backups
+- [ ] Performance and error-handling hardening
+- [ ] Friendly non-technical user experience
+- [ ] Full documentation and examples
+
+---
+
+## `Future` — Self-hosted & Owned
+
+**Goal:** Full independence from commercial vendors where desired.
+
+- Local open-source model deployment as a first-class provider
+- Model switching without losing conversation or memory
+- Data stays local by default; cloud services remain optional
+- Long-term evolution toward a more capable, general assistant
+
+---
+
+## Long-term Vision
+
+Dream AI is a lifelong project built alongside continuous learning. The roadmap
+above covers the engineering phases; the broader ambition is to grow into a
+thoughtful, capable assistant that serves people everywhere, while keeping the
+code open and the ownership with its authors and contributors.
