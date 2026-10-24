@@ -64,6 +64,13 @@ relcheck.txt
 ci_latest.txt
 probe.txt
 check.txt
+wf.txt
+dispatch.txt
+poll.txt
+poll2.txt
+package.txt
+pkgcheck.txt
+arch.txt
 cred_info.txt
 .git_cred_token.txt
 ghdocs.txt
