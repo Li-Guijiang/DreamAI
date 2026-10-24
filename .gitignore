@@ -89,6 +89,8 @@ demo2.txt
 demo_tool.txt
 demo_fs.txt
 v3check.txt
+rel3.txt
+poll4.txt
 _demo*.py
 cred_info.txt
 .git_cred_token.txt
