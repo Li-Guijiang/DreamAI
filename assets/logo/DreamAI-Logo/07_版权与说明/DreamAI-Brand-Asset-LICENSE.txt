@@ -1,0 +1,58 @@
+DreamAI Brand Asset License
+===========================
+
+Brand:  DreamAI
+Mark:   Dream Orbit (the "DreamAI Logo")
+Copyright Owner: Li Guijiang (李贵江)
+Copyright (c) 2026 Li Guijiang. All Rights Reserved.
+Repository: https://github.com/Li-Guijiang/DreamAI
+
+1. SCOPE
+This license applies to the DreamAI brand assets only, including the
+Dream Orbit graphic mark, the rounded application icon, the DreamAI
+lockup (graphic + wordmark), their color palettes, SVG vector sources,
+PSD layered source files, and any exported raster images in this package
+(collectively, the "Brand Assets").
+
+The Brand Assets are separate from the DreamAI software source code.
+The software source code in the repository is licensed under the MIT
+License; the MIT License does NOT apply to the Brand Assets.
+
+2. OWNERSHIP
+The Brand Assets are original artistic works. Copyright is retained by
+and remains with Li Guijiang. No ownership of any trademark, copyright,
+or other intellectual property is transferred to any third party.
+
+3. PERMITTED USE
+You may display the Brand Assets, without modification, to:
+  (a) refer to, link to, or identify the official DreamAI project;
+  (b) report on, review, or describe the DreamAI project; and
+  (c) use them for non-commercial, personal, or educational purposes.
+Attribution "DreamAI by Li Guijiang" and a link to the repository are
+appreciated.
+
+4. RESTRICTED USE
+Without the express written permission of the copyright owner, you may
+NOT:
+  (a) use the Brand Assets in any commercial product, paid service,
+      advertisement, or for-profit activity;
+  (b) alter, distort, recolor, redraw, or create derivative works of
+      the Brand Assets and redistribute them;
+  (c) register the Brand Assets or the name "DreamAI" (or confusingly
+      similar signs) as a trademark, domain name, or account name;
+  (d) imply endorsement by or affiliation with the owner; or
+  (e) remove or obscure this copyright and license notice.
+
+5. NO TRADEMARK GRANT
+This notice establishes copyright ownership of the artistic works. It
+does not grant, constitute, or replace any trademark registration.
+Trademark rights require a separate registration process in the
+relevant jurisdiction.
+
+6. NO WARRANTY
+The Brand Assets are provided "as is", without warranty of any kind.
+
+For licensing, commercial use, or press inquiries, please open an issue
+at https://github.com/Li-Guijiang/DreamAI.
+
+Copyright (c) 2026 Li Guijiang (李贵江). All Rights Reserved.
