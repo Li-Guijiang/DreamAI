@@ -1,0 +1,57 @@
+{
+  "name": "dream-ai-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dream AI 桌面版 · 本地文件工作台",
+  "main": "electron/main.js",
+  "author": {
+    "name": "Dream AI Team",
+    "email": "599575094@qq.com"
+  },
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "start:local": "cross-env DREAMAI_URL=http://127.0.0.1:8787 electron .",
+    "dist": "electron-builder --win nsis --x64",
+    "pack": "electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "com.dreamai.desktop",
+    "productName": "Dream AI",
+    "copyright": "Copyright © 2026 Dream AI Team",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "DreamAI-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Dream AI",
+      "uninstallDisplayName": "Dream AI"
+    }
+  }
+}

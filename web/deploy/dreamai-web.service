@@ -1,0 +1,34 @@
+[Unit]
+Description=Dream AI Web (FastAPI)
+Documentation=https://github.com/Li-Guijiang/DreamAI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__WEB_USER__
+Group=__WEB_USER__
+WorkingDirectory=__APP_DIR__
+EnvironmentFile=__APP_DIR__/.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PATH=__APP_DIR__/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+ExecStart=__APP_DIR__/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 \
+    --port __PORT__ \
+    --workers 2 \
+    --proxy-headers \
+    --forwarded-allow-ips=127.0.0.1
+
+Restart=always
+RestartSec=2
+TimeoutStopSec=20
+LimitNOFILE=65535
+
+# 基础加固
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

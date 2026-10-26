@@ -1,0 +1,2332 @@
+/* Dream AI — web client 1.1
+   Vanilla ES2020. Conversations live in the browser; only model requests
+   leave the device, and they go through our own API. */
+
+(() => {
+  "use strict";
+
+  const STORE_SESSIONS = "dreamai.sessions.v1";
+  const STORE_SETTINGS = "dreamai.settings.v1";
+  const STORE_USER_KEY = "dreamai.userkey.v1";
+  const MAX_INPUT = 12000;
+  const MAX_FILES = 3;
+  const MAX_FILE_CHARS = 20000;
+  const MAX_TOTAL_ATTACH = 60000;
+
+  const MODES = [
+    { id: "chat", label: "对话", desc: "直接问答，适合写作、编程、闲聊" },
+    { id: "work", label: "工作", desc: "拆解任务，逐步执行并汇总（更慢）" },
+  ];
+
+  const STYLES = [
+    { id: "default", label: "通用", desc: "平衡、自然的表达" },
+    { id: "precise", label: "严谨", desc: "结论先行，重视依据" },
+    { id: "creative", label: "创意", desc: "更发散，更有想象力" },
+    { id: "concise", label: "精简", desc: "能一句话说清就不写两行" },
+  ];
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  const uid = () =>
+    crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
+  const now = () => Date.now();
+  const isMobile = () => window.matchMedia("(max-width: 900px)").matches;
+
+  function el(tag, attrs = {}, children = []) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(attrs)) {
+      if (value === null || value === undefined || value === false) continue;
+      if (key === "class") node.className = value;
+      else if (key === "text") node.textContent = value;
+      else if (key === "html") node.innerHTML = value;
+      else if (key.startsWith("on") && typeof value === "function") {
+        node.addEventListener(key.slice(2).toLowerCase(), value);
+      } else node.setAttribute(key, value === true ? "" : String(value));
+    }
+    for (const child of [].concat(children)) {
+      if (child === null || child === undefined) continue;
+      node.appendChild(typeof child === "string" ? document.createTextNode(child) : child);
+    }
+    return node;
+  }
+
+  const ICONS = {
+    chat: '<path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H9l-4 3.5v-3.5H6.5A2.5 2.5 0 0 1 4 13.5Z"/>',
+    more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+    trash: '<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
+    copy: '<rect x="9" y="9" width="11" height="11" rx="2.2"/><path d="M6 15H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v1"/>',
+    check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+    refresh: '<path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 5v6h-6"/>',
+    arrow: '<path d="M7 17 17 7M9 7h8v8"/>',
+    edit: '<path d="M4 20h4L19 9a2.5 2.5 0 0 0-3.5-3.5L4 16.5V20Z"/><path d="M13.5 6.5 17.5 10.5"/>',
+    download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+    file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/>',
+    folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
+  };
+
+  function icon(name, cls = "") {
+    const span = document.createElement("span");
+    span.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" class="${cls}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ""}</svg>`;
+    return span.firstElementChild;
+  }
+
+  function toast(message, kind = "ok") {
+    const host = $("#toasts");
+    if (!host) return;
+    const node = el("div", { class: `toast${kind === "err" ? " toast--err" : ""}` }, [
+      el("i"),
+      el("span", { text: message }),
+    ]);
+    host.appendChild(node);
+    setTimeout(() => {
+      node.classList.add("is-out");
+      setTimeout(() => node.remove(), 220);
+    }, 2400);
+  }
+
+  // ---------------------------------------------------------------------
+  // State
+  // ---------------------------------------------------------------------
+
+  const state = {
+    config: null,
+    sessions: [],
+    activeId: null,
+    settings: {
+      theme: "dark",
+      size: "md",
+      model: null,
+      provider: "free",
+      temperature: 0.7,
+      thinking: false,
+      style: "default",
+      mode: "chat",
+    },
+    userKey: "",
+    attachments: [],
+    search: "",
+    streaming: false,
+    follow: true,
+    abort: null,
+  };
+
+  function loadStorage() {
+    try {
+      const raw = localStorage.getItem(STORE_SESSIONS);
+      const data = raw ? JSON.parse(raw) : [];
+      state.sessions = Array.isArray(data) ? data.filter((s) => s && s.id && Array.isArray(s.messages)) : [];
+    } catch {
+      state.sessions = [];
+    }
+    try {
+      const raw = localStorage.getItem(STORE_SETTINGS);
+      if (raw) Object.assign(state.settings, JSON.parse(raw));
+    } catch {
+      /* ignore */
+    }
+    try {
+      state.userKey = localStorage.getItem(STORE_USER_KEY) || "";
+    } catch {
+      state.userKey = "";
+    }
+    if (!["dark", "light", "system"].includes(state.settings.theme)) state.settings.theme = "dark";
+    if (!["sm", "md", "lg"].includes(state.settings.size)) state.settings.size = "md";
+    if (!["free", "byok"].includes(state.settings.provider)) state.settings.provider = "free";
+    if (!["chat", "work"].includes(state.settings.mode)) state.settings.mode = "chat";
+    if (!STYLES.some((s) => s.id === state.settings.style)) state.settings.style = "default";
+    state.sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  }
+
+  let saveTimer = null;
+  function persistSessions() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        const slim = state.sessions.slice(0, 120).map((s) => ({
+          id: s.id,
+          title: s.title,
+          createdAt: s.createdAt,
+          updatedAt: s.updatedAt,
+          messages: s.messages.map((m) => ({
+            role: m.role,
+            kind: m.kind || undefined,
+            content: m.content,
+            reasoning: m.reasoning || "",
+            attachments: m.attachments || undefined,
+            title: m.title || undefined,
+            steps: m.steps || undefined,
+            final: m.final || undefined,
+            status: m.status || undefined,
+            error: m.error || undefined,
+            model: m.model || "",
+            provider: m.provider || undefined,
+            ts: m.ts,
+          })),
+        }));
+        localStorage.setItem(STORE_SESSIONS, JSON.stringify(slim));
+      } catch {
+        toast("本地存储空间不足，历史记录可能无法保存", "err");
+      }
+    }, 220);
+  }
+
+  function persistSettings() {
+    try {
+      localStorage.setItem(STORE_SETTINGS, JSON.stringify(state.settings));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const activeSession = () => state.sessions.find((s) => s.id === state.activeId) || null;
+
+  function createSession() {
+    const session = { id: uid(), title: "新对话", createdAt: now(), updatedAt: now(), messages: [] };
+    state.sessions.unshift(session);
+    state.activeId = session.id;
+    persistSessions();
+    return session;
+  }
+
+  // ---------------------------------------------------------------------
+  // Theme & size
+  // ---------------------------------------------------------------------
+
+  const systemLight = () => window.matchMedia("(prefers-color-scheme: light)").matches;
+
+  function resolvedTheme() {
+    return state.settings.theme === "system" ? (systemLight() ? "light" : "dark") : state.settings.theme;
+  }
+
+  function applyTheme() {
+    const theme = resolvedTheme();
+    document.documentElement.dataset.theme = theme;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", theme === "dark" ? "#08090d" : "#f7f6f2");
+    $$("#themeSeg button").forEach((btn) => {
+      btn.setAttribute("aria-checked", String(btn.dataset.themeValue === state.settings.theme));
+    });
+  }
+
+  function applySize() {
+    document.documentElement.dataset.size = state.settings.size;
+    $$("#sizeSeg button").forEach((btn) => {
+      btn.setAttribute("aria-checked", String(btn.dataset.sizeValue === state.settings.size));
+    });
+  }
+
+  function initTheme() {
+    applyTheme();
+    applySize();
+    window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
+      if (state.settings.theme === "system") applyTheme();
+    });
+  }
+
+  function setGreeting() {
+    const hour = new Date().getHours();
+    const greeting =
+      hour < 6 ? "夜深了" : hour < 11 ? "早上好" : hour < 14 ? "中午好" : hour < 18 ? "下午好" : "晚上好";
+    const node = $("#greetingText");
+    if (node) node.textContent = greeting;
+  }
+
+  // ---------------------------------------------------------------------
+  // Markdown
+  // ---------------------------------------------------------------------
+
+  marked.setOptions({ gfm: true, breaks: true });
+
+  const ALLOWED_TAGS = [
+    "p", "br", "strong", "em", "del", "code", "pre", "blockquote", "ul", "ol", "li",
+    "h1", "h2", "h3", "h4", "h5", "h6", "hr", "a", "table", "thead", "tbody", "tr", "th", "td", "span",
+  ];
+
+  function markdown(text) {
+    const raw = marked.parse(text || "");
+    return DOMPurify.sanitize(raw, {
+      ALLOWED_TAGS,
+      ALLOWED_ATTR: ["href", "title", "class", "target", "rel"],
+      FORBID_TAGS: ["style", "iframe", "form", "input", "button", "script"],
+    });
+  }
+
+  function decorate(container) {
+    if (window.Prism) {
+      try {
+        Prism.highlightAllUnder(container);
+      } catch {
+        /* optional */
+      }
+    }
+    $$("pre > code", container).forEach((code) => {
+      const pre = code.parentElement;
+      if (!pre || pre.closest(".code-block")) return;
+      const match = /language-([\w-]+)/.exec(code.className || "");
+      const lang = match ? match[1] : "text";
+      const block = el("div", { class: "code-block" });
+      const head = el("div", { class: "code-block__head" }, [
+        el("span", { text: lang }),
+        el("button", { class: "code-block__copy", type: "button" }, [
+          icon("copy"),
+          el("span", { text: "复制" }),
+        ]),
+      ]);
+      pre.replaceWith(block);
+      block.append(head, pre);
+      head.querySelector("button").addEventListener("click", async (event) => {
+        const btn = event.currentTarget;
+        await copyText(code.textContent || "");
+        btn.querySelector("span").textContent = "已复制";
+        setTimeout(() => (btn.querySelector("span").textContent = "复制"), 1500);
+      });
+    });
+    $$("a", container).forEach((a) => {
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+    });
+  }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const area = el("textarea");
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      area.value = text;
+      document.body.appendChild(area);
+      area.select();
+      try {
+        document.execCommand("copy");
+      } catch {
+        /* ignore */
+      }
+      area.remove();
+      return false;
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Sidebar
+  // ---------------------------------------------------------------------
+
+  function groupLabel(ts) {
+    const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
+    const day = 86400000;
+    if (ts >= startOfToday) return "今天";
+    if (ts >= startOfToday - day) return "昨天";
+    if (ts >= startOfToday - 7 * day) return "最近 7 天";
+    return "更早";
+  }
+
+  function renderSidebar() {
+    const host = $("#sessionList");
+    host.textContent = "";
+    const query = state.search.trim().toLowerCase();
+    const list = state.sessions.filter((s) => {
+      if (!query) return true;
+      return (
+        (s.title || "").toLowerCase().includes(query) ||
+        s.messages.some((m) => (m.content || "").toLowerCase().includes(query))
+      );
+    });
+
+    if (!list.length) {
+      host.appendChild(
+        el("div", { class: "sessions__empty" }, [
+          query ? "没有找到相关对话" : "还没有对话\n从下方输入框，或首页灵感卡片开始",
+        ]),
+      );
+      return;
+    }
+
+    let lastGroup = "";
+    for (const session of list) {
+      const label = groupLabel(session.updatedAt || session.createdAt);
+      if (label !== lastGroup) {
+        host.appendChild(el("div", { class: "sessions__group", text: label }));
+        lastGroup = label;
+      }
+      const item = el("div", {
+        class: `session${session.id === state.activeId ? " is-active" : ""}`,
+        role: "button",
+        tabindex: "0",
+        "data-id": session.id,
+      }, [
+        icon("chat", "session__icon"),
+        el("span", { class: "session__title", text: session.title || "新对话" }),
+        el("button", { class: "session__more", type: "button", "aria-label": "对话操作" }, [icon("more")]),
+      ]);
+
+      const pick = () => {
+        if (state.streaming) {
+          toast("正在生成中，请先停止当前回答", "err");
+          return;
+        }
+        state.activeId = session.id;
+        renderSidebar();
+        renderChat();
+        closeSidebar();
+      };
+      item.addEventListener("click", pick);
+      item.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          pick();
+        }
+      });
+      const more = item.querySelector(".session__more");
+      more.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openSessionMenu(session, more);
+      });
+      host.appendChild(item);
+    }
+  }
+
+  function removeSession(id) {
+    const index = state.sessions.findIndex((s) => s.id === id);
+    if (index < 0) return;
+    state.sessions.splice(index, 1);
+    if (state.activeId === id) state.activeId = state.sessions[0]?.id || null;
+    persistSessions();
+    renderSidebar();
+    renderChat();
+    toast("对话已删除");
+  }
+
+  // ---------------------------------------------------------------------
+  // Chat rendering
+  // ---------------------------------------------------------------------
+
+  function timeLabel(ts) {
+    if (!ts) return "";
+    return new Date(ts).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function modelLabel(id, provider = null) {
+    const found = modelOption(id, provider) || modelOption(id);
+    return found ? found.label : id || "Dream AI";
+  }
+
+  function actionBtn(iconName, label, onClick, extraClass = "") {
+    const btn = el("button", { class: `act ${extraClass}`.trim(), type: "button", title: label }, [
+      icon(iconName),
+      el("span", { text: label }),
+    ]);
+    btn.addEventListener("click", onClick);
+    return btn;
+  }
+
+  function filesRow(files) {
+    const row = el("div", { class: "msg__files" });
+    files.forEach((file) => {
+      row.appendChild(el("span", { class: "file-chip" }, [icon("file"), el("span", { text: file.name })]));
+    });
+    return row;
+  }
+
+  function composeUserContent(message) {
+    let content = message.content || "";
+    if (message.attachments && message.attachments.length) {
+      const blocks = message.attachments.map(
+        (file) => `【附件：${file.name}】\n${file.text}\n【附件结束】`,
+      );
+      content = (content ? content + "\n\n" : "") + blocks.join("\n\n");
+    }
+    return content.trim();
+  }
+
+  function thinkingNode(text, streaming) {
+    const details = el("details", { class: "think" });
+    if (streaming) details.open = true;
+    const summary = el("summary", { class: "think__summary" }, [
+      el("span", { html: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>' }),
+      el("span", { text: streaming ? "深度思考中…" : "思考过程" }),
+    ]);
+    const body = el("div", { class: "think__text", text });
+    details.append(summary, body);
+    return details;
+  }
+
+  function messageNode(message, index) {
+    if (message.kind === "work") return workMessageNode(message, index);
+    const isUser = message.role === "user";
+    const wrap = el("div", { class: `msg msg--${isUser ? "user" : "assistant"}`, "data-index": String(index) });
+
+    if (isUser) {
+      const main = el("div", { class: "msg__main" });
+      if (message.content) main.appendChild(el("div", { class: "msg__bubble", text: message.content }));
+      if (message.attachments && message.attachments.length) main.appendChild(filesRow(message.attachments));
+
+      const actions = el("div", { class: "msg__actions" });
+      if (message.content) actions.appendChild(actionBtn("edit", "编辑", () => startEdit(index)));
+      actions.appendChild(
+        actionBtn("copy", "复制", async () => {
+          await copyText(composeUserContent(message));
+          toast("已复制");
+        }),
+      );
+      main.appendChild(actions);
+      wrap.append(main, el("div", { class: "msg__avatar", "aria-hidden": "true", text: "我" }));
+      return wrap;
+    }
+
+    const body = el("div", { class: "msg__body md" });
+    body.innerHTML = markdown(message.content);
+    decorate(body);
+
+    const head = el("div", { class: "msg__head" }, [
+      el("strong", { text: "Dream AI" }),
+      message.model ? el("span", { class: "tag", text: modelLabel(message.model, message.provider) }) : null,
+      el("span", { text: timeLabel(message.ts) }),
+    ]);
+
+    const main = el("div", { class: "msg__main" }, [head]);
+    if (message.reasoning) main.appendChild(thinkingNode(message.reasoning, false));
+    main.appendChild(body);
+    main.appendChild(
+      el("div", { class: "msg__actions" }, [
+        actionBtn("copy", "复制", async () => {
+          await copyText(message.content);
+          toast("已复制");
+        }),
+        actionBtn("refresh", "重新生成", () => regenerate(index)),
+      ]),
+    );
+
+    wrap.append(
+      el("div", { class: "msg__avatar", "aria-hidden": "true" }, [
+        el("img", { src: "/assets/img/mark.svg", alt: "", width: "18", height: "18" }),
+      ]),
+      main,
+    );
+    return wrap;
+  }
+
+  function renderChat() {
+    const chat = $("#chat");
+    const hero = $("#hero");
+    const toBottom = $("#toBottom");
+    chat.textContent = "";
+    if (toBottom) toBottom.hidden = true;
+    const session = activeSession();
+
+    if (!session || session.messages.length === 0) {
+      hero.hidden = false;
+      chat.hidden = true;
+      return;
+    }
+
+    hero.hidden = true;
+    chat.hidden = false;
+    session.messages.forEach((message, index) => chat.appendChild(messageNode(message, index)));
+    scrollToBottom(true);
+  }
+
+  // ---------------------------------------------------------------------
+  // Modes & work mode
+  // ---------------------------------------------------------------------
+
+  function buildModeMenu() {
+    const menu = $("#modeMenu");
+    menu.textContent = "";
+    MODES.forEach((mode) => {
+      const item = el("button", {
+        class: `menu__item${state.settings.mode === mode.id ? " is-active" : ""}`,
+        type: "button",
+        "data-mode": mode.id,
+      }, [
+        el("span", { class: "menu__item__main" }, [
+          el("strong", { text: `${mode.label}模式` }),
+          el("span", { text: mode.desc }),
+        ]),
+        el("span", {
+          html: '<svg class="menu__check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+        }),
+      ]);
+      item.addEventListener("click", () => {
+        setMode(mode.id);
+        closeMenus();
+      });
+      menu.appendChild(item);
+    });
+  }
+
+  function setMode(id) {
+    state.settings.mode = id;
+    persistSettings();
+    updateModeUI();
+    toast(id === "work" ? "已切换到工作模式：先拆计划，再逐步执行" : "已切换到对话模式");
+    if (!isMobile()) $("#input").focus({ preventScroll: true });
+  }
+
+  function updateModeUI() {
+    const work = state.settings.mode === "work";
+    $("#modeLabel").textContent = work ? "工作" : "对话";
+    $("#modeBtn").classList.toggle("is-work", work);
+    $("#input").placeholder = work
+      ? "描述一个任务，Dream 会拆解成步骤逐步完成……"
+      : "给 Dream AI 发送消息……";
+    const hint = $(".hint");
+    if (hint) {
+      hint.textContent = work
+        ? "工作模式会分多步执行，耗时更长 · Enter 发送"
+        : "Enter 发送 · Shift + Enter 换行 · 可拖入 txt / md 文件";
+    }
+    $$("#modeMenu .menu__item").forEach((item) => {
+      item.classList.toggle("is-active", item.dataset.mode === state.settings.mode);
+    });
+  }
+
+  function workStateText(work) {
+    if (work.status === "planning") return "正在规划…";
+    if (work.status === "finalizing") return "正在汇总…";
+    if (work.status === "done") return "已完成";
+    if (work.status === "stopped") return "已停止";
+    if (work.status === "error") return "执行出错";
+    const done = work.steps.filter((step) => step.status === "done").length;
+    return `${done}/${work.steps.length}`;
+  }
+
+  function workStepNode(step, index) {
+    const details = el("details", { class: `work-step is-${step.status}` });
+    if (step.status === "running") details.open = true;
+    const mark = step.status === "done" ? "✓" : step.status === "error" ? "!" : String(index + 1);
+    const summary = el("summary", { class: "work-step__head" }, [
+      el("span", { class: "work-step__dot", text: mark }),
+      el("strong", { text: step.title }),
+      el("span", {
+        class: "work-step__state",
+        text:
+          step.status === "running"
+            ? "执行中"
+            : step.status === "done"
+              ? "完成"
+              : step.status === "error"
+                ? "失败"
+                : "等待",
+      }),
+      el("span", {
+        class: "work-step__chev",
+        html: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+      }),
+    ]);
+    const body = el("div", { class: "work-step__body md" });
+    if (step.output) {
+      body.innerHTML = markdown(step.output);
+      decorate(body);
+    }
+    details.append(summary, body);
+    return details;
+  }
+
+  function paintWork(node) {
+    const { card, work } = node._work;
+    card.textContent = "";
+
+    card.appendChild(
+      el("div", { class: "work__head" }, [
+        icon("spark"),
+        el("strong", { text: work.title || "任务计划" }),
+        el("span", { class: `work__state is-${work.status}`, text: workStateText(work) }),
+      ]),
+    );
+
+    const list = el("div", { class: "work__steps" });
+    work.steps.forEach((step, index) => list.appendChild(workStepNode(step, index)));
+    card.appendChild(list);
+
+    if (work.final) {
+      const final = el("div", { class: "work__final md" });
+      final.innerHTML = markdown(work.final);
+      decorate(final);
+      card.appendChild(final);
+    }
+    if (work.error) {
+      card.appendChild(el("div", { class: "msg__error", text: work.error }));
+    }
+    node._work.list = list;
+  }
+
+  function paintWorkStep(node, index, text) {
+    const details = node._work.list?.children[index];
+    const body = details?.querySelector(".work-step__body");
+    if (!body) return;
+    const stamp = Date.now();
+    if (body._last && stamp - body._last < 120) return;
+    body._last = stamp;
+    body.innerHTML = markdown(text);
+    decorate(body);
+    scrollToBottom();
+  }
+
+  function paintWorkFinal(node, text) {
+    const { card } = node._work;
+    let final = card.querySelector(".work__final");
+    if (!final) {
+      final = el("div", { class: "work__final md" });
+      card.appendChild(final);
+    }
+    const stamp = Date.now();
+    if (final._last && stamp - final._last < 120) return;
+    final._last = stamp;
+    final.innerHTML = markdown(text);
+    decorate(final);
+    scrollToBottom();
+  }
+
+  function workMessageNode(work, index) {
+    const head = el("div", { class: "msg__head" }, [
+      el("strong", { text: "Dream AI" }),
+      el("span", { class: "tag", text: "工作模式" }),
+      work.model ? el("span", { class: "tag", text: modelLabel(work.model, work.provider) }) : null,
+      el("span", { text: timeLabel(work.ts) }),
+    ]);
+    const card = el("div", { class: "work" });
+    const main = el("div", { class: "msg__main" }, [head, card]);
+    const node = el("div", { class: "msg msg--assistant", "data-index": String(index), "data-kind": "work" }, [
+      el("div", { class: "msg__avatar", "aria-hidden": "true" }, [
+        el("img", { src: "/assets/img/mark.svg", alt: "", width: "18", height: "18" }),
+      ]),
+      main,
+    ]);
+    node._work = { card, work };
+    paintWork(node);
+    return node;
+  }
+
+  function plannerPrompt(task) {
+    return `你是 Dream AI 的任务规划器。请把用户任务拆成 3–6 个按顺序执行、彼此不重复的步骤。
+只输出严格 JSON，不要代码块，不要解释：
+{"title":"不超过 20 字的任务标题","steps":["步骤1","步骤2","步骤3"]}
+
+用户任务：
+${task}`;
+  }
+
+  function stepPrompt(task, steps, index, results) {
+    const done = results.length
+      ? results.map((r, i) => `${i + 1}. ${steps[i].title} → ${r.slice(0, 700)}`).join("\n")
+      : "（还没开始）";
+    return `你在执行一个多步任务，需要独立完成其中一步。
+总任务：${task}
+
+完整计划：
+${steps.map((s, i) => `${i + 1}. ${s.title}`).join("\n")}
+
+已完成：
+${done}
+
+当前步骤（第 ${index + 1} 步）：${steps[index].title}
+请直接完成当前步骤，输出简洁、可用的结果（Markdown）。不要复述计划，不要询问用户。`;
+  }
+
+  function finalPrompt(task, steps, results) {
+    return `总任务：${task}
+
+执行记录：
+${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join("\n\n")}
+
+请基于以上结果，给用户一个完整、清晰的最终答复（Markdown）。不要复述执行过程，只给结果和必要的说明。`;
+  }
+
+  function parsePlan(text) {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        const data = JSON.parse(text.slice(start, end + 1));
+        const steps = Array.isArray(data.steps)
+          ? data.steps.filter((step) => typeof step === "string" && step.trim()).slice(0, 6)
+          : [];
+        if (steps.length) {
+          return {
+            title: String(data.title || "").slice(0, 40),
+            steps: steps.map((step) => step.replace(/^步骤\s*\d+\s*[：:.、]\s*/, "").trim()),
+          };
+        }
+      } catch {
+        /* fall through */
+      }
+    }
+    return null;
+  }
+
+  async function callModel(messages, { onDelta, signal, temperature } = {}) {
+    const provider = state.settings.provider || "free";
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+      signal,
+      body: JSON.stringify({
+        messages,
+        model: state.settings.model || state.config?.defaultModel,
+        provider,
+        apiKey: provider === "byok" ? state.userKey : undefined,
+        temperature: temperature ?? Number(state.settings.temperature),
+        thinking: false,
+        style: state.settings.style,
+      }),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      const error = new Error(data.error || `请求失败（${response.status}）`);
+      error.status = response.status;
+      throw error;
+    }
+    if (!response.body) throw new Error("当前浏览器不支持流式响应。");
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let text = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let boundary;
+      while ((boundary = buffer.indexOf("\n\n")) >= 0) {
+        const block = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        const event = parseEvent(block);
+        if (!event) continue;
+        if (event.name === "delta") {
+          text += event.data.t || "";
+          onDelta?.(event.data.t || "", text);
+        } else if (event.name === "error") {
+          throw new Error(event.data.message || "生成失败");
+        }
+      }
+    }
+    return text;
+  }
+
+  async function runWorkTask(session, userMessage) {
+    const task = composeUserContent(userMessage);
+    const work = {
+      role: "assistant",
+      kind: "work",
+      title: "正在规划…",
+      steps: [],
+      final: "",
+      status: "planning",
+      model: state.settings.model || state.config?.defaultModel,
+      provider: state.settings.provider || "free",
+      ts: now(),
+    };
+
+    const node = workMessageNode(work, session.messages.length);
+    $("#chat").appendChild(node);
+    setStreaming(true);
+    state.follow = true;
+    scrollToBottom(true);
+
+    const controller = new AbortController();
+    state.abort = controller;
+    const repaint = () => {
+      paintWork(node);
+      scrollToBottom();
+    };
+
+    try {
+      const planText = await callModel([{ role: "user", content: plannerPrompt(task) }], {
+        signal: controller.signal,
+        temperature: 0.2,
+      });
+      const plan = parsePlan(planText);
+      work.title = plan?.title || "任务计划";
+      work.steps = (plan?.steps || ["分析并完成任务"]).map((title) => ({
+        title,
+        status: "pending",
+        output: "",
+      }));
+      work.status = "running";
+      repaint();
+
+      const results = [];
+      for (let index = 0; index < work.steps.length; index += 1) {
+        if (controller.signal.aborted) break;
+        const step = work.steps[index];
+        step.status = "running";
+        repaint();
+        const output = await callModel(
+          [{ role: "user", content: stepPrompt(task, work.steps, index, results) }],
+          {
+            signal: controller.signal,
+            temperature: 0.4,
+            onDelta: (_chunk, full) => paintWorkStep(node, index, full),
+          },
+        );
+        step.output = output.trim();
+        step.status = "done";
+        results.push(step.output);
+        repaint();
+      }
+
+      if (!controller.signal.aborted) {
+        work.status = "finalizing";
+        repaint();
+        const finalText = await callModel([{ role: "user", content: finalPrompt(task, work.steps, results) }], {
+          signal: controller.signal,
+          temperature: 0.5,
+          onDelta: (_chunk, full) => paintWorkFinal(node, full),
+        });
+        work.final = finalText.trim();
+        work.status = "done";
+        repaint();
+      } else {
+        work.status = "stopped";
+      }
+    } catch (error) {
+      if (error.name === "AbortError" || controller.signal.aborted) {
+        work.status = "stopped";
+      } else {
+        work.status = "error";
+        work.error = error.message || "任务执行失败，请重试。";
+        const keyProblem =
+          error.status === 401 || /api key|密钥|key 无效/i.test(error.message || "");
+        if (state.settings.provider === "byok" && keyProblem) {
+          setTimeout(() => openKeyModal(), 500);
+        }
+      }
+      repaint();
+    } finally {
+      setStreaming(false);
+      state.abort = null;
+      if (work.steps.length || work.final || work.error) {
+        session.messages.push(work);
+        session.updatedAt = now();
+        persistSessions();
+      }
+      scrollToBottom();
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Editing
+  // ---------------------------------------------------------------------
+
+  function startEdit(index) {
+    const session = activeSession();
+    const message = session?.messages[index];
+    const wrap = $(`.msg[data-index="${index}"]`);
+    if (!message || message.role !== "user" || !wrap) return;
+    const main = $(".msg__main", wrap);
+    if (!main || $(".edit-box", main)) return;
+
+    const original = [message.content, message.attachments];
+    main.textContent = "";
+    const area = el("textarea", { class: "edit-input" });
+    area.value = message.content || "";
+    const box = el("div", { class: "edit-box" }, [
+      area,
+      el("div", { class: "edit-actions" }, [
+        el("button", { class: "btn btn--ghost", type: "button", text: "取消" }),
+        el("button", { class: "btn btn--primary", type: "button", text: "保存并重新发送" }),
+      ]),
+    ]);
+    main.appendChild(box);
+    area.focus();
+    area.setSelectionRange(area.value.length, area.value.length);
+    area.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        save();
+      }
+    });
+    box.querySelector(".btn--ghost").addEventListener("click", () => {
+      message.content = original[0];
+      message.attachments = original[1];
+      renderChat();
+    });
+    box.querySelector(".btn--primary").addEventListener("click", save);
+
+    function save() {
+      const text = area.value.trim();
+      if (!text) {
+        toast("内容不能为空", "err");
+        return;
+      }
+      if (state.streaming) {
+        toast("正在生成中，请先停止当前回答", "err");
+        return;
+      }
+      message.content = text;
+      message.ts = now();
+      session.messages = session.messages.slice(0, index + 1);
+      session.updatedAt = now();
+      persistSessions();
+      renderChat();
+      requestCompletion(session);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Streaming
+  // ---------------------------------------------------------------------
+
+  let streamPaint = { last: 0, timer: null };
+
+  function scrollToBottom(force = false) {
+    const scroller = $("#scroll");
+    const distance = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+    if (force || distance < 160) scroller.scrollTop = scroller.scrollHeight;
+  }
+
+  function setStreaming(on) {
+    state.streaming = on;
+    $("#composer").classList.toggle("is-streaming", on);
+    $("#sendBtn").setAttribute("aria-label", on ? "停止生成" : "发送消息");
+  }
+
+  async function sendMessage(text) {
+    const typed = (text ?? $("#input").value).trim();
+    const attachments = state.attachments.slice();
+    if ((!typed && !attachments.length) || state.streaming) return;
+    if (typed.length > MAX_INPUT) {
+      toast(`单条消息最多 ${MAX_INPUT} 个字符`, "err");
+      return;
+    }
+
+    let session = activeSession();
+    if (!session) {
+      session = createSession();
+      renderSidebar();
+    }
+
+    const userMessage = { role: "user", content: typed, ts: now() };
+    if (attachments.length) userMessage.attachments = attachments;
+
+    session.messages.push(userMessage);
+    session.updatedAt = now();
+    if (session.messages.length === 1) {
+      session.title = (typed || attachments[0]?.name || "新对话").replace(/\s+/g, " ").slice(0, 26);
+    }
+
+    $("#input").value = "";
+    state.attachments = [];
+    renderAttachList();
+    autoGrow();
+    updateCounter();
+    $("#hero").hidden = true;
+    $("#chat").hidden = false;
+    $("#chat").appendChild(messageNode(userMessage, session.messages.length - 1));
+    renderSidebar();
+    state.follow = true;
+    scrollToBottom(true);
+    persistSessions();
+
+    if (state.settings.mode === "work") await runWorkTask(session, userMessage);
+    else await requestCompletion(session);
+  }
+
+  async function requestCompletion(session) {
+    const provider = state.settings.provider || "free";
+    const model = state.settings.model || state.config?.defaultModel;
+    const assistant = { role: "assistant", content: "", reasoning: "", model, provider, ts: now() };
+
+    const index = session.messages.length;
+    const node = assistantShell(assistant, index);
+    $("#chat").appendChild(node);
+    const body = $(".msg__body", node);
+    body.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+    const thinkHost = $(".msg__main", node);
+
+    setStreaming(true);
+    autoGrow();
+    scrollToBottom(true);
+
+    const controller = new AbortController();
+    state.abort = controller;
+
+    const payload = {
+      messages: session.messages
+        .filter((m) => m.role === "user" || (m.role === "assistant" && m.content))
+        .map((m) => ({
+          role: m.role,
+          content: m.role === "user" ? composeUserContent(m) : m.content,
+        })),
+      model,
+      provider,
+      apiKey: provider === "byok" ? state.userKey : undefined,
+      temperature: Number(state.settings.temperature),
+      thinking: Boolean(state.settings.thinking),
+      style: state.settings.style,
+    };
+
+    let thinkNode = null;
+    let errored = false;
+
+    const paint = () => {
+      if (!assistant.content && !assistant.reasoning) return;
+      body.innerHTML = markdown(assistant.content);
+      body.classList.add("caret");
+      decorate(body);
+      if (assistant.reasoning) {
+        if (!thinkNode) {
+          thinkNode = thinkingNode(assistant.reasoning, true);
+          thinkHost.insertBefore(thinkNode, body);
+        } else {
+          $(".think__text", thinkNode).textContent = assistant.reasoning;
+        }
+      }
+      if (state.follow) scrollToBottom(true);
+    };
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const err = new Error(data.error || `请求失败（${response.status}）`);
+        err.status = response.status;
+        throw err;
+      }
+      if (!response.body) throw new Error("当前浏览器不支持流式响应，请更换浏览器。");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let boundary;
+        while ((boundary = buffer.indexOf("\n\n")) >= 0) {
+          const block = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          const event = parseEvent(block);
+          if (!event) continue;
+          if (event.name === "delta") assistant.content += event.data.t || "";
+          else if (event.name === "reasoning") assistant.reasoning += event.data.t || "";
+          else if (event.name === "error") throw new Error(event.data.message || "生成失败");
+          else if (event.name === "meta") {
+            assistant.model = event.data.model || assistant.model;
+            const tag = $(".msg__head .tag", node);
+            if (tag) tag.textContent = modelLabel(assistant.model, assistant.provider);
+          }
+          schedulePaint();
+        }
+        schedulePaint(true);
+      }
+    } catch (error) {
+      if (error.name === "AbortError") {
+        if (!assistant.content && !assistant.reasoning) node.remove();
+        else toast("已停止生成");
+      } else {
+        errored = true;
+        console.error("chat stream failed:", error);
+        showError(node, body, error.message || "请求失败，请稍后重试。");
+        const keyProblem =
+          error.status === 401 || /api key|密钥|key 无效/i.test(error.message || "");
+        if (provider === "byok" && keyProblem) {
+          setTimeout(() => openKeyModal(model), 500);
+        }
+      }
+    } finally {
+      clearTimeout(streamPaint.timer);
+      streamPaint.timer = null;
+      setStreaming(false);
+      state.abort = null;
+      body.classList.remove("caret");
+
+      if (!errored && (assistant.content || assistant.reasoning)) {
+        body.innerHTML = markdown(assistant.content);
+        decorate(body);
+        if (thinkNode) {
+          thinkNode.open = false;
+          $(".think__text", thinkNode).textContent = assistant.reasoning;
+          $(".think__summary span:last-child", thinkNode).textContent = "思考过程";
+        }
+        if (assistant.content) session.messages.push(assistant);
+        session.updatedAt = now();
+        persistSessions();
+        scrollToBottom();
+        if (!assistant.content) node.remove();
+      } else if (!errored) {
+        node.remove();
+      }
+      if (!isMobile()) $("#input").focus({ preventScroll: true });
+    }
+
+    function schedulePaint(immediate = false) {
+      const gap = 90;
+      const delay = Math.max(0, gap - (Date.now() - streamPaint.last));
+      if (immediate) {
+        streamPaint.last = Date.now();
+        paint();
+        return;
+      }
+      if (streamPaint.timer) return;
+      streamPaint.timer = setTimeout(() => {
+        streamPaint.timer = null;
+        streamPaint.last = Date.now();
+        paint();
+      }, delay);
+    }
+  }
+
+  function assistantShell(assistant, index) {
+    const head = el("div", { class: "msg__head" }, [
+      el("strong", { text: "Dream AI" }),
+      el("span", { class: "tag", text: modelLabel(assistant.model, assistant.provider) }),
+      el("span", { text: timeLabel(assistant.ts) }),
+    ]);
+    const main = el("div", { class: "msg__main" }, [head, el("div", { class: "msg__body md" })]);
+    return el("div", { class: "msg msg--assistant", "data-index": String(index) }, [
+      el("div", { class: "msg__avatar", "aria-hidden": "true" }, [
+        el("img", { src: "/assets/img/mark.svg", alt: "", width: "18", height: "18" }),
+      ]),
+      main,
+    ]);
+  }
+
+  function parseEvent(block) {
+    let name = "message";
+    const dataLines = [];
+    for (const line of block.split("\n")) {
+      if (line.startsWith("event:")) name = line.slice(6).trim();
+      else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+    }
+    if (!dataLines.length) return null;
+    try {
+      return { name, data: JSON.parse(dataLines.join("\n")) };
+    } catch {
+      return null;
+    }
+  }
+
+  function showError(node, body, message) {
+    body.innerHTML = "";
+    body.appendChild(
+      el("div", { class: "msg__error" }, [
+        el("span", {
+          html: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.2v.2"/></svg>',
+        }),
+        el("span", { text: message }),
+      ]),
+    );
+    const main = $(".msg__main", node);
+    main.appendChild(el("div", { class: "msg__actions is-visible" }, [actionBtn("refresh", "重试", () => retry(node))]));
+    scrollToBottom();
+  }
+
+  function retry(node) {
+    node.remove();
+    const session = activeSession();
+    if (session) requestCompletion(session);
+  }
+
+  function regenerate(index) {
+    if (state.streaming) {
+      toast("正在生成中，请稍后再试", "err");
+      return;
+    }
+    const session = activeSession();
+    if (!session) return;
+    session.messages = session.messages.slice(0, index);
+    renderChat();
+    persistSessions();
+    requestCompletion(session);
+  }
+
+  // ---------------------------------------------------------------------
+  // Composer
+  // ---------------------------------------------------------------------
+
+  function autoGrow() {
+    const input = $("#input");
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
+  }
+
+  function updateCounter() {
+    const length = $("#input").value.length;
+    const counter = $("#counter");
+    counter.classList.toggle("is-visible", length >= 800);
+    counter.textContent = length >= 800 ? `${length} / ${MAX_INPUT}` : "";
+  }
+
+  function models() {
+    return state.config?.models || [];
+  }
+
+  function modelOption(id, provider = null) {
+    return (
+      models().find((m) => m.id === id && (provider === null || m.provider === provider)) || null
+    );
+  }
+
+  function selectModel(model, { silent = false } = {}) {
+    if (!model) return;
+    if (model.provider === "byok" && !state.userKey) {
+      openKeyModal(model.id);
+      return;
+    }
+    state.settings.model = model.id;
+    state.settings.provider = model.provider;
+    state.settings.thinking = Boolean(model.reasoning);
+    $("#thinkBtn").setAttribute("aria-pressed", String(Boolean(model.reasoning)));
+    persistSettings();
+    syncModelUI();
+    closeMenus();
+    if (!silent) toast(`已切换至 ${model.label}`);
+  }
+
+  function setThinking(on) {
+    if (on) {
+      const reasoning = models().find((m) => m.reasoning);
+      if (!reasoning) {
+        toast("当前模型不支持深度思考", "err");
+        return;
+      }
+      if (!state.userKey) {
+        openKeyModal(reasoning.id);
+        return;
+      }
+      state.settings.thinking = true;
+      state.settings.model = reasoning.id;
+      state.settings.provider = "byok";
+    } else {
+      state.settings.thinking = false;
+      if (state.settings.provider === "byok") {
+        const fallback =
+          models().find((m) => m.provider === "byok" && !m.reasoning) ||
+          models().find((m) => m.provider === "free");
+        if (fallback) {
+          state.settings.model = fallback.id;
+          state.settings.provider = fallback.provider;
+        }
+      }
+    }
+    $("#thinkBtn").setAttribute("aria-pressed", String(state.settings.thinking));
+    syncModelUI();
+    persistSettings();
+  }
+
+  function syncModelUI() {
+    const id = state.settings.model || state.config?.defaultModel;
+    const option = modelOption(id, state.settings.provider) || modelOption(id);
+    $("#modelLabel").textContent = option?.label || id || "Dream AI";
+    const badge = $("#modelBadge");
+    const isKey = state.settings.provider === "byok";
+    badge.textContent = isKey ? "Key" : "免费";
+    badge.classList.toggle("is-key", isKey);
+    const select = $("#modelSelect");
+    if (select) select.value = `${state.settings.provider}:${id}`;
+    $$("#modelMenu .menu__item").forEach((item) => {
+      item.classList.toggle(
+        "is-active",
+        item.dataset.model === id && item.dataset.provider === state.settings.provider,
+      );
+    });
+    $("#thinkBtn").setAttribute("aria-pressed", String(Boolean(state.settings.thinking)));
+  }
+
+  function renderAttachList() {
+    const host = $("#attachList");
+    host.textContent = "";
+    host.hidden = state.attachments.length === 0;
+    state.attachments.forEach((file) => {
+      const chip = el("span", { class: "attach" }, [
+        icon("file"),
+        el("span", { text: file.name }),
+        el("button", { type: "button", "aria-label": `移除 ${file.name}` }, [
+          el("span", { html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>' }),
+        ]),
+      ]);
+      chip.querySelector("button").addEventListener("click", () => {
+        state.attachments = state.attachments.filter((item) => item !== file);
+        renderAttachList();
+      });
+      host.appendChild(chip);
+    });
+  }
+
+  async function addFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    for (const file of files) {
+      if (state.attachments.length >= MAX_FILES) {
+        toast(`最多添加 ${MAX_FILES} 个文件`, "err");
+        break;
+      }
+      if (!/\.(txt|md|markdown|csv|json|py|js|ts|html|css|yaml|yml|log|xml)$/i.test(file.name)) {
+        toast(`暂不支持 ${file.name}，请上传文本类文件`, "err");
+        continue;
+      }
+      if (file.size > 600 * 1024) {
+        toast(`${file.name} 超过 600KB`, "err");
+        continue;
+      }
+      if (state.attachments.some((item) => item.name === file.name)) continue;
+      try {
+        const text = (await file.text()).slice(0, MAX_FILE_CHARS);
+        if (!text.trim()) {
+          toast(`${file.name} 是空文件`, "err");
+          continue;
+        }
+        const total = state.attachments.reduce((sum, item) => sum + item.text.length, 0) + text.length;
+        if (total > MAX_TOTAL_ATTACH) {
+          toast("附件总内容过长，请减少文件", "err");
+          continue;
+        }
+        state.attachments.push({ name: file.name, text });
+      } catch {
+        toast(`读取 ${file.name} 失败`, "err");
+      }
+    }
+    renderAttachList();
+  }
+
+  function initVoice() {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const mic = $("#micBtn");
+    if (!Recognition || !mic) return;
+    mic.hidden = false;
+    const input = $("#input");
+    const recognition = new Recognition();
+    recognition.lang = "zh-CN";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    let listening = false;
+    let base = "";
+
+    recognition.onresult = (event) => {
+      let finalText = "";
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const piece = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += piece;
+        else interim += piece;
+      }
+      input.value = `${base}${finalText}${interim}`.trim();
+      autoGrow();
+      updateCounter();
+    };
+    recognition.onend = () => {
+      listening = false;
+      mic.classList.remove("is-recording");
+    };
+    recognition.onerror = (event) => {
+      if (event.error !== "aborted" && event.error !== "no-speech") toast("语音识别失败，请重试", "err");
+    };
+
+    mic.addEventListener("click", () => {
+      if (listening) {
+        recognition.stop();
+        return;
+      }
+      base = input.value ? `${input.value} ` : "";
+      try {
+        recognition.start();
+        listening = true;
+        mic.classList.add("is-recording");
+        toast("正在听，请说话…");
+      } catch {
+        toast("无法启动语音识别", "err");
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Menus
+  // ---------------------------------------------------------------------
+
+  let openMenu = null;
+
+  function closeMenus() {
+    ["#modelMenu", "#styleMenu", "#sessionMenu", "#modeMenu"].forEach((sel) => {
+      const menu = $(sel);
+      if (menu) menu.hidden = true;
+    });
+    $("#modelBtn")?.setAttribute("aria-expanded", "false");
+    $("#styleBtn")?.setAttribute("aria-expanded", "false");
+    $("#modeBtn")?.setAttribute("aria-expanded", "false");
+    openMenu = null;
+  }
+
+  function positionMenu(menu, anchor, align = "left") {
+    menu.hidden = false;
+    const rect = anchor.getBoundingClientRect();
+    const width = menu.offsetWidth;
+    const height = menu.offsetHeight;
+    let left = align === "right" ? rect.right - width : rect.left;
+    let top = rect.bottom + 6;
+    if (top + height > window.innerHeight - 8) top = rect.top - height - 6;
+    left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+    top = Math.max(8, top);
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    openMenu = menu;
+  }
+
+  function buildModelMenu() {
+    const menu = $("#modelMenu");
+    menu.textContent = "";
+
+    const addGroup = (label, list) => {
+      if (!list.length) return;
+      menu.appendChild(el("div", { class: "menu__label", text: label }));
+      list.forEach((model) => {
+        const locked = model.provider === "byok" && !state.userKey;
+        const item = el("button", {
+          class: "menu__item",
+          type: "button",
+          role: "option",
+          "data-model": model.id,
+          "data-provider": model.provider,
+        }, [
+          el("span", { class: "menu__item__main" }, [
+            el("strong", { text: model.label }),
+            el("span", {
+              text: locked ? `${model.hint} · 需填写 Key` : model.hint,
+            }),
+          ]),
+          el("span", {
+            html: '<svg class="menu__check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+          }),
+        ]);
+        item.addEventListener("click", () => selectModel(model));
+        menu.appendChild(item);
+      });
+    };
+
+    addGroup("免费模型", models().filter((m) => m.provider === "free"));
+    addGroup("使用自己的 Key", models().filter((m) => m.provider === "byok"));
+
+    menu.appendChild(el("div", { class: "menu__divider" }));
+    const help = el("button", { class: "menu__item menu__item--help", type: "button" }, [
+      el("span", { class: "menu__item__main" }, [
+        el("strong", { text: state.userKey ? "管理我的 Key" : "如何获取 Key？" }),
+        el("span", {
+          text: state.userKey ? "已保存 · 可更新或清除" : "用你自己的 DeepSeek 额度",
+        }),
+      ]),
+      el("span", {
+        html: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>',
+      }),
+    ]);
+    help.addEventListener("click", () => {
+      closeMenus();
+      openKeyModal();
+    });
+    menu.appendChild(help);
+
+    syncModelUI();
+  }
+
+  function openSessionMenu(session, anchor) {
+    closeMenus();
+    const menu = $("#sessionMenu");
+    menu.textContent = "";
+    menu.className = "menu menu--fixed";
+
+    const rename = el("button", { class: "menu__item", type: "button" }, [
+      icon("edit"),
+      el("span", { class: "menu__item__main" }, [el("strong", { text: "重命名" })]),
+    ]);
+    rename.addEventListener("click", () => {
+      closeMenus();
+      openRename(session);
+    });
+
+    const download = el("button", { class: "menu__item", type: "button" }, [
+      icon("download"),
+      el("span", { class: "menu__item__main" }, [el("strong", { text: "导出此对话" })]),
+    ]);
+    download.addEventListener("click", () => {
+      closeMenus();
+      exportSession(session);
+    });
+
+    const remove = el("button", { class: "menu__item", type: "button" }, [
+      icon("trash"),
+      el("span", { class: "menu__item__main" }, [el("strong", { text: "删除" })]),
+    ]);
+    remove.addEventListener("click", () => {
+      closeMenus();
+      removeSession(session.id);
+    });
+    remove.style.color = "var(--danger)";
+
+    menu.append(rename, download, remove);
+    positionMenu(menu, anchor, "right");
+  }
+
+  function buildStyleMenu() {
+    const menu = $("#styleMenu");
+    menu.textContent = "";
+    STYLES.forEach((style) => {
+      const item = el("button", {
+        class: `menu__item${state.settings.style === style.id ? " is-active" : ""}`,
+        type: "button",
+        "data-style": style.id,
+      }, [
+        el("span", { class: "menu__item__main" }, [
+          el("strong", { text: style.label }),
+          el("span", { text: style.desc }),
+        ]),
+        el("span", {
+          html: '<svg class="menu__check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+        }),
+      ]);
+      item.addEventListener("click", () => {
+        state.settings.style = style.id;
+        $("#styleLabel").textContent = style.label;
+        persistSettings();
+        closeMenus();
+      });
+      menu.appendChild(item);
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Modals
+  // ---------------------------------------------------------------------
+
+  let renameTarget = null;
+  let pendingModelId = null;
+
+  function pendingKeyStatus() {
+    return state.userKey ? `已配置 · ${state.userKey.slice(0, 6)}…${state.userKey.slice(-4)}` : "未配置 · 使用免费模型";
+  }
+
+  function updateKeyStatus() {
+    const status = $("#keyStatus");
+    if (status) status.textContent = pendingKeyStatus();
+    const clear = $("#keyClear");
+    if (clear) clear.hidden = !state.userKey;
+  }
+
+  function openKeyModal(modelId = null) {
+    closeMenus();
+    pendingModelId = modelId;
+    const input = $("#keyInput");
+    input.value = "";
+    input.placeholder = state.userKey ? "已保存 · 粘贴新 Key 可更新" : "sk-...";
+    updateKeyStatus();
+    openModal("keyModal");
+    setTimeout(() => input.focus(), 40);
+  }
+
+  function saveUserKey() {
+    const key = $("#keyInput").value.trim();
+    if (!/^[A-Za-z0-9_.\-]{20,200}$/.test(key)) {
+      toast("Key 格式看起来不对，请检查后重试", "err");
+      return;
+    }
+    state.userKey = key;
+    try {
+      localStorage.setItem(STORE_USER_KEY, key);
+    } catch {
+      toast("浏览器不允许保存，可能是隐私模式", "err");
+    }
+    updateKeyStatus();
+    buildModelMenu();
+    closeModal($("#keyModal"));
+    const target = pendingModelId ? modelOption(pendingModelId, "byok") : null;
+    pendingModelId = null;
+    if (target) selectModel(target, { silent: true });
+    syncModelUI();
+    toast(target ? `已保存 Key，切换到 ${target.label}` : "已保存 Key");
+  }
+
+  function clearUserKey() {
+    state.userKey = "";
+    try {
+      localStorage.removeItem(STORE_USER_KEY);
+    } catch {
+      /* ignore */
+    }
+    updateKeyStatus();
+    buildModelMenu();
+    if (state.settings.provider === "byok") {
+      const free = models().find((m) => m.provider === "free");
+      if (free) selectModel(free, { silent: true });
+    }
+    syncModelUI();
+    closeModal($("#keyModal"));
+    toast("已清除本机保存的 Key");
+  }
+
+  function openModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.hidden = false;
+    const focusable = modal.querySelector(".modal__close") || modal.querySelector("input") || modal.querySelector("button");
+    setTimeout(() => focusable && focusable.focus(), 20);
+  }
+
+  function closeModal(modal) {
+    if (!modal) return;
+    modal.hidden = true;
+  }
+
+  function closeTopModal() {
+    const openModals = $$(".modal").filter((m) => !m.hidden);
+    if (openModals.length) closeModal(openModals[openModals.length - 1]);
+    return openModals.length > 0;
+  }
+
+  function openRename(session) {
+    renameTarget = session.id;
+    const input = $("#renameInput");
+    input.value = session.title || "";
+    openModal("renameModal");
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 30);
+  }
+
+  function saveRename() {
+    const session = state.sessions.find((s) => s.id === renameTarget);
+    if (!session) return;
+    const title = $("#renameInput").value.trim() || "新对话";
+    session.title = title.slice(0, 40);
+    persistSessions();
+    renderSidebar();
+    closeModal($("#renameModal"));
+    toast("已重命名");
+  }
+
+  // ---------------------------------------------------------------------
+  // Export
+  // ---------------------------------------------------------------------
+
+  function download(name, content, type = "text/markdown;charset=utf-8") {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const link = el("a", { href: url, download: name });
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  function sessionMarkdown(session) {
+    const lines = [`# ${session.title}`, `时间：${new Date(session.createdAt).toLocaleString("zh-CN")}`, ""];
+    for (const message of session.messages) {
+      if (message.role === "user") {
+        lines.push("**你**：", message.content || "");
+        if (message.attachments?.length) {
+          lines.push(`> 附件：${message.attachments.map((f) => f.name).join("、")}`);
+        }
+        lines.push("");
+      } else {
+        lines.push("**Dream AI**：", message.content, "");
+      }
+    }
+    return lines.join("\n");
+  }
+
+  function exportSession(session) {
+    download(`dreamai-${(session.title || "chat").slice(0, 20)}.md`, sessionMarkdown(session));
+    toast("已导出此对话");
+  }
+
+  function exportAll() {
+    if (!state.sessions.length) {
+      toast("还没有可导出的对话", "err");
+      return;
+    }
+    const ordered = [...state.sessions].sort((a, b) => a.createdAt - b.createdAt);
+    const body = ordered.map(sessionMarkdown).join("\n\n---\n\n");
+    download(`dreamai-${new Date().toISOString().slice(0, 10)}.md`, `# Dream AI 对话记录\n\n${body}\n`);
+    toast("已导出为 Markdown");
+  }
+
+  // ---------------------------------------------------------------------
+  // Sidebar (mobile)
+  // ---------------------------------------------------------------------
+
+  function openSidebar() {
+    document.body.classList.add("sidebar-open");
+    $("#scrim").hidden = false;
+  }
+
+  function closeSidebar() {
+    document.body.classList.remove("sidebar-open");
+    $("#scrim").hidden = true;
+  }
+
+  // ---------------------------------------------------------------------
+  // Settings
+  // ---------------------------------------------------------------------
+
+  function buildSettings() {
+    const select = $("#modelSelect");
+    select.textContent = "";
+
+    const addGroup = (label, list) => {
+      if (!list.length) return;
+      const group = el("optgroup", { label });
+      list.forEach((model) => {
+        group.appendChild(el("option", { value: `${model.provider}:${model.id}`, text: model.label }));
+      });
+      select.appendChild(group);
+    };
+    addGroup("免费模型", models().filter((m) => m.provider === "free"));
+    addGroup("使用自己的 Key", models().filter((m) => m.provider === "byok"));
+    select.value = `${state.settings.provider}:${state.settings.model}`;
+
+    select.addEventListener("change", () => {
+      const [provider, ...rest] = select.value.split(":");
+      const target = modelOption(rest.join(":"));
+      if (!target) return;
+      if (provider === "byok" && !state.userKey) {
+        openKeyModal(target.id);
+        syncModelUI();
+        return;
+      }
+      selectModel(target, { silent: true });
+    });
+
+    $("#manageKeyBtn").addEventListener("click", () => openKeyModal());
+    $("#keySave").addEventListener("click", saveUserKey);
+    $("#keyClear").addEventListener("click", clearUserKey);
+    $("#keyInput").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveUserKey();
+      }
+    });
+
+    const range = $("#tempRange");
+    range.value = String(state.settings.temperature ?? 0.7);
+    const paintRange = () => {
+      const pct = (Number(range.value) / Number(range.max)) * 100;
+      range.style.setProperty("--fill", `${pct}%`);
+      $("#tempValue").textContent = Number(range.value).toFixed(1);
+    };
+    paintRange();
+    range.addEventListener("input", () => {
+      state.settings.temperature = Number(range.value);
+      paintRange();
+      persistSettings();
+    });
+
+    $$("#themeSeg button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.settings.theme = btn.dataset.themeValue;
+        persistSettings();
+        applyTheme();
+      });
+    });
+
+    $$("#sizeSeg button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.settings.size = btn.dataset.sizeValue;
+        persistSettings();
+        applySize();
+      });
+    });
+
+    $("#clearBtn").addEventListener("click", () => openModal("confirmModal"));
+  }
+
+  // ---------------------------------------------------------------------
+  // Desktop workbench (only inside the Electron app)
+  // ---------------------------------------------------------------------
+
+  const desktop = window.dreamDesktop || null;
+  let deskAction = null;
+
+  async function refreshDesktop() {
+    if (!desktop) return;
+    const info = await desktop.getWorkspace();
+    const pathEl = $("#deskPath");
+    if (!info.exists) {
+      pathEl.textContent = "尚未选择文件夹";
+      $("#deskOpen").disabled = true;
+      $("#deskStats").hidden = true;
+      $("#deskTools").hidden = true;
+      $("#deskCats").textContent = "";
+      $("#deskPreview").hidden = true;
+      return;
+    }
+    pathEl.textContent = info.workspace;
+    $("#deskOpen").disabled = false;
+    const scan = await desktop.scan();
+    $("#deskStats").hidden = false;
+    $("#deskTools").hidden = false;
+    $("#deskFiles").textContent = scan.files;
+    $("#deskFolders").textContent = scan.folders;
+    $("#deskSize").textContent = scan.sizeLabel;
+    const cats = $("#deskCats");
+    cats.textContent = "";
+    Object.entries(scan.byCategory)
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([name, count]) => cats.appendChild(el("span", { text: `${name} ${count}` })));
+  }
+
+  function showDeskPreview(title, lines) {
+    $("#deskPreview").hidden = false;
+    $("#deskPreviewTitle").textContent = title;
+    const list = $("#deskPreviewList");
+    list.textContent = "";
+    lines.slice(0, 80).forEach((line) => list.appendChild(el("li", { text: line })));
+    if (lines.length > 80) {
+      list.appendChild(el("li", { text: `…… 还有 ${lines.length - 80} 项` }));
+    }
+  }
+
+  async function initDesktop() {
+    if (!desktop) return;
+    $("#desktopBtn").hidden = false;
+    const download = $("#downloadLink");
+    if (download) download.hidden = true;
+
+    $("#desktopBtn").addEventListener("click", () => {
+      openModal("desktopModal");
+      refreshDesktop().catch((error) => toast(error.message, "err"));
+    });
+
+    $("#deskPick").addEventListener("click", async () => {
+      try {
+        const result = await desktop.pickFolder();
+        if (!result.canceled) {
+          toast("工作文件夹已设置");
+          await refreshDesktop();
+        }
+      } catch (error) {
+        toast(error.message, "err");
+      }
+    });
+
+    $("#deskOpen").addEventListener("click", () => desktop.openWorkspace().catch(() => {}));
+
+    $("#deskOrganize").addEventListener("click", async () => {
+      try {
+        const plan = await desktop.planOrganize();
+        if (!plan.total) {
+          toast("没有可整理的文件", "err");
+          return;
+        }
+        deskAction = "organize";
+        showDeskPreview(
+          `按类型整理 · ${plan.total} 个文件`,
+          plan.moves.map((move) => `${move.from}  →  ${move.to}`),
+        );
+      } catch (error) {
+        toast(error.message, "err");
+      }
+    });
+
+    $("#deskRename").addEventListener("click", async () => {
+      try {
+        const prefix = $("#deskPrefix").value.trim() || "Dream";
+        const plan = await desktop.planRename(prefix);
+        if (!plan.total) {
+          toast("没有需要重命名的文件", "err");
+          return;
+        }
+        deskAction = "rename";
+        showDeskPreview(
+          `批量重命名 · ${plan.total} 个文件`,
+          plan.changes.map((change) => `${change.from}  →  ${change.to}`),
+        );
+      } catch (error) {
+        toast(error.message, "err");
+      }
+    });
+
+    $("#deskSave").addEventListener("click", async () => {
+      try {
+        const session = activeSession();
+        if (!session || !session.messages.length) {
+          toast("当前没有可保存的对话", "err");
+          return;
+        }
+        const name = $("#deskDocName").value.trim() || "Dream AI 对话";
+        const result = await desktop.saveText(name, sessionMarkdown(session));
+        if (result.canceled) return;
+        toast(`已保存：${result.name}`);
+        await refreshDesktop();
+      } catch (error) {
+        toast(error.message, "err");
+      }
+    });
+
+    $("#deskCancel").addEventListener("click", () => {
+      deskAction = null;
+      $("#deskPreview").hidden = true;
+    });
+
+    $("#deskApply").addEventListener("click", async () => {
+      if (!deskAction) return;
+      try {
+        const result =
+          deskAction === "organize" ? await desktop.applyOrganize() : await desktop.applyRename();
+        const action = deskAction;
+        deskAction = null;
+        $("#deskPreview").hidden = true;
+        if (result.canceled) {
+          toast("已取消，没有修改任何文件");
+          return;
+        }
+        const count = action === "organize" ? result.moved : result.renamed;
+        toast(`已完成：${count} 个文件`);
+        if (result.errors && result.errors.length) {
+          toast(`${result.errors.length} 个文件处理失败`, "err");
+        }
+        await refreshDesktop();
+      } catch (error) {
+        toast(error.message, "err");
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Config & boot
+  // ---------------------------------------------------------------------
+
+  async function loadConfig() {
+    try {
+      const response = await fetch("/api/config", { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error("config");
+      state.config = await response.json();
+    } catch {
+      state.config = {
+        configured: false,
+        models: [{ id: "glm-4-flash", label: "GLM-4-Flash", provider: "free", reasoning: false, hint: "免费" }],
+        defaultModel: "glm-4-flash",
+        version: "1.2.0",
+      };
+    }
+
+    if (!state.settings.model || !modelOption(state.settings.model)) {
+      state.settings.model = state.config.defaultModel || models()[0]?.id;
+      state.settings.provider = modelOption(state.settings.model)?.provider || "free";
+    }
+    let current = modelOption(state.settings.model, state.settings.provider);
+    if (!current) {
+      const fallback = modelOption(state.settings.model);
+      if (fallback) {
+        state.settings.provider = fallback.provider;
+        current = fallback;
+      }
+    }
+
+    // A BYOK model without a saved key falls back to the free model.
+    if (state.settings.provider === "byok" && !state.userKey) {
+      const free = models().find((m) => m.provider === "free") || models()[0];
+      if (free) {
+        state.settings.model = free.id;
+        state.settings.provider = free.provider;
+      }
+      state.settings.thinking = false;
+    }
+    current = modelOption(state.settings.model, state.settings.provider) || modelOption(state.settings.model);
+    if (current?.reasoning && state.userKey) state.settings.thinking = true;
+
+    buildModelMenu();
+    buildSettings();
+    buildStyleMenu();
+    buildModeMenu();
+    updateKeyStatus();
+    updateModeUI();
+    syncModelUI();
+    $("#styleLabel").textContent = STYLES.find((s) => s.id === state.settings.style)?.label || "通用";
+
+    if (state.config.version) $("#aboutVersion").textContent = `v${state.config.version}`;
+
+    const freeStatus = $("#freeStatus");
+    if (freeStatus && state.config.free) {
+      freeStatus.textContent = state.config.free.configured
+        ? `${state.config.free.label} · 无需 Key`
+        : `${state.config.free.label} · 服务端未配置`;
+    }
+
+    if (!state.config.configured) {
+      const badge = $("#statusBadge");
+      badge.hidden = false;
+      $("span", badge).textContent = "免费模型暂未开放 · 请使用自己的 Key";
+      badge.title = "在设置 → 模型来源 → 管理，填入自己的 DeepSeek Key";
+    }
+  }
+
+  function initEvents() {
+    $("#composer").addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (state.streaming) {
+        state.abort?.abort();
+        return;
+      }
+      sendMessage();
+    });
+
+    const input = $("#input");
+    input.addEventListener("input", () => {
+      autoGrow();
+      updateCounter();
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.shiftKey) return;
+      if (event.isComposing || event.keyCode === 229) return;
+      if (isMobile()) return;
+      event.preventDefault();
+      if (!state.streaming) sendMessage();
+    });
+
+    $("#newChatBtn").addEventListener("click", () => {
+      if (state.streaming) {
+        toast("正在生成中，请先停止当前回答", "err");
+        return;
+      }
+      const current = activeSession();
+      if (current && current.messages.length === 0) {
+        closeSidebar();
+        input.focus();
+        return;
+      }
+      createSession();
+      renderSidebar();
+      renderChat();
+      closeSidebar();
+      if (!isMobile()) input.focus();
+    });
+
+    $("#searchInput").addEventListener("input", (event) => {
+      state.search = event.target.value;
+      renderSidebar();
+    });
+
+    $$(".card").forEach((card) => {
+      card.addEventListener("click", () => {
+        if (!card.dataset.prompt || state.streaming) return;
+        sendMessage(card.dataset.prompt);
+      });
+    });
+
+    $("#aboutBtn").addEventListener("click", () => {
+      closeSidebar();
+      openModal("aboutModal");
+    });
+    $("#aboutBtnTop").addEventListener("click", () => openModal("aboutModal"));
+    $("#settingsBtn").addEventListener("click", () => openModal("settingsModal"));
+    $("#exportBtn").addEventListener("click", exportAll);
+    $("#clearAllBtn").addEventListener("click", () => {
+      if (!state.sessions.length) {
+        toast("还没有对话记录", "err");
+        return;
+      }
+      openModal("confirmModal");
+    });
+
+    $("#shortcutsBtn").addEventListener("click", () => openModal("shortcutsModal"));
+    $("#shortcutsBtn2").addEventListener("click", () => openModal("shortcutsModal"));
+
+    $("#confirmYes").addEventListener("click", () => {
+      state.sessions = [];
+      state.activeId = null;
+      state.search = "";
+      $("#searchInput").value = "";
+      persistSessions();
+      renderSidebar();
+      renderChat();
+      closeModal($("#confirmModal"));
+      toast("已清空全部对话");
+    });
+
+    $$("[data-close]").forEach((node) => {
+      node.addEventListener("click", () => closeModal(node.closest(".modal")));
+    });
+
+    $("#renameSave").addEventListener("click", saveRename);
+    $("#renameInput").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveRename();
+      }
+    });
+
+    $("#themeBtn").addEventListener("click", () => {
+      state.settings.theme = resolvedTheme() === "dark" ? "light" : "dark";
+      persistSettings();
+      applyTheme();
+    });
+
+    $("#thinkBtn").addEventListener("click", () => setThinking(!state.settings.thinking));
+
+    $("#modelBtn").addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (openMenu === $("#modelMenu")) {
+        closeMenus();
+        return;
+      }
+      closeMenus();
+      const menu = $("#modelMenu");
+      menu.hidden = false;
+      $("#modelBtn").setAttribute("aria-expanded", "true");
+      openMenu = menu;
+    });
+
+    $("#styleBtn").addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (openMenu === $("#styleMenu")) {
+        closeMenus();
+        return;
+      }
+      closeMenus();
+      positionMenu($("#styleMenu"), $("#styleBtn"));
+      $("#styleBtn").setAttribute("aria-expanded", "true");
+    });
+
+    $("#modeBtn").addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (openMenu === $("#modeMenu")) {
+        closeMenus();
+        return;
+      }
+      closeMenus();
+      positionMenu($("#modeMenu"), $("#modeBtn"));
+      $("#modeBtn").setAttribute("aria-expanded", "true");
+    });
+
+    document.addEventListener("click", (event) => {
+      if (
+        event.target.closest(".menu") ||
+        event.target.closest("#modelBtn") ||
+        event.target.closest("#styleBtn") ||
+        event.target.closest("#modeBtn") ||
+        event.target.closest(".session__more")
+      ) {
+        return;
+      }
+      closeMenus();
+    });
+
+    const scroller = $("#scroll");
+    scroller.addEventListener(
+      "scroll",
+      () => {
+        const topbar = $(".topbar");
+        if (topbar) topbar.classList.toggle("is-scrolled", scroller.scrollTop > 6);
+        const distance = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+        if (state.streaming) {
+          if (distance > 260) state.follow = false;
+          else if (distance < 80) state.follow = true;
+        }
+        const toBottom = $("#toBottom");
+        if (toBottom) toBottom.hidden = distance < 420;
+      },
+      { passive: true },
+    );
+
+    $("#toBottom").addEventListener("click", () => {
+      state.follow = true;
+      scrollToBottom(true);
+    });
+
+    $("#menuBtn").addEventListener("click", openSidebar);
+    $("#scrim").addEventListener("click", closeSidebar);
+
+    $("#collapseBtn").addEventListener("click", () => {
+      if (isMobile()) {
+        closeSidebar();
+        return;
+      }
+      document.body.classList.add("sidebar-collapsed");
+      localStorage.setItem("dreamai.sidebar", "1");
+      toast("侧边栏已收起，点击左上角按钮可展开");
+    });
+    $("#expandBtn").addEventListener("click", () => {
+      document.body.classList.remove("sidebar-collapsed");
+      localStorage.setItem("dreamai.sidebar", "0");
+    });
+
+    $("#attachBtn").addEventListener("click", () => $("#fileInput").click());
+    $("#fileInput").addEventListener("change", (event) => {
+      addFiles(event.target.files);
+      event.target.value = "";
+    });
+
+    document.addEventListener("dragover", (event) => event.preventDefault());
+    document.addEventListener("drop", (event) => {
+      event.preventDefault();
+      if (event.dataTransfer?.files?.length) addFiles(event.dataTransfer.files);
+    });
+
+    window.addEventListener("resize", closeMenus);
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        if (closeTopModal()) return;
+        if (openMenu) {
+          closeMenus();
+          return;
+        }
+        if (state.streaming) state.abort?.abort();
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        $("#newChatBtn").click();
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
+        event.preventDefault();
+        if (document.body.classList.contains("sidebar-collapsed")) {
+          document.body.classList.remove("sidebar-collapsed");
+          localStorage.setItem("dreamai.sidebar", "0");
+        } else {
+          document.body.classList.add("sidebar-collapsed");
+          localStorage.setItem("dreamai.sidebar", "1");
+        }
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key === "/") {
+        event.preventDefault();
+        openModal("shortcutsModal");
+      }
+    });
+
+    window.addEventListener("beforeunload", (event) => {
+      if (state.streaming) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    });
+  }
+
+  function init() {
+    loadStorage();
+    initTheme();
+    setGreeting();
+    initEvents();
+    initVoice();
+    initDesktop();
+    renderAttachList();
+    $("#styleLabel").textContent = STYLES.find((s) => s.id === state.settings.style)?.label || "通用";
+
+    if (localStorage.getItem("dreamai.sidebar") === "1" && !isMobile()) {
+      document.body.classList.add("sidebar-collapsed");
+    }
+
+    const last = state.sessions[0];
+    state.activeId = last ? last.id : null;
+
+    renderSidebar();
+    renderChat();
+    loadConfig().then(() => {
+      if (!isMobile()) $("#input").focus({ preventScroll: true });
+    });
+
+    fetch("/api/health", { headers: { Accept: "application/json" } }).catch(() => {});
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();

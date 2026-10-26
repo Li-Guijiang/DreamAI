@@ -1,0 +1,21 @@
+# secrets
+.env
+.env.local
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# build / test artefacts
+dist/
+data/
+tools/qa/node_modules/
+tools/qa/pnpm-lock.yaml
+tools/qa/shots/
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

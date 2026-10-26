@@ -18,6 +18,16 @@
 
 > ⚠️ **Status: Early development (WIP).** Dream AI is under active construction. Many features described here are planned rather than finished. See the [Roadmap](./docs/ROADMAP.md) for what exists today and what comes next.
 
+## 🌐 Web & Desktop
+
+- **在线体验**：<https://liguijiang.com> — 对话 / 工作双模式，默认免费模型，也可使用自己的 DeepSeek Key
+- **Windows 桌面版**：<https://liguijiang.com/download.html> — 官网同款界面 + 本地文件工作台（按类型整理、批量重命名、导出对话）
+- **源码**：[`web/`](./web)（FastAPI + 前端）、[`desktop/`](./desktop)（Electron）
+
+![Web](./web/docs/preview-hero.png)
+
+由李贵江等人组成的团队开发与维护。
+
 ## 🌙 Vision
 
 **Dream** is the shared promise behind this project: people everywhere, united by a common dream, seeking to understand the world — its knowledge, its logic, its deepest questions.

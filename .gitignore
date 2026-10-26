@@ -130,3 +130,14 @@ models/
 .dream_ai/
 session.json
 preferences.json
+
+# Web app (Node build artefacts / local runtime)
+web/downloads/*.exe
+web/data/
+web/.venv/
+web/node_modules/
+
+# Desktop app
+desktop/node_modules/
+desktop/release/
+desktop/test/shots/

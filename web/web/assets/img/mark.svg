@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Dream AI">
+  <defs>
+    <linearGradient id="planet" x1="16" y1="12" x2="50" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6FF0D8"/>
+      <stop offset="0.42" stop-color="#5B93FF"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="6" y1="42" x2="58" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FD9C4"/>
+      <stop offset="0.5" stop-color="#7FA6FF"/>
+      <stop offset="1" stop-color="#C39BFF"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="0.32" cy="0.26" r="0.8">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="48" y1="8" x2="58" y2="18" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFE7A8"/>
+      <stop offset="1" stop-color="#F0B54A"/>
+    </linearGradient>
+  </defs>
+  <g transform="rotate(-18 32 34)">
+    <path d="M3.5 34a28.5 8.6 0 0 1 57 0" fill="none" stroke="url(#ring)" stroke-width="2.2" stroke-opacity="0.3" stroke-linecap="round"/>
+  </g>
+  <circle cx="32" cy="34" r="17" fill="url(#planet)"/>
+  <circle cx="32" cy="34" r="17" fill="url(#shine)"/>
+  <g transform="rotate(-18 32 34)">
+    <path d="M3.5 34a28.5 8.6 0 0 0 57 0" fill="none" stroke="url(#ring)" stroke-width="3.4" stroke-linecap="round"/>
+  </g>
+  <path d="M52.5 8.6c.5 3.5 2.1 5.1 5.6 5.6-3.5.5-5.1 2.1-5.6 5.6-.5-3.5-2.1-5.1-5.6-5.6 3.5-.5 5.1-2.1 5.6-5.6Z" fill="url(#gold)"/>
+</svg>

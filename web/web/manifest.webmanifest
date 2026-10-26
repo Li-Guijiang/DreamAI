@@ -1,0 +1,15 @@
+{
+  "name": "Dream AI",
+  "short_name": "Dream AI",
+  "description": "一个会思考、能协作的通用智能体。写作、编程、推理与创意，从一句话开始。",
+  "lang": "zh-CN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#08090d",
+  "theme_color": "#08090d",
+  "icons": [
+    { "src": "/assets/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
