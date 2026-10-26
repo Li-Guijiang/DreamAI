@@ -84,7 +84,7 @@ dreamai-web/
 - 批量重命名（前缀 + 序号，保留扩展名）
 - 把当前对话保存为 Markdown
 
-构建方式见 [`desktop/README.md`](desktop/README.md)。
+构建方式见 [desktop 说明](https://github.com/Li-Guijiang/DreamAI/tree/main/desktop)。
 
 ## 本地运行
 
