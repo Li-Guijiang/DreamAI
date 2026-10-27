@@ -141,3 +141,6 @@ web/node_modules/
 desktop/node_modules/
 desktop/release/
 desktop/test/shots/
+
+# Nested static site downloads
+web/web/downloads/*.exe

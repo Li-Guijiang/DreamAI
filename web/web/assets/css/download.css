@@ -286,6 +286,67 @@ main {
   text-align: center;
 }
 
+.formats {
+  margin: 0 0 70px;
+}
+
+.formats h2 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.formats__lead {
+  margin: 0 0 20px;
+  color: var(--text-3);
+  font-size: 12.5px;
+  line-height: 1.8;
+}
+
+.format-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.format {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px 9px 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.022);
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.format b {
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: #2b579a;
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.02em;
+}
+
+.format--xlsx b {
+  background: #217346;
+}
+
+.format--pptx b {
+  background: #d24726;
+}
+
+.format--pdf b {
+  background: #b3261e;
+}
+
+.format--md b {
+  background: #6b7280;
+}
 .features h2,
 .steps h2,
 .faq h2 {

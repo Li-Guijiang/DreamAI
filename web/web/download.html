@@ -32,21 +32,21 @@
 
 <main>
   <section class="hero">
-    <span class="badge">Windows 桌面版 · <span id="dlVersion">v1.0.0</span></span>
+    <span class="badge">Windows 桌面版 · <span id="dlVersion">v1.1.0</span></span>
     <h1>把 Dream<br><span class="grad">装进电脑。</span></h1>
     <p class="hero__sub">
-      同一个 Dream AI，多了一双手：在你选择的文件夹里整理文件、批量重命名、保存文档。<br>
-      聊天与工作模式，与网页版完全一致。
+      同一个 Dream AI，现在能直接交成品：生成 Word / Excel / PPT / PDF，<br>
+      整理文件、批量重命名、保存对话，全部落在你选择的文件夹里。
     </p>
     <div class="hero__actions">
-      <a class="btn btn--primary" id="downloadBtn" href="/downloads/DreamAI-Setup-1.0.0.exe">
+      <a class="btn btn--primary" id="downloadBtn" href="/downloads/DreamAI-Setup-1.1.0.exe">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10M7 9l5 5 5-5M5 19h14"/></svg>
         下载 Windows 版
       </a>
       <a class="btn btn--ghost" href="/">直接使用网页版</a>
     </div>
     <p class="hero__meta">
-      Windows 10 / 11 · 64 位 · <span id="dlSize">约 90 MB</span> ·
+      Windows 10 / 11 · 64 位 · <span id="dlSize">约 115 MB</span> ·
       <span id="dlDate">2026-10-26</span>
     </p>
     <p class="hero__hint">
@@ -63,9 +63,20 @@
       </div>
       <img src="/assets/img/desktop-preview.png" alt="Dream AI 桌面版界面预览">
     </div>
-    <p class="shot__caption">桌面版 = 官网的对话界面 + 本地文件工作台</p>
+    <p class="shot__caption">桌面版 = 三种模式 + 文档生成 + 本地文件工作台</p>
   </section>
 
+  <section class="formats">
+    <h2>一句话，直接拿到成品</h2>
+    <p class="formats__lead">说清楚你要什么，Dream 会把结构、内容、表格和排版一起做完，保存到你的文件夹。</p>
+    <div class="format-row">
+      <span class="format format--docx"><b>DOCX</b>报告 / 会议纪要 / 方案</span>
+      <span class="format format--xlsx"><b>XLSX</b>排期 / 清单 / 数据表</span>
+      <span class="format format--pptx"><b>PPTX</b>演示大纲 / 汇报</span>
+      <span class="format format--pdf"><b>PDF</b>正式版 / 对外发送</span>
+      <span class="format format--md"><b>MD</b>笔记 / 可继续加工</span>
+    </div>
+  </section>
   <section class="features">
     <h2>桌面版多了什么</h2>
     <div class="grid">
@@ -73,22 +84,22 @@
         <span class="card__icon card__icon--teal">
           <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
         </span>
-        <h3>本地文件整理</h3>
-        <p>把桌面上散落的文件按图片、文档、视频、压缩包自动归类，先预览清单，再确认执行。</p>
+        <h3>文档一键生成</h3>
+        <p>Word、Excel、PPT、PDF、Markdown 五种格式，带标题、小节、表格和排版，直接可用。</p>
       </article>
       <article class="card">
         <span class="card__icon card__icon--blue">
           <svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h7"/><path d="M17 5v4M15 7h4"/></svg>
         </span>
-        <h3>批量重命名</h3>
-        <p>统一前缀加序号，保留扩展名，支持中文文件名，改之前能看到完整的新旧对照。</p>
+        <h3>文件整理</h3>
+        <p>按类型自动归类、统一前缀批量重命名，先预览再执行，只动你选中的文件夹。</p>
       </article>
       <article class="card">
         <span class="card__icon card__icon--violet">
           <svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H9l-4 3.5v-3.5H6.5A2.5 2.5 0 0 1 4 13.5Z"/></svg>
         </span>
-        <h3>对话 + 工作模式</h3>
-        <p>与网页版同一个 Dream：免费模型直接用，想用 DeepSeek 就填自己的 Key。</p>
+        <h3>三种模式</h3>
+        <p>对话、工作、文档三种模式：既能聊，也能拆任务，还能直接产出文件。</p>
       </article>
       <article class="card">
         <span class="card__icon card__icon--gold">
@@ -104,13 +115,21 @@
     <h2>三步开始</h2>
     <ol>
       <li><strong>下载并安装</strong><span>运行 DreamAI-Setup 安装包，按提示完成安装。</span></li>
-      <li><strong>登录同一个 Dream</strong><span>打开后就是官网界面，默认使用免费模型。</span></li>
-      <li><strong>选择工作文件夹</strong><span>点右上角「本地工作台」，选一个文件夹开始整理。</span></li>
+      <li><strong>选择工作文件夹</strong><span>在右侧「智能体」面板选一个文件夹，生成的文件会放进去。</span></li>
+      <li><strong>直接说你要什么</strong><span>切到「文档」模式，说「生成一份产品发布会会议纪要」即可。</span></li>
     </ol>
   </section>
 
   <section class="faq">
     <h2>常见问题</h2>
+    <details>
+      <summary>能生成哪些文件？</summary>
+      <p>Word（.docx）、Excel（.xlsx）、PowerPoint（.pptx）、PDF 和 Markdown。不需要电脑安装 Office。</p>
+    </details>
+    <details>
+      <summary>内容会不会很模板化？</summary>
+      <p>会按你的需求写具体内容，并检测「平台一 / 负责人一」这类占位内容自动重写；生成后还可以继续让 Dream 修改。</p>
+    </details>
     <details>
       <summary>要付费吗？</summary>
       <p>不强制。默认使用免费模型；想用 DeepSeek V3 / R1，在设置里填自己的 API Key，按自己的用量付费。</p>

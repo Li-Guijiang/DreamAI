@@ -24,7 +24,7 @@
 <link rel="icon" type="image/svg+xml" href="/assets/img/mark.svg">
 <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/assets/css/app.css?v=1.2.0">
+<link rel="stylesheet" href="/assets/css/app.css?v=1.3.0">
 </head>
 <body>
 <div class="ambient" aria-hidden="true">
@@ -32,6 +32,21 @@
   <span class="ambient__glow ambient__glow--b"></span>
   <span class="ambient__glow ambient__glow--c"></span>
   <span class="ambient__noise"></span>
+</div>
+
+<div class="desktop-titlebar" id="desktopTitlebar" hidden>
+  <div class="dtb__brand">
+    <img src="/assets/img/mark.svg" alt="" width="18" height="18">
+    <strong>Dream AI</strong>
+    <em>Desktop</em>
+  </div>
+  <div class="dtb__drag" id="dtbDrag"></div>
+  <div class="dtb__status"><i></i><span id="dtbModel">GLM-4-Flash</span></div>
+  <div class="dtb__controls">
+    <button type="button" id="winMin" aria-label="最小化"><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></button>
+    <button type="button" id="winMax" aria-label="最大化"><svg viewBox="0 0 12 12"><rect x="2.2" y="2.2" width="7.6" height="7.6" rx="1"/></svg></button>
+    <button type="button" id="winClose" aria-label="关闭"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
+  </div>
 </div>
 
 <a class="skip-link" href="#main">跳到主要内容</a>
@@ -112,10 +127,13 @@
 
       <div class="topbar__actions">
         <span class="status" id="statusBadge" hidden><i></i><span></span></span>
-        <a class="download-btn hide-sm" href="/download.html" id="downloadLink" title="下载桌面版">
+        <a class="download-btn" href="/download.html" id="downloadLink" title="下载桌面版">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10M7 9l5 5 5-5M5 19h14"/></svg>
           <span>下载</span>
         </a>
+        <button class="icon-btn" id="agentToggle" type="button" aria-label="智能体面板" title="显示 / 隐藏智能体面板" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16M7 9h4M7 13h4"/></svg>
+        </button>
         <button class="icon-btn" id="desktopBtn" type="button" aria-label="本地工作台" title="本地工作台" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M8 13h8M8 16h5"/></svg>
         </button>        <button class="icon-btn" id="shortcutsBtn" type="button" aria-label="快捷键" title="快捷键 · Ctrl + /">
@@ -209,6 +227,11 @@
               <span id="modeLabel">对话</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
             </button>
+            <button class="chip chip--doc" id="docTemplateBtn" type="button" aria-haspopup="menu" aria-expanded="false" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+              <span id="docTemplateLabel">自动</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
+            </button>
             <button class="tool" id="attachBtn" type="button" aria-label="添加附件" title="添加文本文件">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5 12 19.5a5 5 0 0 1-7-7l8-8a3.4 3.4 0 0 1 4.8 4.8l-8 8a1.8 1.8 0 0 1-2.6-2.6l7.2-7.2"/></svg>
             </button>
@@ -236,6 +259,26 @@
       <p class="hint">Enter 发送 · Shift + Enter 换行 · 可拖入 txt / md 文件</p>
     </div>
   </main>
+
+  <aside class="agent-panel" id="agentPanel" aria-label="智能体面板" hidden>
+    <div class="agent-panel__head">
+      <span class="agent-panel__title">智能体</span>
+      <span class="agent-panel__state" id="agentState">空闲</span>
+    </div>
+    <div class="agent-panel__tabs">
+      <button type="button" class="is-active" data-agent-tab="activity">运行记录</button>
+      <button type="button" data-agent-tab="artifacts">产物 <span id="artifactCount">0</span></button>
+    </div>
+    <div class="agent-panel__body" id="agentActivity"></div>
+    <div class="agent-panel__body" id="agentArtifacts" hidden></div>
+    <div class="agent-panel__foot">
+      <div class="agent-panel__workspace" id="agentWorkspacePath">未选择工作文件夹</div>
+      <div class="agent-panel__actions">
+        <button type="button" class="btn btn--ghost" id="agentPick">选择文件夹</button>
+        <button type="button" class="btn btn--ghost" id="agentOpenWorkbench">工作台</button>
+      </div>
+    </div>
+  </aside>
 </div>
 
 <input type="file" id="fileInput" accept=".txt,.md,.markdown,.csv,.json,.py,.js,.ts,.html,.css,.yaml,.yml,.log,.xml" multiple hidden>
@@ -243,6 +286,7 @@
 <!-- ======================= Style menu ======================= -->
 <div class="menu menu--fixed" id="styleMenu" role="menu" hidden></div>
 <div class="menu menu--fixed" id="modeMenu" role="menu" hidden></div>
+<div class="menu menu--fixed" id="docTemplateMenu" role="menu" hidden></div>
 
 <!-- ======================= Session menu ======================= -->
 <div class="menu menu--fixed" id="sessionMenu" role="menu" hidden></div>
@@ -519,6 +563,6 @@
 <script src="/assets/vendor/marked.min.js?v=1.2.0" defer></script>
 <script src="/assets/vendor/purify.min.js?v=1.2.0" defer></script>
 <script src="/assets/vendor/prism.bundle.js?v=1.2.0" defer></script>
-<script src="/assets/js/app.js?v=1.2.0" defer></script>
+<script src="/assets/js/app.js?v=1.3.0" defer></script>
 </body>
 </html>

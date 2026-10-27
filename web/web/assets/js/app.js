@@ -16,6 +16,41 @@
   const MODES = [
     { id: "chat", label: "对话", desc: "直接问答，适合写作、编程、闲聊" },
     { id: "work", label: "工作", desc: "拆解任务，逐步执行并汇总（更慢）" },
+    { id: "doc", label: "文档", desc: "生成 Word / Excel / PPT / PDF / Markdown" },
+  ];
+
+  const DOC_TEMPLATES = [
+    { id: "auto", label: "自动", prompt: "" },
+    {
+      id: "meeting",
+      label: "会议纪要",
+      prompt: "使用会议纪要结构：会议信息、讨论要点、结论、待办事项（表格，含负责人与截止时间）。",
+    },
+    {
+      id: "proposal",
+      label: "项目方案",
+      prompt: "使用项目方案结构：背景与目标、方案概述、实施计划（表格）、资源与预算、风险与应对。",
+    },
+    {
+      id: "weekly",
+      label: "周报",
+      prompt: "使用周报结构：本周完成、关键进展与数据、问题与风险、下周计划。",
+    },
+    {
+      id: "resume",
+      label: "简历",
+      prompt: "使用简历结构：个人信息、教育背景、工作/项目经历（以成果量化）、技能、自我评价。",
+    },
+    {
+      id: "table",
+      label: "数据表格",
+      prompt: "输出 xlsx，包含合理表头、5–15 行具体数据、汇总行，并设置合适列宽。",
+    },
+    {
+      id: "slides",
+      label: "演示大纲",
+      prompt: "输出 pptx，包含封面与 5–8 页内容，每页 3–5 个要点，备注中写讲稿提示。",
+    },
   ];
 
   const STYLES = [
@@ -62,6 +97,7 @@
     edit: '<path d="M4 20h4L19 9a2.5 2.5 0 0 0-3.5-3.5L4 16.5V20Z"/><path d="M13.5 6.5 17.5 10.5"/>',
     download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
     file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/>',
+    open: '<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
     folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
   };
 
@@ -102,6 +138,7 @@
       thinking: false,
       style: "default",
       mode: "chat",
+      docTemplate: "auto",
     },
     userKey: "",
     attachments: [],
@@ -133,7 +170,8 @@
     if (!["dark", "light", "system"].includes(state.settings.theme)) state.settings.theme = "dark";
     if (!["sm", "md", "lg"].includes(state.settings.size)) state.settings.size = "md";
     if (!["free", "byok"].includes(state.settings.provider)) state.settings.provider = "free";
-    if (!["chat", "work"].includes(state.settings.mode)) state.settings.mode = "chat";
+    if (!["chat", "work", "doc"].includes(state.settings.mode)) state.settings.mode = "chat";
+    if (!DOC_TEMPLATES.some((t) => t.id === state.settings.docTemplate)) state.settings.docTemplate = "auto";
     if (!STYLES.some((s) => s.id === state.settings.style)) state.settings.style = "default";
     state.sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   }
@@ -161,6 +199,7 @@
             error: m.error || undefined,
             model: m.model || "",
             provider: m.provider || undefined,
+            document: m.document || undefined,
             ts: m.ts,
           })),
         }));
@@ -454,6 +493,7 @@
 
   function messageNode(message, index) {
     if (message.kind === "work") return workMessageNode(message, index);
+    if (message.kind === "doc") return docMessageNode(message, index);
     const isUser = message.role === "user";
     const wrap = el("div", { class: `msg msg--${isUser ? "user" : "assistant"}`, "data-index": String(index) });
 
@@ -556,29 +596,82 @@
     });
   }
 
+  function buildDocTemplateMenu() {
+    const menu = $("#docTemplateMenu");
+    menu.textContent = "";
+    DOC_TEMPLATES.forEach((template) => {
+      const item = el("button", {
+        class: `menu__item${state.settings.docTemplate === template.id ? " is-active" : ""}`,
+        type: "button",
+        "data-template": template.id,
+      }, [
+        el("span", { class: "menu__item__main" }, [
+          el("strong", { text: template.label }),
+          el("span", { text: template.id === "auto" ? "根据内容自动选择格式与结构" : "内置办公模板" }),
+        ]),
+        el("span", {
+          html: '<svg class="menu__check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+        }),
+      ]);
+      item.addEventListener("click", () => {
+        setDocTemplate(template.id);
+        closeMenus();
+      });
+      menu.appendChild(item);
+    });
+  }
+
+  function setDocTemplate(id) {
+    state.settings.docTemplate = id;
+    persistSettings();
+    updateModeUI();
+    const template = DOC_TEMPLATES.find((item) => item.id === id);
+    if (template) toast(`模板：${template.label}`);
+  }
+
   function setMode(id) {
     state.settings.mode = id;
     persistSettings();
     updateModeUI();
-    toast(id === "work" ? "已切换到工作模式：先拆计划，再逐步执行" : "已切换到对话模式");
+    toast(
+      id === "work"
+        ? "已切换到工作模式：先拆计划，再逐步执行"
+        : id === "doc"
+          ? "已切换到文档模式：可生成 Word / Excel / PPT / PDF"
+          : "已切换到对话模式",
+    );
     if (!isMobile()) $("#input").focus({ preventScroll: true });
   }
 
   function updateModeUI() {
-    const work = state.settings.mode === "work";
-    $("#modeLabel").textContent = work ? "工作" : "对话";
-    $("#modeBtn").classList.toggle("is-work", work);
-    $("#input").placeholder = work
-      ? "描述一个任务，Dream 会拆解成步骤逐步完成……"
-      : "给 Dream AI 发送消息……";
+    const mode = state.settings.mode;
+    const work = mode === "work";
+    const doc = mode === "doc";
+    $("#modeLabel").textContent = work ? "工作" : doc ? "文档" : "对话";
+    $("#modeBtn").classList.toggle("is-work", work || doc);
+    const template = DOC_TEMPLATES.find((item) => item.id === state.settings.docTemplate) || DOC_TEMPLATES[0];
+    $("#input").placeholder = doc
+      ? "描述要生成的文档，例如：产品发布会会议纪要……"
+      : work
+        ? "描述一个任务，Dream 会拆解成步骤逐步完成……"
+        : "给 Dream AI 发送消息……";
     const hint = $(".hint");
     if (hint) {
-      hint.textContent = work
-        ? "工作模式会分多步执行，耗时更长 · Enter 发送"
-        : "Enter 发送 · Shift + Enter 换行 · 可拖入 txt / md 文件";
+      hint.textContent = doc
+        ? `文档模式会生成文件到工作文件夹 · 当前模板：${template.label}`
+        : work
+          ? "工作模式会分多步执行，耗时更长 · Enter 发送"
+          : "Enter 发送 · Shift + Enter 换行 · 可拖入 txt / md 文件";
     }
+    const docBtn = $("#docTemplateBtn");
+    if (docBtn) {
+      docBtn.hidden = !doc;
+      docBtn.classList.toggle("is-on", doc);
+    }
+    const docLabel = $("#docTemplateLabel");
+    if (docLabel) docLabel.textContent = template.label;
     $$("#modeMenu .menu__item").forEach((item) => {
-      item.classList.toggle("is-active", item.dataset.mode === state.settings.mode);
+      item.classList.toggle("is-active", item.dataset.mode === mode);
     });
   }
 
@@ -827,6 +920,8 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
 
     const controller = new AbortController();
     state.abort = controller;
+    setAgentState("执行任务中", true);
+    agentLog("step", `开始任务：${task.slice(0, 42)}`);
     const repaint = () => {
       paintWork(node);
       scrollToBottom();
@@ -846,6 +941,7 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
       }));
       work.status = "running";
       repaint();
+      agentLog("step", `已拆解 ${work.steps.length} 个步骤`);
 
       const results = [];
       for (let index = 0; index < work.steps.length; index += 1) {
@@ -853,6 +949,7 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
         const step = work.steps[index];
         step.status = "running";
         repaint();
+        agentLog("tool", `执行：${step.title}`);
         const output = await callModel(
           [{ role: "user", content: stepPrompt(task, work.steps, index, results) }],
           {
@@ -865,6 +962,7 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
         step.status = "done";
         results.push(step.output);
         repaint();
+        agentLog("done", `完成：${step.title}`);
       }
 
       if (!controller.signal.aborted) {
@@ -878,6 +976,7 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
         work.final = finalText.trim();
         work.status = "done";
         repaint();
+        agentLog("done", "任务完成");
       } else {
         work.status = "stopped";
       }
@@ -897,11 +996,274 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
     } finally {
       setStreaming(false);
       state.abort = null;
+      setAgentState("空闲", false);
       if (work.steps.length || work.final || work.error) {
         session.messages.push(work);
         session.updatedAt = now();
         persistSessions();
       }
+      scrollToBottom();
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Document mode
+  // ---------------------------------------------------------------------
+
+  function docShell(assistant, index) {
+    const head = el("div", { class: "msg__head" }, [
+      el("strong", { text: "Dream AI" }),
+      el("span", { class: "tag", text: "文档模式" }),
+      assistant.model ? el("span", { class: "tag", text: modelLabel(assistant.model, assistant.provider) }) : null,
+      el("span", { text: timeLabel(assistant.ts) }),
+    ]);
+    const body = el("div", { class: "msg__body" }, [
+      el("span", { class: "typing" }, [el("i"), el("i"), el("i")]),
+      el("span", { class: "doc-pending", text: "正在生成文档…" }),
+    ]);
+    const main = el("div", { class: "msg__main" }, [head, body]);
+    return el("div", { class: "msg msg--assistant", "data-index": String(index), "data-kind": "doc" }, [
+      el("div", { class: "msg__avatar", "aria-hidden": "true" }, [
+        el("img", { src: "/assets/img/mark.svg", alt: "", width: "18", height: "18" }),
+      ]),
+      main,
+    ]);
+  }
+
+  function docMessageNode(message, index) {
+    const head = el("div", { class: "msg__head" }, [
+      el("strong", { text: "Dream AI" }),
+      el("span", { class: "tag", text: "文档模式" }),
+      message.model ? el("span", { class: "tag", text: modelLabel(message.model, message.provider) }) : null,
+      el("span", { text: timeLabel(message.ts) }),
+    ]);
+    const main = el("div", { class: "msg__main" }, [head]);
+
+    if (message.document) {
+      const doc = message.document;
+      const card = el("div", { class: "doc-result" }, [
+        el("span", { class: "doc-result__icon", "data-type": doc.type, text: String(doc.type || "").toUpperCase() }),
+        el("div", { class: "doc-result__meta" }, [
+          el("strong", { text: doc.name, title: doc.path }),
+          el("em", { text: `${doc.sizeLabel} · ${doc.typeLabel}` }),
+        ]),
+      ]);
+      const actions = el("div", { class: "doc-result__actions" });
+      const open = el("button", { class: "btn btn--primary", type: "button", text: "打开" });
+      open.addEventListener("click", () => {
+        desktop?.documents.open(doc.path).catch((error) => toast(error.message, "err"));
+      });
+      const reveal = el("button", { class: "btn btn--ghost", type: "button", text: "在文件夹中显示" });
+      reveal.addEventListener("click", () => {
+        desktop?.documents.reveal(doc.path).catch((error) => toast(error.message, "err"));
+      });
+      actions.append(open, reveal);
+      card.appendChild(actions);
+      main.appendChild(card);
+      main.appendChild(
+        el("div", { class: "msg__actions is-visible" }, [
+          actionBtn("copy", "复制路径", async () => {
+            await copyText(doc.path);
+            toast("路径已复制");
+          }),
+        ]),
+      );
+    } else if (message.error) {
+      main.appendChild(el("div", { class: "msg__error", text: message.error }));
+    }
+
+    return el("div", { class: "msg msg--assistant", "data-index": String(index), "data-kind": "doc" }, [
+      el("div", { class: "msg__avatar", "aria-hidden": "true" }, [
+        el("img", { src: "/assets/img/mark.svg", alt: "", width: "18", height: "18" }),
+      ]),
+      main,
+    ]);
+  }
+
+  function parseJsonObject(text) {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    const slice = text.slice(start, end + 1);
+    try {
+      return JSON.parse(slice);
+    } catch {
+      try {
+        return JSON.parse(slice.replace(/,\s*([}\]])/g, "$1"));
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  function inferDocType(spec, template) {
+    if (Array.isArray(spec.slides) && spec.slides.length) return "pptx";
+    if (Array.isArray(spec.sheets) && spec.sheets.length) return "xlsx";
+    if (template.id === "table") return "xlsx";
+    if (template.id === "slides") return "pptx";
+    return "docx";
+  }
+
+  function docPrompt(task, template) {
+    const today = new Date().toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" });
+    return `你是 Dream AI 的文档生成器。根据用户需求生成一份可直接使用的办公文档。今天是 ${today}。
+只输出严格 JSON，不要 Markdown 代码块，不要解释：
+{
+  "type": "docx|xlsx|pptx|pdf|md",
+  "title": "文档标题",
+  "subtitle": "副标题，可空",
+  "filename": "文件名（不含扩展名）",
+  "sections": [{"heading":"小节标题","paragraphs":["段落"],"bullets":["条目"],"table":{"headers":["列1"],"rows":[["值"]]},"note":"备注"}],
+  "slides": [{"title":"页标题","bullets":["要点"],"notes":"讲稿提示"}],
+  "sheets": [{"name":"工作表","headers":["列1"],"rows":[["值"]],"summary":["合计","",""]}]
+}
+规则：
+- docx / pdf / md 使用 sections；xlsx 使用 sheets；pptx 使用 slides。
+- 内容具体、专业、可直接使用，不要写“待补充”“示例”这类占位符。
+- 所有日期使用 2026 年，不要出现 2023/2024 等旧年份。
+- 禁止使用“张三/李四/王五”“平台一/主题一/负责人一”这类示例内容；用具体角色（产品负责人、市场负责人）或用户提供的真实信息。
+- 数据要有真实感：具体渠道名、主题名、金额或指标数字；产品名统一写作 Dream AI。
+- 表格每一行必须是不同的具体内容；平台写公众号/视频号/小红书/B站/抖音/官网等真实渠道，人名写林晓/陈默这类具体姓名或“市场负责人”这类角色。
+- 禁止“平台一、主题一、负责人一、活动一、里程碑1”这类编号占位。
+- 合格的数据表示例（只在生成表格时参考具体程度，不要照抄）：
+  {"type":"xlsx","title":"10 月内容排期","sheets":[{"name":"内容排期","headers":["日期","平台","主题","负责人","状态"],"rows":[["2026-10-27","公众号","发布会预告：把想法交给 Dream","林晓","进行中"],["2026-10-29","视频号","90 秒看懂 Dream AI 桌面版","陈默","待开始"]],"summary":["合计","2 条","","",""]}]}
+- 中文办公风格，标题简洁，正文分点，必要时用表格。
+- 用户没指定格式时：会议/方案/周报/简历用 docx，数据用 xlsx，演示用 pptx。
+${template.prompt ? `- 模板要求：${template.prompt}` : ""}
+
+用户需求：
+${task}`;
+  }
+
+  function fallbackDocSpec(task, template) {
+    const type = template.id === "table" ? "xlsx" : template.id === "slides" ? "pptx" : "docx";
+    const title = task.slice(0, 28) || "Dream AI 文档";
+    if (type === "xlsx") {
+      return { type, title, sheets: [{ name: "Sheet1", headers: ["内容"], rows: [[task]] }] };
+    }
+    if (type === "pptx") {
+      return { type, title, slides: [{ title, bullets: [task] }] };
+    }
+    return { type, title, sections: [{ heading: "内容", paragraphs: [task] }] };
+  }
+
+  function hasPlaceholderContent(spec) {
+    const text = JSON.stringify(spec || {});
+    return (
+      /(平台|主题|活动|负责人|里程碑|项目|任务)[一二三四五六七八九十]/.test(text) ||
+      /张三|李四|王五|赵六|钱七|孙八/.test(text)
+    );
+  }
+
+  async function generateDocSpec(task, template, signal) {
+    const first = await callModel([{ role: "user", content: docPrompt(task, template) }], {
+      signal,
+      temperature: 0.5,
+    });
+    let spec = parseJsonObject(first);
+    if (spec && hasPlaceholderContent(spec)) {
+      agentLog("info", "检测到模板化内容，正在重写");
+      const retry = await callModel(
+        [
+          {
+            role: "user",
+            content: `${docPrompt(task, template)}
+
+注意：上一版出现了“平台一 / 主题一 / 负责人一 / 张三”这类占位内容，不合格。
+这次必须写具体平台、具体主题、具体姓名或角色，表格每一行都要不同。`,
+          },
+        ],
+        { signal, temperature: 0.7 },
+      );
+      const next = parseJsonObject(retry);
+      if (next && !hasPlaceholderContent(next)) spec = next;
+    }
+    return spec;
+  }
+  async function runDocTask(session, userMessage) {
+    if (!desktop?.documents) {
+      toast("文档模式需要在桌面版使用", "err");
+      return;
+    }
+    const workspace = await desktop.getWorkspace();
+    if (!workspace.exists) {
+      toast("请先选择一个工作文件夹", "err");
+      openModal("desktopModal");
+      refreshDesktop().catch(() => {});
+      return;
+    }
+    const task = composeUserContent(userMessage);
+    const template =
+      DOC_TEMPLATES.find((item) => item.id === state.settings.docTemplate) || DOC_TEMPLATES[0];
+    const assistant = {
+      role: "assistant",
+      kind: "doc",
+      ts: now(),
+      model: state.settings.model,
+      provider: state.settings.provider,
+      status: "generating",
+    };
+
+    const node = docShell(assistant, session.messages.length);
+    $("#chat").appendChild(node);
+    setStreaming(true);
+    state.follow = true;
+    setAgentState("生成文档中", true);
+    agentLog("step", `理解需求：${task.slice(0, 44)}`);
+    scrollToBottom(true);
+
+    const controller = new AbortController();
+    state.abort = controller;
+
+    try {
+      agentLog("tool", "规划文档结构");
+      const spec = await generateDocSpec(task, template, controller.signal);
+      let resolved = spec;
+      if (!resolved || typeof resolved !== "object") {
+        resolved = fallbackDocSpec(task, template);
+        agentLog("info", "结构解析失败，改用默认模板");
+      }
+      if (!["docx", "xlsx", "pptx", "pdf", "md"].includes(resolved.type)) {
+        resolved.type = inferDocType(resolved, template);
+      }
+      if (!resolved.title) resolved.title = task.slice(0, 30);
+
+      agentLog("tool", `写入 ${String(resolved.type).toUpperCase()} 文件`);
+      const doc = await desktop.documents.create(resolved);
+      assistant.document = doc;
+      assistant.status = "done";
+
+      node.remove();
+      $("#chat").appendChild(docMessageNode(assistant, session.messages.length));
+      session.messages.push(assistant);
+      session.updatedAt = now();
+      persistSessions();
+
+      addArtifact(doc);
+      agentLog("done", `已生成 ${doc.name}（${doc.sizeLabel}）`);
+      toast("文档已生成");
+      scrollToBottom();
+    } catch (error) {
+      if (error.name === "AbortError" || controller.signal.aborted) {
+        toast("已取消生成");
+        node.remove();
+      } else {
+        assistant.status = "error";
+        assistant.error = error.message || "文档生成失败，请重试。";
+        node.remove();
+        $("#chat").appendChild(docMessageNode(assistant, session.messages.length));
+        session.messages.push(assistant);
+        session.updatedAt = now();
+        persistSessions();
+        agentLog("error", assistant.error);
+        if (error.status === 401 && state.settings.provider === "byok") {
+          setTimeout(() => openKeyModal(), 500);
+        }
+      }
+    } finally {
+      setStreaming(false);
+      state.abort = null;
+      setAgentState("空闲", false);
       scrollToBottom();
     }
   }
@@ -1020,7 +1382,12 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
     scrollToBottom(true);
     persistSessions();
 
-    if (state.settings.mode === "work") await runWorkTask(session, userMessage);
+    if (state.settings.mode === "doc" && !desktop) {
+      toast("文档模式需要在桌面版使用，可在「下载」页安装", "err");
+      return;
+    }
+    if (state.settings.mode === "doc") await runDocTask(session, userMessage);
+    else if (state.settings.mode === "work") await runWorkTask(session, userMessage);
     else await requestCompletion(session);
   }
 
@@ -1039,6 +1406,8 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
     setStreaming(true);
     autoGrow();
     scrollToBottom(true);
+    setAgentState("思考中", true);
+    agentLog("info", `对话 · ${modelLabel(model, provider)}`);
 
     const controller = new AbortController();
     state.abort = controller;
@@ -1138,6 +1507,10 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
       streamPaint.timer = null;
       setStreaming(false);
       state.abort = null;
+      setAgentState("空闲", false);
+      if (!errored && assistant.content) {
+        agentLog("done", `回答完成 · ${assistant.content.length} 字`);
+      }
       body.classList.remove("caret");
 
       if (!errored && (assistant.content || assistant.reasoning)) {
@@ -1318,6 +1691,8 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
     const id = state.settings.model || state.config?.defaultModel;
     const option = modelOption(id, state.settings.provider) || modelOption(id);
     $("#modelLabel").textContent = option?.label || id || "Dream AI";
+    const dtbModel = $("#dtbModel");
+    if (dtbModel) dtbModel.textContent = option?.label || id || "Dream AI";
     const badge = $("#modelBadge");
     const isKey = state.settings.provider === "byok";
     badge.textContent = isKey ? "Key" : "免费";
@@ -1446,13 +1821,14 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
   let openMenu = null;
 
   function closeMenus() {
-    ["#modelMenu", "#styleMenu", "#sessionMenu", "#modeMenu"].forEach((sel) => {
+    ["#modelMenu", "#styleMenu", "#sessionMenu", "#modeMenu", "#docTemplateMenu"].forEach((sel) => {
       const menu = $(sel);
       if (menu) menu.hidden = true;
     });
     $("#modelBtn")?.setAttribute("aria-expanded", "false");
     $("#styleBtn")?.setAttribute("aria-expanded", "false");
     $("#modeBtn")?.setAttribute("aria-expanded", "false");
+    $("#docTemplateBtn")?.setAttribute("aria-expanded", "false");
     openMenu = null;
   }
 
@@ -1724,6 +2100,14 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
           lines.push(`> 附件：${message.attachments.map((f) => f.name).join("、")}`);
         }
         lines.push("");
+      } else if (message.kind === "doc" && message.document) {
+        lines.push("**Dream AI（文档模式）**：", `已生成 ${message.document.name}（${message.document.path}）`, "");
+      } else if (message.kind === "work") {
+        lines.push("**Dream AI（工作模式）**：", message.title || "任务", "");
+        (message.steps || []).forEach((step, index) => {
+          lines.push(`${index + 1}. ${step.title}`, step.output || "", "");
+        });
+        if (message.final) lines.push("最终结果：", message.final, "");
       } else {
         lines.push("**Dream AI**：", message.content, "");
       }
@@ -1841,7 +2225,138 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
   // ---------------------------------------------------------------------
 
   const desktop = window.dreamDesktop || null;
+  const STORE_ARTIFACTS = "dreamai.artifacts.v1";
   let deskAction = null;
+  let agentEvents = [];
+  let agentArtifacts = [];
+
+  function setAgentState(text, busy) {
+    const node = $("#agentState");
+    if (!node) return;
+    node.textContent = text;
+    node.classList.toggle("is-busy", Boolean(busy));
+  }
+
+  function agentLog(kind, text) {
+    if (!desktop) return;
+    agentEvents.push({ kind, text, ts: Date.now() });
+    if (agentEvents.length > 80) agentEvents = agentEvents.slice(-80);
+    renderAgentActivity();
+  }
+
+  function renderAgentActivity() {
+    const host = $("#agentActivity");
+    if (!host) return;
+    host.textContent = "";
+    if (!agentEvents.length) {
+      host.appendChild(
+        el("div", {
+          class: "agent-panel__empty",
+          text: "还没有操作记录。\n在对话、工作或文档模式里发一条消息试试。",
+        }),
+      );
+      return;
+    }
+    agentEvents.forEach((event) => {
+      const time = new Date(event.ts).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+      host.appendChild(
+        el("div", { class: `agent-event is-${event.kind}` }, [
+          el("span", { class: "agent-event__dot" }),
+          el("span", { class: "agent-event__text", text: event.text }),
+          el("time", { text: time }),
+        ]),
+      );
+    });
+    host.scrollTop = host.scrollHeight;
+  }
+
+  function loadArtifacts() {
+    try {
+      const raw = localStorage.getItem(STORE_ARTIFACTS);
+      const data = raw ? JSON.parse(raw) : [];
+      agentArtifacts = Array.isArray(data) ? data.filter((item) => item && item.path) : [];
+    } catch {
+      agentArtifacts = [];
+    }
+  }
+
+  function persistArtifacts() {
+    try {
+      localStorage.setItem(STORE_ARTIFACTS, JSON.stringify(agentArtifacts.slice(0, 30)));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function addArtifact(doc) {
+    if (!doc || !doc.path) return;
+    agentArtifacts = agentArtifacts.filter((item) => item.path !== doc.path);
+    agentArtifacts.unshift({ ...doc, mtime: Date.now() });
+    agentArtifacts = agentArtifacts.slice(0, 30);
+    persistArtifacts();
+    renderAgentArtifacts();
+  }
+
+  function renderAgentArtifacts() {
+    const host = $("#agentArtifacts");
+    if (!host) return;
+    host.textContent = "";
+    const count = $("#artifactCount");
+    if (count) count.textContent = String(agentArtifacts.length);
+    if (!agentArtifacts.length) {
+      host.appendChild(
+        el("div", {
+          class: "agent-panel__empty",
+          text: "生成的 Word / Excel / PPT / PDF 会出现在这里。",
+        }),
+      );
+      return;
+    }
+    agentArtifacts.forEach((doc) => {
+      const row = el("div", { class: "artifact" }, [
+        el("span", {
+          class: "artifact__icon",
+          "data-type": doc.type,
+          text: String(doc.type || "").toUpperCase(),
+        }),
+        el("div", { class: "artifact__meta" }, [
+          el("strong", { text: doc.name, title: doc.path }),
+          el("em", { text: `${doc.sizeLabel || ""} · ${doc.typeLabel || ""}` }),
+        ]),
+      ]);
+      const actions = el("div", { class: "artifact__actions" });
+      const open = el("button", { type: "button", title: "打开" }, [icon("open")]);
+      open.addEventListener("click", () => desktop.documents.open(doc.path).catch((error) => toast(error.message, "err")));
+      const reveal = el("button", { type: "button", title: "在文件夹中显示" }, [icon("folder")]);
+      reveal.addEventListener("click", () =>
+        desktop.documents.reveal(doc.path).catch((error) => toast(error.message, "err")),
+      );
+      actions.append(open, reveal);
+      row.appendChild(actions);
+      host.appendChild(row);
+    });
+  }
+
+  async function refreshArtifacts() {
+    if (!desktop) return;
+    try {
+      const info = await desktop.getWorkspace();
+      if (!info.exists) return;
+      const list = await desktop.documents.list();
+      if (Array.isArray(list)) {
+        agentArtifacts = list;
+        persistArtifacts();
+        renderAgentArtifacts();
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function updateAgentWorkspace(pathText) {
+    const node = $("#agentWorkspacePath");
+    if (node) node.textContent = pathText || "未选择工作文件夹";
+  }
 
   async function refreshDesktop() {
     if (!desktop) return;
@@ -1849,6 +2364,7 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
     const pathEl = $("#deskPath");
     if (!info.exists) {
       pathEl.textContent = "尚未选择文件夹";
+      updateAgentWorkspace("");
       $("#deskOpen").disabled = true;
       $("#deskStats").hidden = true;
       $("#deskTools").hidden = true;
@@ -1857,6 +2373,7 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
       return;
     }
     pathEl.textContent = info.workspace;
+    updateAgentWorkspace(info.workspace);
     $("#deskOpen").disabled = false;
     const scan = await desktop.scan();
     $("#deskStats").hidden = false;
@@ -1885,6 +2402,64 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
   async function initDesktop() {
     if (!desktop) return;
     $("#desktopBtn").hidden = false;
+    $("#desktopTitlebar").hidden = false;
+    $("#agentToggle").hidden = false;
+    document.body.classList.add("desktop-app");
+
+    if (desktop.window) {
+      $("#winMin").addEventListener("click", () => desktop.window.minimize());
+      $("#winMax").addEventListener("click", () => desktop.window.toggleMaximize());
+      $("#winClose").addEventListener("click", () => desktop.window.close());
+      $("#dtbDrag").addEventListener("dblclick", () => desktop.window.toggleMaximize());
+      desktop.window.onMaximized?.((maximized) => {
+        document.body.classList.toggle("is-maximized", maximized);
+      });
+    }
+
+    const panel = $("#agentPanel");
+    panel.hidden = localStorage.getItem("dreamai.agentPanel") === "0";
+    $("#agentToggle").addEventListener("click", () => {
+      panel.hidden = !panel.hidden;
+      localStorage.setItem("dreamai.agentPanel", panel.hidden ? "0" : "1");
+    });
+
+    const showAgentTab = (name) => {
+      $$("[data-agent-tab]").forEach((btn) => btn.classList.toggle("is-active", btn.dataset.agentTab === name));
+      $("#agentActivity").hidden = name !== "activity";
+      $("#agentArtifacts").hidden = name !== "artifacts";
+      if (name === "artifacts") refreshArtifacts();
+    };
+    $$("[data-agent-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => showAgentTab(btn.dataset.agentTab));
+    });
+
+    $("#agentPick").addEventListener("click", async () => {
+      try {
+        const result = await desktop.pickFolder();
+        if (!result.canceled) {
+          toast("工作文件夹已设置");
+          await refreshDesktop();
+          await refreshArtifacts();
+        }
+      } catch (error) {
+        toast(error.message, "err");
+      }
+    });
+
+    $("#agentOpenWorkbench").addEventListener("click", () => {
+      openModal("desktopModal");
+      refreshDesktop().catch(() => {});
+    });
+
+    loadArtifacts();
+    renderAgentActivity();
+    renderAgentArtifacts();
+    desktop
+      .getWorkspace()
+      .then((info) => updateAgentWorkspace(info.exists ? info.workspace : ""))
+      .catch(() => {});
+    refreshArtifacts();
+
     const download = $("#downloadLink");
     if (download) download.hidden = true;
 
@@ -2035,6 +2610,7 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
     buildSettings();
     buildStyleMenu();
     buildModeMenu();
+    buildDocTemplateMenu();
     updateKeyStatus();
     updateModeUI();
     syncModelUI();
@@ -2194,6 +2770,16 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
       positionMenu($("#modeMenu"), $("#modeBtn"));
       $("#modeBtn").setAttribute("aria-expanded", "true");
     });
+    $("#docTemplateBtn").addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (openMenu === $("#docTemplateMenu")) {
+        closeMenus();
+        return;
+      }
+      closeMenus();
+      positionMenu($("#docTemplateMenu"), $("#docTemplateBtn"));
+      $("#docTemplateBtn").setAttribute("aria-expanded", "true");
+    });
 
     document.addEventListener("click", (event) => {
       if (
@@ -2201,6 +2787,7 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
         event.target.closest("#modelBtn") ||
         event.target.closest("#styleBtn") ||
         event.target.closest("#modeBtn") ||
+        event.target.closest("#docTemplateBtn") ||
         event.target.closest(".session__more")
       ) {
         return;

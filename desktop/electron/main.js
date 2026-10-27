@@ -4,6 +4,7 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require("electron")
 const path = require("path");
 const fs = require("fs");
 const tools = require("./local-tools");
+const documents = require("./documents");
 
 const APP_URL = process.env.DREAMAI_URL || "https://liguijiang.com";
 const PRODUCT = "Dream AI";
@@ -19,6 +20,7 @@ function createWindow() {
     minWidth: 980,
     minHeight: 640,
     show: false,
+    frame: false,
     backgroundColor: "#08090d",
     title: PRODUCT,
     icon: path.join(__dirname, "..", "build", "icon.ico"),
@@ -53,6 +55,8 @@ function createWindow() {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+  mainWindow.on("maximize", () => mainWindow?.webContents.send("win:maximized", true));
+  mainWindow.on("unmaximize", () => mainWindow?.webContents.send("win:maximized", false));
 }
 
 async function confirmAction(message, detail) {
@@ -194,6 +198,90 @@ function registerIpc() {
   );
 }
 
+async function printPdf(html, target) {
+  const pdfWindow = new BrowserWindow({
+    show: false,
+    width: 900,
+    height: 1200,
+    webPreferences: {
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      javascript: false,
+    },
+  });
+  try {
+    await pdfWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    const buffer = await pdfWindow.webContents.printToPDF({
+      printBackground: true,
+      pageSize: "A4",
+      margins: { marginType: "none" },
+    });
+    fs.writeFileSync(target, buffer);
+  } finally {
+    if (!pdfWindow.isDestroyed()) pdfWindow.destroy();
+  }
+}
+
+function documentDirectory() {
+  const workspace = tools.getWorkspace();
+  if (!workspace) throw new Error("请先选择工作文件夹");
+  return path.join(workspace, documents.DOC_DIR);
+}
+
+function assertDocumentPath(candidate) {
+  const dir = documentDirectory();
+  const target = path.resolve(String(candidate || ""));
+  if (!target.startsWith(dir + path.sep)) throw new Error("文件不在 Dream AI 文档目录中");
+  if (!fs.existsSync(target)) throw new Error("文件已不存在");
+  return target;
+}
+
+function registerExtraIpc() {
+  ipcMain.handle("win:minimize", () => {
+    mainWindow?.minimize();
+  });
+  ipcMain.handle("win:toggle-maximize", () => {
+    if (!mainWindow) return false;
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
+    return mainWindow.isMaximized();
+  });
+  ipcMain.handle("win:close", () => {
+    mainWindow?.close();
+  });
+  ipcMain.handle("win:is-maximized", () => Boolean(mainWindow?.isMaximized()));
+
+  ipcMain.handle(
+    "doc:create",
+    wrap(async (_event, spec) => {
+      const workspace = tools.getWorkspace();
+      if (!workspace) throw new Error("请先在「本地工作台」选择文件夹");
+      return documents.createDocument(spec, workspace, { printPdf });
+    }),
+  );
+  ipcMain.handle(
+    "doc:list",
+    wrap(async () => documents.listDocuments(tools.getWorkspace())),
+  );
+  ipcMain.handle(
+    "doc:open",
+    wrap(async (_event, target) => {
+      const file = assertDocumentPath(target);
+      const error = await shell.openPath(file);
+      if (error) throw new Error(error);
+      return { ok: true };
+    }),
+  );
+  ipcMain.handle(
+    "doc:reveal",
+    wrap(async (_event, target) => {
+      shell.showItemInFolder(assertDocumentPath(target));
+      return { ok: true };
+    }),
+  );
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -211,6 +299,7 @@ if (!gotLock) {
     const devWorkspace = process.env.DREAMAI_DEV_WORKSPACE;
     if (devWorkspace && fs.existsSync(devWorkspace)) tools.setWorkspace(devWorkspace);
     registerIpc();
+    registerExtraIpc();
     createWindow();
 
     app.on("activate", () => {
