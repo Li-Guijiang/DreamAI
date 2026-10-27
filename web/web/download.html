@@ -32,14 +32,14 @@
 
 <main>
   <section class="hero">
-    <span class="badge">Windows 桌面版 · <span id="dlVersion">v1.1.0</span></span>
+    <span class="badge">Windows 桌面版 · <span id="dlVersion">v1.2.0</span></span>
     <h1>把 Dream<br><span class="grad">装进电脑。</span></h1>
     <p class="hero__sub">
-      同一个 Dream AI，现在能直接交成品：生成 Word / Excel / PPT / PDF，<br>
-      整理文件、批量重命名、保存对话，全部落在你选择的文件夹里。
+      同一个 Dream AI，现在能真正动手干活：生成 Word / Excel / PPT / PDF，<br>
+      也能直接写代码、装依赖、把前后端项目跑起来，全部落在你选择的文件夹里。
     </p>
     <div class="hero__actions">
-      <a class="btn btn--primary" id="downloadBtn" href="/downloads/DreamAI-Setup-1.1.0.exe">
+      <a class="btn btn--primary" id="downloadBtn" href="/downloads/DreamAI-Setup-1.2.0.exe">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10M7 9l5 5 5-5M5 19h14"/></svg>
         下载 Windows 版
       </a>
@@ -63,7 +63,7 @@
       </div>
       <img src="/assets/img/desktop-preview.png" alt="Dream AI 桌面版界面预览">
     </div>
-    <p class="shot__caption">桌面版 = 三种模式 + 文档生成 + 本地文件工作台</p>
+    <p class="shot__caption">桌面版 = 对话 · 工作 · 文档 · 编程 四种模式</p>
   </section>
 
   <section class="formats">
@@ -98,8 +98,8 @@
         <span class="card__icon card__icon--violet">
           <svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H9l-4 3.5v-3.5H6.5A2.5 2.5 0 0 1 4 13.5Z"/></svg>
         </span>
-        <h3>三种模式</h3>
-        <p>对话、工作、文档三种模式：既能聊，也能拆任务，还能直接产出文件。</p>
+        <h3>编程模式</h3>
+        <p>说一句「做一个前后端待办清单」，它自己建项目、写代码、装依赖、把服务跑起来，报错还会自己修。</p>
       </article>
       <article class="card">
         <span class="card__icon card__icon--gold">
@@ -111,17 +111,34 @@
     </div>
   </section>
 
+  <section class="code-banner">
+    <h2>想让 AI 直接帮你把程序写出来？</h2>
+    <p class="code-banner__lead">切到「编程」模式，描述你要的小程序，Dream 会在工作文件夹里新建项目、逐批生成代码、运行 npm 安装、启动服务并检查输出；报错了它会读日志、改代码、再跑一次，直到跑通。</p>
+    <ul class="code-banner__points">
+      <li>所有操作都发生在你选择的工作文件夹下的「Dream AI 项目」里</li>
+      <li>命令白名单 + 完整命令日志（dreamai-commands.log），危险命令会先问你再执行</li>
+      <li>服务随时可以在对话里一键停止</li>
+    </ul>
+  </section>
   <section class="steps">
     <h2>三步开始</h2>
     <ol>
       <li><strong>下载并安装</strong><span>运行 DreamAI-Setup 安装包，按提示完成安装。</span></li>
       <li><strong>选择工作文件夹</strong><span>在右侧「智能体」面板选一个文件夹，生成的文件会放进去。</span></li>
-      <li><strong>直接说你要什么</strong><span>切到「文档」模式，说「生成一份产品发布会会议纪要」即可。</span></li>
+      <li><strong>直接说你要什么</strong><span>「文档」模式生成办公文件，「编程」模式直接帮你把项目写出来并跑起来。</span></li>
     </ol>
   </section>
 
   <section class="faq">
     <h2>常见问题</h2>
+    <details>
+      <summary>编程模式需要什么环境？</summary>
+      <p>需要电脑安装 Node.js 20+（<a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a>）。默认生成零第三方依赖的项目，没有 npm 也能直接运行；需要装包时会检测 npm 并提示。</p>
+    </details>
+    <details>
+      <summary>编程模式会动我电脑上的其他东西吗？</summary>
+      <p>不会。它只能在「工作文件夹 / Dream AI 项目」里创建和修改文件；命令有白名单，危险命令会弹窗确认，所有命令都会写入项目里的 dreamai-commands.log 可随时审查。</p>
+    </details>
     <details>
       <summary>能生成哪些文件？</summary>
       <p>Word（.docx）、Excel（.xlsx）、PowerPoint（.pptx）、PDF 和 Markdown。不需要电脑安装 Office。</p>

@@ -17,6 +17,7 @@
     { id: "chat", label: "对话", desc: "直接问答，适合写作、编程、闲聊" },
     { id: "work", label: "工作", desc: "拆解任务，逐步执行并汇总（更慢）" },
     { id: "doc", label: "文档", desc: "生成 Word / Excel / PPT / PDF / Markdown" },
+    { id: "code", label: "编程", desc: "直接在电脑上写代码、装依赖、把项目跑起来" },
   ];
 
   const DOC_TEMPLATES = [
@@ -200,6 +201,12 @@
             model: m.model || "",
             provider: m.provider || undefined,
             document: m.document || undefined,
+            project: m.project || undefined,
+            files: m.files ? m.files.slice(0, 80) : undefined,
+            log: m.log ? m.log.slice(-8000) : undefined,
+            serverId: m.serverId || undefined,
+            url: m.url || undefined,
+            running: m.running || undefined,
             ts: m.ts,
           })),
         }));
@@ -494,6 +501,7 @@
   function messageNode(message, index) {
     if (message.kind === "work") return workMessageNode(message, index);
     if (message.kind === "doc") return docMessageNode(message, index);
+    if (message.kind === "code") return codeMessageNode(message, index);
     const isUser = message.role === "user";
     const wrap = el("div", { class: `msg msg--${isUser ? "user" : "assistant"}`, "data-index": String(index) });
 
@@ -638,7 +646,9 @@
         ? "已切换到工作模式：先拆计划，再逐步执行"
         : id === "doc"
           ? "已切换到文档模式：可生成 Word / Excel / PPT / PDF"
-          : "已切换到对话模式",
+          : id === "code"
+            ? "已切换到编程模式：直接在你的电脑上写代码并运行"
+            : "已切换到对话模式",
     );
     if (!isMobile()) $("#input").focus({ preventScroll: true });
   }
@@ -647,25 +657,30 @@
     const mode = state.settings.mode;
     const work = mode === "work";
     const doc = mode === "doc";
-    $("#modeLabel").textContent = work ? "工作" : doc ? "文档" : "对话";
-    $("#modeBtn").classList.toggle("is-work", work || doc);
+    const code = mode === "code";
+    $("#modeLabel").textContent = work ? "工作" : doc ? "文档" : code ? "编程" : "对话";
+    $("#modeBtn").classList.toggle("is-work", work || doc || code);
     const template = DOC_TEMPLATES.find((item) => item.id === state.settings.docTemplate) || DOC_TEMPLATES[0];
     $("#input").placeholder = doc
       ? "描述要生成的文档，例如：产品发布会会议纪要……"
-      : work
-        ? "描述一个任务，Dream 会拆解成步骤逐步完成……"
-        : "给 Dream AI 发送消息……";
+      : code
+        ? "描述要开发的小程序，例如：做一个前后端分离的待办清单……"
+        : work
+          ? "描述一个任务，Dream 会拆解成步骤逐步完成……"
+          : "给 Dream AI 发送消息……";
     const hint = $(".hint");
     if (hint) {
       hint.textContent = doc
         ? `文档模式会生成文件到工作文件夹 · 当前模板：${template.label}`
-        : work
-          ? "工作模式会分多步执行，耗时更长 · Enter 发送"
-          : "Enter 发送 · Shift + Enter 换行 · 可拖入 txt / md 文件";
+        : code
+          ? "编程模式会直接写代码、装依赖、启动服务，命令会记录到项目里的 dreamai-commands.log"
+          : work
+            ? "工作模式会分多步执行，耗时更长 · Enter 发送"
+            : "Enter 发送 · Shift + Enter 换行 · 可拖入 txt / md 文件";
     }
     const docBtn = $("#docTemplateBtn");
     if (docBtn) {
-      docBtn.hidden = !doc;
+      docBtn.hidden = doc ? false : true;
       docBtn.classList.toggle("is-on", doc);
     }
     const docLabel = $("#docTemplateLabel");
@@ -849,18 +864,25 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
     return null;
   }
 
-  async function callModel(messages, { onDelta, signal, temperature } = {}) {
+  async function callModel(messages, { onDelta, signal, temperature, maxTokens, timeoutMs = 300000 } = {}) {
     const provider = state.settings.provider || "free";
+    let effectiveSignal = signal;
+    if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
+      const timer = AbortSignal.timeout(timeoutMs);
+      effectiveSignal =
+        signal && AbortSignal.any ? AbortSignal.any([signal, timer]) : signal || timer;
+    }
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-      signal,
+      signal: effectiveSignal,
       body: JSON.stringify({
         messages,
         model: state.settings.model || state.config?.defaultModel,
         provider,
         apiKey: provider === "byok" ? state.userKey : undefined,
         temperature: temperature ?? Number(state.settings.temperature),
+        maxTokens,
         thinking: false,
         style: state.settings.style,
       }),
@@ -1269,6 +1291,555 @@ ${task}`;
   }
 
   // ---------------------------------------------------------------------
+  // Coding agent mode (desktop only)
+  // ---------------------------------------------------------------------
+
+  const sleepPromise = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const CODE_STATUS = {
+    planning: { label: "正在规划项目…", busy: true },
+    writing: { label: "正在写代码…", busy: true },
+    installing: { label: "安装依赖…", busy: true },
+    fixing: { label: "修复报错…", busy: true },
+    running: { label: "启动服务…", busy: true },
+    done: { label: "已运行", busy: false },
+    paused: { label: "服务未启动（已跳过）", busy: false },
+    stopped: { label: "已停止", busy: false },
+    error: { label: "出错", busy: false },
+  };
+
+  function codeStatusLabel(message) {
+    if (message.error) return message.error.slice(0, 60);
+    return (CODE_STATUS[message.status] || CODE_STATUS.error).label;
+  }
+
+  function appendCodeLog(message, text) {
+    message.buildLog = (message.buildLog || "") + String(text || "");
+    if (message.buildLog.length > 60000) message.buildLog = message.buildLog.slice(-60000);
+    message.log = message.buildLog + (message.serverLog ? `\n--- 服务输出 ---\n${message.serverLog}` : "");
+    if (message.log.length > 80000) message.log = message.log.slice(-80000);
+  }
+
+  function codeMessageNode(message, index) {
+    const status = CODE_STATUS[message.status] || CODE_STATUS.error;
+    const head = el("div", { class: "msg__head" }, [
+      el("strong", { text: "Dream AI" }),
+      el("span", { class: "tag", text: "编程模式" }),
+      message.model ? el("span", { class: "tag", text: modelLabel(message.model, message.provider) }) : null,
+      el("span", { text: timeLabel(message.ts) }),
+    ]);
+    const card = el("div", { class: "code-card" }, [
+      el("div", { class: "code-card__head" }, [
+        el("span", { class: `code-dot is-${message.status}${status.busy ? " is-busy" : ""}` }),
+        el("strong", { text: message.title || "项目" }),
+        el("em", { text: codeStatusLabel(message) }),
+      ]),
+    ]);
+
+    if (message.project) {
+      card.appendChild(
+        el("div", { class: "code-card__meta" }, [
+          el("span", { text: message.project.name }),
+          message.url && message.running ? el("span", { text: `· ${message.url}` }) : null,
+          el("span", { text: `· 端口 ${message.project.port || "—"}` }),
+        ]),
+      );
+    }
+
+    if (message.files && message.files.length) {
+      const tree = el("ul", { class: "code-tree" });
+      message.files.slice(0, 60).forEach((pathText) => {
+        tree.appendChild(
+          el("li", {}, [
+            el("span", { class: "code-tree__icon" }, [icon(pathText.endsWith("/") ? "folder" : "file")]),
+            el("span", { text: pathText }),
+          ]),
+        );
+      });
+      if (message.files.length > 60) {
+        tree.appendChild(el("li", { text: `… 还有 ${message.files.length - 60} 个文件` }));
+      }
+      card.appendChild(tree);
+    }
+
+    if (message.log) {
+      const log = el("pre", { class: "code-log", text: message.log });
+      requestAnimationFrame(() => {
+        log.scrollTop = log.scrollHeight;
+      });
+      card.appendChild(log);
+    }
+
+    if (message.error && message.status === "error") {
+      card.appendChild(el("div", { class: "msg__error", text: message.error }));
+    }
+
+    const actions = el("div", { class: "code-card__actions" });
+    if (message.project) {
+      const folder = el("button", { class: "btn btn--ghost", type: "button", text: "在文件夹中显示" });
+      folder.addEventListener("click", () => {
+        desktop?.code.openFolder(message.project.root).catch((error) => toast(error.message, "err"));
+      });
+      actions.appendChild(folder);
+    }
+    if (message.url && message.running) {
+      const open = el("button", { class: "btn btn--primary", type: "button", text: "打开网页" });
+      open.addEventListener("click", () => {
+        desktop?.code.openUrl(message.url).catch((error) => toast(error.message, "err"));
+      });
+      actions.appendChild(open);
+    }
+    if (message.serverId && message.running) {
+      const stop = el("button", { class: "btn btn--ghost", type: "button", text: "停止服务" });
+      stop.addEventListener("click", () => {
+        desktop?.code
+          .stopServer(message.serverId)
+          .then(() => {
+            message.running = false;
+            message.status = "stopped";
+            toast("服务已停止");
+            persistSessions();
+            const host = stop.closest(".msg");
+            if (host) host.replaceWith(codeMessageNode(message, index));
+          })
+          .catch((error) => toast(error.message, "err"));
+      });
+      actions.appendChild(stop);
+    }
+    const copy = actionBtn("copy", "复制路径", async () => {
+      await copyText(message.project?.root || "");
+      toast("路径已复制");
+    });
+    actions.appendChild(copy);
+    card.appendChild(actions);
+
+    const main = el("div", { class: "msg__main" }, [head, card]);
+    return el("div", { class: "msg msg--assistant", "data-index": String(index), "data-kind": "code" }, [
+      el("div", { class: "msg__avatar", "aria-hidden": "true" }, [
+        el("img", { src: "/assets/img/mark.svg", alt: "", width: "18", height: "18" }),
+      ]),
+      main,
+    ]);
+  }
+
+  function codePlanPrompt(task) {
+    return `你是 Dream AI 编程智能体，在用户的 Windows 电脑上直接开发并运行项目（电脑装有 Node.js 20+ 与 npm）。
+只输出严格 JSON，不要 Markdown 代码块，不要解释：
+{
+  "name": "英文小写短名",
+  "description": "一句话中文说明",
+  "stack": "技术栈说明",
+  "port": 3000,
+  "files": [{"path": "package.json", "purpose": "依赖与启动脚本"}, {"path": "server.js", "purpose": "Node 后端"}],
+  "setup": ["npm install"],
+  "run": "node server.js",
+  "verify": "浏览器打开 http://localhost:3000 应看到什么"
+}
+规则：
+- 前端用原生 HTML/CSS/JS；后端必须用 Node.js 内置模块（http/fs/path/url），不得使用 express/body-parser 等第三方包；数据存内存或 JSON 文件。
+- 零第三方依赖：package.json 不写 dependencies，setup 输出空数组 []。
+- 默认只写一个 server.js：用 Node 内置 http 模块，把 HTML/CSS/JS 内嵌在返回的页面里，同时提供 JSON API；只有确实需要拆分时才写多个文件，总数不超过 3 个。
+- 每个文件尽量控制在 160 行以内，内容完整可运行，互相引用一致。
+- name 用英文小写连字符；port 选 3000–3999 里不容易冲突的。
+- 只输出 JSON。
+
+用户需求：
+${task}`;
+  }
+
+  function parseFileBlocks(text, batch) {
+    const files = [];
+    const re = /===FILE:\s*([^\n=]+)===+\s*\n?([\s\S]*?)(?=\n?===FILE:|\n?===END===|$)/g;
+    let match;
+    while ((match = re.exec(text)) !== null) {
+      const pathText = String(match[1] || "").trim();
+      let content = String(match[2] || "");
+      content = content.replace(/^```[a-zA-Z]*\s*\n?/, "").replace(/\n?```\s*$/, "");
+      if (pathText && content.trim()) files.push({ path: pathText, content });
+    }
+    if (!files.length) {
+      const single = /(?:路径|FILE|文件)[:：]\s*([^\n]+)\s*\n?```[a-zA-Z]*\s*\n([\s\S]*?)\n?```/i.exec(text);
+      if (single) files.push({ path: single[1].trim(), content: single[2] });
+    }
+    if (!files.length) {
+      const fences = [...text.matchAll(/```[a-zA-Z]*\s*\n([\s\S]*?)\n?```/g)]
+        .map((m) => m[1])
+        .filter((content) => String(content || "").trim());
+      const candidates = (batch || []).map((file) => file.path);
+      if (fences.length && candidates.length) {
+        const used = new Set();
+        const scoreFor = (candidate, content) => {
+          const lower = candidate.toLowerCase();
+          let score = Math.min(String(content).length / 2000, 2);
+          if (lower.endsWith(".json") && /^\s*[{[]/.test(content)) score += 5;
+          if (lower.endsWith(".html") && /<html|<!doctype/i.test(content)) score += 5;
+          if (lower.endsWith(".css") && /[.#][\w-]+\s*\{/.test(content)) score += 4;
+          if (lower.endsWith(".js") && /(function|const |let |require\(|document\.|addEventListener)/.test(content)) score += 4;
+          return score;
+        };
+        const take = (candidate) => {
+          let best = -1;
+          let bestScore = -1;
+          fences.forEach((content, index) => {
+            if (used.has(index)) return;
+            const score = scoreFor(candidate, content);
+            if (score > bestScore) {
+              bestScore = score;
+              best = index;
+            }
+          });
+          if (best < 0) return null;
+          used.add(best);
+          return fences[best];
+        };
+        for (const candidate of candidates) {
+          const content = take(candidate);
+          if (content != null) files.push({ path: candidate, content });
+        }
+      }
+    }
+    return files;
+  }
+
+  function codeFilesPrompt(task, plan, batch, existing) {
+    const list = batch.map((file) => `- ${file.path}（${file.purpose || "实现文件"}）`).join("\n");
+    const shown = existing
+      .map(
+        (file) =>
+          `<file path="${file.path}">\n${(file.content || "(新文件)").slice(0, 8000)}\n</file>`,
+      )
+      .join("\n");
+    return `你是 Dream AI 编程智能体，正在生成项目「${plan.name}」（${plan.stack}）。
+本批只写这些文件：
+${list}
+
+已存在的文件内容（空表示新文件）：
+${shown}
+
+整体规划：安装命令 ${JSON.stringify(plan.setup)}；启动命令 ${plan.run}；验证 ${plan.verify}。
+请严格按以下格式依次输出本批全部文件（每行只写代码本身，不要用 JSON、不要解释）：
+
+===FILE: public/js/app.js===
+\`\`\`js
+<完整代码，一行都不要省略>
+\`\`\`
+===END===
+
+===FILE: server.js===
+\`\`\`js
+<完整代码>
+\`\`\`
+===END===
+
+要求：代码完整可运行；优先单文件 server.js（内嵌页面）；不得 require 任何第三方包，只用 Node 内置模块；不要写「此处省略」。
+
+用户需求：
+${task}`;
+  }
+
+  function codeFixPrompt(task, plan, cmd, result) {
+    return `你是 Dream AI 编程智能体。项目「${plan.name}」里这条命令失败了：
+$ ${cmd}
+退出码：${result.code}
+输出（末尾）：
+${String(result.stderr || result.stdout || "").slice(-6000)}
+
+请按以下格式输出需要修改的文件（只改必要的文件；如果不需要改，输出「无需修改」四个字）：
+
+===FILE: server.js===
+\`\`\`js
+<修正后的完整文件>
+\`\`\`
+===END===
+
+修复要针对上面的报错，保持各文件引用一致。
+
+用户需求：
+${task}`;
+  }
+
+  async function readExistingFiles(project, batch) {
+    const out = [];
+    for (const file of batch) {
+      try {
+        const result = await desktop.code.readFile(project.root, file.path);
+        out.push({ path: file.path, content: result.content, truncated: result.truncated });
+      } catch {
+        out.push({ path: file.path, content: "" });
+      }
+    }
+    return out;
+  }
+
+  async function codeFixLoop(message, task, plan, project, cmd, result, controller) {
+    agentLog("tool", "读取报错，让模型修复");
+    appendCodeLog(message, "\n[报错] 让模型修复…\n");
+    const raw = await callModel([{ role: "user", content: codeFixPrompt(task, plan, cmd, result) }], {
+      signal: controller.signal,
+      temperature: 0.3,
+      maxTokens: 2200,
+      timeoutMs: 240000,
+    });
+    const files = /无需修改/.test(raw) ? [] : parseFileBlocks(raw, plan.files);
+    if (files.length) {
+      const written = await desktop.code.writeFiles(project.root, files);
+      appendCodeLog(message, `修复写入 ${written.written.length} 个文件\n`);
+      message.files = [...new Set([...(message.files || []), ...written.written.map((w) => w.path)])];
+      agentLog("tool", `修复写入 ${written.written.length} 个文件`);
+    } else {
+      appendCodeLog(message, "模型认为无需改文件，直接重试\n");
+    }
+    appendCodeLog(message, `$ ${cmd}\n`);
+    const retry = await desktop.code.runCommand(project.root, cmd, { auto: true, timeoutMs: 300000 });
+    appendCodeLog(message, `${retry.stdout || ""}${retry.stderr || ""}\n[exit ${retry.code}]\n`);
+    return retry;
+  }
+
+  async function runCodeTask(session, userMessage) {
+    if (!desktop?.code) {
+      toast("编程模式需要在桌面版使用", "err");
+      return;
+    }
+    const workspace = await desktop.getWorkspace();
+    if (!workspace.exists) {
+      toast("请先选择一个工作文件夹", "err");
+      openModal("desktopModal");
+      refreshDesktop().catch(() => {});
+      return;
+    }
+    const task = composeUserContent(userMessage);
+    const message = {
+      role: "assistant",
+      kind: "code",
+      ts: now(),
+      model: state.settings.model,
+      provider: state.settings.provider,
+      status: "planning",
+      title: "正在规划项目…",
+      files: [],
+      buildLog: "",
+      log: "",
+      project: null,
+    };
+
+    let node = codeMessageNode(message, session.messages.length);
+    $("#chat").appendChild(node);
+    const repaint = () => {
+      const fresh = codeMessageNode(message, session.messages.length);
+      node.replaceWith(fresh);
+      node = fresh;
+    };
+
+    setStreaming(true);
+    state.follow = true;
+    setAgentState("写代码中", true);
+    agentLog("step", `开始开发：${task.slice(0, 42)}`);
+    scrollToBottom(true);
+
+    const controller = new AbortController();
+    state.abort = controller;
+
+    try {
+      // 1. plan
+      const planRaw = await callModel([{ role: "user", content: codePlanPrompt(task) }], {
+        signal: controller.signal,
+        temperature: 0.3,
+        maxTokens: 1200,
+        timeoutMs: 180000,
+      });
+      const plan = parseJsonObject(planRaw);
+      if (!plan || !Array.isArray(plan.files) || !plan.files.length) {
+        throw new Error("规划解析失败，请重试");
+      }
+      message.title = `${plan.name} · ${plan.description || ""}`;
+      message.spec = plan;
+      message.status = "writing";
+      repaint();
+      agentLog("step", `规划完成：${plan.files.length} 个文件 · ${plan.stack || "Node.js"}`);
+
+      // 2. create project
+      const project = await desktop.code.createProject(plan.name);
+      message.project = { root: project.root, name: project.name, port: Number(plan.port) || 3000 };
+      agentLog("tool", `创建项目：${project.name}`);
+
+      const nodeProbe = await desktop.code.runCommand(project.root, "node -v", { auto: true, timeoutMs: 15000 });
+      appendCodeLog(message, `Node: ${(nodeProbe.stdout || "").trim() || "未检测到"}\n`);
+      if (nodeProbe.code !== 0) {
+        throw new Error("未检测到 Node.js，请先安装 Node.js 20+（https://nodejs.org）后重试");
+      }
+
+      // 3. write files in batches
+      let remaining = plan.files.slice();
+      let passes = 0;
+      while (remaining.length && passes < 12 && !controller.signal.aborted) {
+        passes += 1;
+        const batch = remaining.slice(0, 1);
+        remaining = remaining.slice(1);
+        const existing = await readExistingFiles(project, batch);
+        let files = [];
+        try {
+          let raw = await callModel(
+            [{ role: "user", content: codeFilesPrompt(task, plan, batch, existing) }],
+            { signal: controller.signal, temperature: 0.3, maxTokens: 2600, timeoutMs: 90000 },
+          );
+          files = parseFileBlocks(raw, batch);
+          if (!files.length) {
+            raw = await callModel(
+              [{ role: "user", content: `${codeFilesPrompt(task, plan, batch, existing)}\n\n上次没有解析到任何文件，请严格使用 ===FILE: 路径=== 和 ===END=== 格式重新输出。` }],
+              { signal: controller.signal, temperature: 0.2, maxTokens: 2200, timeoutMs: 90000 },
+            );
+            files = parseFileBlocks(raw, batch);
+          }
+        } catch (error) {
+          if (error.name === "AbortError") throw error;
+          appendCodeLog(message, `[生成超时/失败] ${error.message}\n`);
+        }
+        if (!files.length && /(待办|todo|清单)/i.test(task)) {
+          const scaffold = await desktop.code.scaffold("todo", message.project.port);
+          if (scaffold && scaffold.length) {
+            files = scaffold;
+            appendCodeLog(message, "模型输出不可用，已使用内置脚手架生成可运行版本\n");
+            agentLog("info", "使用内置脚手架兜底");
+          }
+        }
+        if (!files.length) {
+          appendCodeLog(message, "[失败] 没有拿到可用文件内容\n");
+          throw new Error("模型没有输出可解析的文件内容，请重试");
+        }
+        const result = await desktop.code.writeFiles(project.root, files);
+        message.files = [...new Set([...(message.files || []), ...result.written.map((w) => w.path)])];
+        appendCodeLog(message, `写入 ${result.written.length} 个文件：${result.written.map((w) => w.path).join(", ")}\n`);
+        agentLog("tool", `写入 ${result.written.length} 个文件`);
+        repaint();
+      }
+
+      // 4. setup commands
+      message.status = "installing";
+      repaint();
+      const pkgFile = await desktop.code.readFile(project.root, "package.json").catch(() => null);
+      let hasDeps = false;
+      try {
+        const pkg = JSON.parse(pkgFile?.content || "{}");
+        hasDeps = Object.keys(pkg.dependencies || {}).length > 0 || Object.keys(pkg.devDependencies || {}).length > 0;
+      } catch {
+        hasDeps = false;
+      }
+      const npmProbe = await desktop.code.runCommand(project.root, "npm -v", { auto: true, timeoutMs: 15000 });
+      appendCodeLog(message, `npm: ${npmProbe.code === 0 ? (npmProbe.stdout || "").trim() : "未检测到"}\n`);
+      if (hasDeps && npmProbe.code !== 0) {
+        throw new Error("项目需要第三方依赖，但未检测到 npm。请安装 Node.js（含 npm）后重试，或改成零依赖项目");
+      }
+      let setup = Array.isArray(plan.setup) && plan.setup.length ? plan.setup : ["npm install"];
+      if (!hasDeps) {
+        setup = [];
+        appendCodeLog(message, "零依赖项目，跳过安装\n");
+      }
+      for (const cmd of setup) {
+        if (controller.signal.aborted) break;
+        appendCodeLog(message, `$ ${cmd}\n`);
+        agentLog("tool", `运行：${cmd}`);
+        let result = await desktop.code.runCommand(project.root, cmd, { auto: true, timeoutMs: 300000 });
+        if (result.blocked) {
+          appendCodeLog(message, "（命令未获批准，跳过）\n");
+          continue;
+        }
+        appendCodeLog(message, `${result.stdout || ""}${result.stderr || ""}\n[exit ${result.code}]\n`);
+        repaint();
+        if (result.code !== 0) {
+          message.status = "fixing";
+          repaint();
+          const retry = await codeFixLoop(message, task, plan, project, cmd, result, controller);
+          if (retry.code !== 0) {
+            throw new Error(`命令「${cmd}」失败，修复后仍报错，可查看日志`);
+          }
+        }
+      }
+
+      // 5. start server
+      message.status = "running";
+      repaint();
+      const runCmd = plan.run || "npm run dev";
+      const started = await desktop.code.startServer(project.root, runCmd);
+      if (started.blocked) {
+        message.status = "paused";
+        repaint();
+        agentLog("info", "用户跳过了服务启动");
+      } else {
+        message.serverId = started.id;
+        message.url = `http://localhost:${message.project.port}`;
+        let crashed = null;
+        for (let poll = 0; poll < 25 && !controller.signal.aborted; poll += 1) {
+          await sleepPromise(1200);
+          const out = await desktop.code.serverOutput(started.id);
+          message.serverLog = out.output || "";
+          message.log = message.buildLog + (message.serverLog ? `\n--- 服务输出 ---\n${message.serverLog}` : "");
+          repaint();
+          if (out.exited) {
+            crashed = { code: out.code, stderr: out.output };
+            break;
+          }
+          if (/listening|ready|started|running|localhost:\d+|http:\/\/localhost/i.test(out.output || "")) {
+            break;
+          }
+        }
+        if (crashed && !controller.signal.aborted) {
+          agentLog("tool", "服务启动失败，尝试修复");
+          message.status = "fixing";
+          repaint();
+          const fixed = await codeFixLoop(message, task, plan, project, runCmd, crashed, controller);
+          if (fixed.code !== 0) {
+            throw new Error("服务启动失败，修复后仍报错，可查看日志");
+          }
+          const restarted = await desktop.code.startServer(project.root, runCmd);
+          message.serverId = restarted.id;
+          for (let poll = 0; poll < 20 && !controller.signal.aborted; poll += 1) {
+            await sleepPromise(1200);
+            const out = await desktop.code.serverOutput(restarted.id);
+            message.serverLog = out.output || "";
+            message.log = message.buildLog + (message.serverLog ? `\n--- 服务输出 ---\n${message.serverLog}` : "");
+            repaint();
+            if (out.exited) {
+              crashed = { code: out.code, stderr: out.output };
+              break;
+            }
+            if (/listening|ready|started|running|localhost:\d+/i.test(out.output || "")) break;
+          }
+          if (crashed) throw new Error("服务重启后仍崩溃，可查看日志");
+        }
+        message.running = !crashed;
+      }
+
+      message.status = message.running ? "done" : message.status === "paused" ? "paused" : "done";
+      repaint();
+      session.messages.push(message);
+      session.updatedAt = now();
+      persistSessions();
+      agentLog("done", `项目 ${message.project.name} ${message.running ? "已运行" : "已生成"}`);
+      toast(message.running ? "项目已运行起来" : "项目已生成");
+    } catch (error) {
+      if (error.name === "AbortError" || controller.signal.aborted) {
+        message.status = "stopped";
+        desktop?.code.killCurrent().catch(() => {});
+        if (message.serverId) desktop?.code.stopServer(message.serverId).catch(() => {});
+        toast("已停止");
+      } else {
+        message.status = "error";
+        message.error = error.message || "开发失败，请重试";
+        agentLog("error", message.error);
+        toast(message.error, "err");
+      }
+      session.messages.push(message);
+      session.updatedAt = now();
+      persistSessions();
+      repaint();
+    } finally {
+      setStreaming(false);
+      state.abort = null;
+      setAgentState("空闲", false);
+      scrollToBottom();
+    }
+  }
+  // ---------------------------------------------------------------------
   // Editing
   // ---------------------------------------------------------------------
 
@@ -1386,7 +1957,12 @@ ${task}`;
       toast("文档模式需要在桌面版使用，可在「下载」页安装", "err");
       return;
     }
+    if (state.settings.mode === "code" && !desktop) {
+      toast("编程模式需要在桌面版使用，可在「下载」页安装", "err");
+      return;
+    }
     if (state.settings.mode === "doc") await runDocTask(session, userMessage);
+    else if (state.settings.mode === "code") await runCodeTask(session, userMessage);
     else if (state.settings.mode === "work") await runWorkTask(session, userMessage);
     else await requestCompletion(session);
   }
@@ -2102,6 +2678,15 @@ ${task}`;
         lines.push("");
       } else if (message.kind === "doc" && message.document) {
         lines.push("**Dream AI（文档模式）**：", `已生成 ${message.document.name}（${message.document.path}）`, "");
+      } else if (message.kind === "code") {
+        lines.push("**Dream AI（编程模式）**：", `${message.title || "项目"} · ${message.error || message.status || ""}`, "");
+        if (message.project) {
+          lines.push(`目录：${message.project.root}`);
+          if (message.url) lines.push(`地址：${message.url}`);
+          lines.push("");
+        }
+        (message.files || []).forEach((file) => lines.push(`- ${file}`));
+        if (message.log) lines.push("", "```", message.log.slice(-6000), "```", "");
       } else if (message.kind === "work") {
         lines.push("**Dream AI（工作模式）**：", message.title || "任务", "");
         (message.steps || []).forEach((step, index) => {

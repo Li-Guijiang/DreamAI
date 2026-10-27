@@ -9,8 +9,8 @@ from pathlib import Path
 import paramiko
 
 ROOT = Path(r"D:\Users\HI MATEBOOK 14\Documents\deepseek-harness\default-workspace\dreamai-web")
-LOCAL = ROOT / "web" / "downloads" / "DreamAI-Setup-1.1.0.exe"
-REMOTE = "/www/wwwroot/liguijiang.com/web/downloads/DreamAI-Setup-1.1.0.exe"
+LOCAL = ROOT / "web" / "downloads" / "DreamAI-Setup-1.2.0.exe"
+REMOTE = "/www/wwwroot/liguijiang.com/web/downloads/DreamAI-Setup-1.2.0.exe"
 
 local_hash = hashlib.sha256(LOCAL.read_bytes()).hexdigest()
 print("local:", LOCAL.stat().st_size, local_hash)

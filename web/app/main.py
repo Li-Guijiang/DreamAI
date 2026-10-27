@@ -186,6 +186,7 @@ class ChatRequest(BaseModel):
     provider: Literal["free", "byok"] = "free"
     apiKey: str | None = Field(default=None, max_length=200)
     temperature: float | None = None
+    maxTokens: int | None = Field(default=None, ge=128, le=8192)
     thinking: bool = False
     style: str | None = None
 
@@ -360,7 +361,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     model=model,
                     messages=messages,
                     temperature=temperature,
-                    max_tokens=settings.max_tokens,
+                    max_tokens=payload.maxTokens or settings.max_tokens,
                 ):
                     produced += len(text)
                     yield sse("reasoning" if kind == "reasoning" else "delta", {"t": text})

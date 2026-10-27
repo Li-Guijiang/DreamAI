@@ -3175,6 +3175,156 @@ html[data-theme="light"] .btn--danger {
   font-size: 10px;
 }
 
+/* ---------- Coding mode ---------- */
+.code-card {
+  margin-top: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  background: var(--line);
+}
+
+.code-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.code-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+
+.code-dot.is-busy {
+  background: var(--accent);
+  animation: codePulse 1.2s ease-in-out infinite;
+}
+
+.code-dot.is-done {
+  background: var(--teal);
+}
+
+.code-dot.is-error {
+  background: var(--danger);
+}
+
+.code-dot.is-stopped,
+.code-dot.is-paused {
+  background: var(--text-3);
+}
+
+@keyframes codePulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.code-card__head strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.code-card__head em {
+  flex: none;
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: 10.5px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.code-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
+
+.code-tree {
+  max-height: 190px;
+  margin: 10px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  border-top: 1px dashed var(--line);
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.code-tree li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 2px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
+
+.code-tree li:last-child {
+  border-bottom: 0;
+}
+
+.code-tree__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 12px;
+  color: var(--text-3);
+}
+
+.code-tree__icon svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.code-log {
+  max-height: 240px;
+  margin: 10px 0 0;
+  padding: 10px;
+  overflow: auto;
+  border-radius: 10px;
+  background: #05060a;
+  color: #a7b0c2;
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  scrollbar-width: thin;
+}
+
+.code-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.code-card__actions .btn {
+  height: 30px;
+  font-size: 11px;
+}
 /* Shortcuts */
 .shortcuts {
   list-style: none;

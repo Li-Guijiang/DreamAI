@@ -5,6 +5,7 @@ const path = require("path");
 const fs = require("fs");
 const tools = require("./local-tools");
 const documents = require("./documents");
+const agent = require("./agent");
 
 const APP_URL = process.env.DREAMAI_URL || "https://liguijiang.com";
 const PRODUCT = "Dream AI";
@@ -253,6 +254,98 @@ function registerExtraIpc() {
   ipcMain.handle("win:is-maximized", () => Boolean(mainWindow?.isMaximized()));
 
   ipcMain.handle(
+    "code:create-project",
+    wrap(async (_event, name) => {
+      const workspace = tools.getWorkspace();
+      if (!workspace) throw new Error("请先选择工作文件夹");
+      return agent.createProject(workspace, name);
+    }),
+  );
+  ipcMain.handle(
+    "code:write-files",
+    wrap(async (_event, payload) => {
+      const workspace = tools.getWorkspace();
+      if (!workspace) throw new Error("请先选择工作文件夹");
+      return agent.writeFiles(workspace, payload?.root, payload?.files);
+    }),
+  );
+  ipcMain.handle(
+    "code:run-command",
+    wrap(async (_event, payload) => {
+      const workspace = tools.getWorkspace();
+      if (!workspace) throw new Error("请先选择工作文件夹");
+      const project = agent.assertProject(workspace, payload?.root);
+      const cmd = String(payload?.cmd || "").trim();
+      if (!cmd) return { code: 0, stdout: "", stderr: "" };
+      if (agent.needsApproval(cmd, Boolean(payload?.auto))) {
+        const ok = await confirmAction(
+          `Dream AI 想执行这条命令`,
+          `${cmd}\n\n目录：${project}\n\n命令会记录在项目的 dreamai-commands.log 里。`,
+        );
+        if (!ok) return { blocked: true };
+      }
+      return agent.runCommand(project, cmd, { timeoutMs: Number(payload?.timeoutMs) || 180000 });
+    }),
+  );
+  ipcMain.handle(
+    "code:start-server",
+    wrap(async (_event, payload) => {
+      const workspace = tools.getWorkspace();
+      if (!workspace) throw new Error("请先选择工作文件夹");
+      const project = agent.assertProject(workspace, payload?.root);
+      const cmd = String(payload?.cmd || "").trim();
+      if (!cmd) throw new Error("没有可用的启动命令");
+      if (agent.needsApproval(cmd, true)) {
+        const ok = await confirmAction(`Dream AI 想启动服务`, `${cmd}\n\n目录：${project}`);
+        if (!ok) return { blocked: true };
+      }
+      return agent.startServer(project, cmd);
+    }),
+  );
+  ipcMain.handle(
+    "code:scaffold",
+    wrap(async (_event, payload) => agent.scaffoldFiles(payload?.kind, payload?.port)),
+  );
+  ipcMain.handle("code:server-output", wrap(async (_event, id) => agent.serverOutput(id)));
+  ipcMain.handle("code:stop-server", wrap(async (_event, id) => agent.stopServer(id)));
+  ipcMain.handle("code:kill-current", wrap(async () => agent.killCurrentCommand()));
+  ipcMain.handle(
+    "code:list-dir",
+    wrap(async (_event, payload) => {
+      const workspace = tools.getWorkspace();
+      if (!workspace) throw new Error("请先选择工作文件夹");
+      return agent.listDir(workspace, payload?.root, payload?.rel);
+    }),
+  );
+  ipcMain.handle(
+    "code:read-file",
+    wrap(async (_event, payload) => {
+      const workspace = tools.getWorkspace();
+      if (!workspace) throw new Error("请先选择工作文件夹");
+      return agent.readFile(workspace, payload?.root, payload?.rel, Number(payload?.max) || 80000);
+    }),
+  );
+  ipcMain.handle(
+    "code:open-folder",
+    wrap(async (_event, root) => {
+      const workspace = tools.getWorkspace();
+      if (!workspace) throw new Error("请先选择工作文件夹");
+      const project = agent.assertProject(workspace, root);
+      const error = await shell.openPath(project);
+      if (error) throw new Error(error);
+      return { ok: true };
+    }),
+  );
+  ipcMain.handle(
+    "code:open-url",
+    wrap(async (_event, url) => {
+      const target = String(url || "");
+      if (!/^https?:\/\//i.test(target)) throw new Error("链接无效");
+      await shell.openExternal(target);
+      return { ok: true };
+    }),
+  );
+  ipcMain.handle(
     "doc:create",
     wrap(async (_event, spec) => {
       const workspace = tools.getWorkspace();
@@ -297,7 +390,10 @@ if (!gotLock) {
     Menu.setApplicationMenu(null);
     app.setAppUserModelId("com.dreamai.desktop");
     const devWorkspace = process.env.DREAMAI_DEV_WORKSPACE;
-    if (devWorkspace && fs.existsSync(devWorkspace)) tools.setWorkspace(devWorkspace);
+    if (devWorkspace) {
+      fs.mkdirSync(devWorkspace, { recursive: true });
+      tools.setWorkspace(devWorkspace);
+    }
     registerIpc();
     registerExtraIpc();
     createWindow();
@@ -306,6 +402,8 @@ if (!gotLock) {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
   });
+
+  app.on("will-quit", () => agent.stopAll());
 
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();

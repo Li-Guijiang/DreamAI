@@ -22,6 +22,20 @@ contextBridge.exposeInMainWorld("dreamDesktop", {
   saveText: (name, content) => invoke("local:save-text", name, content),
   openWorkspace: () => invoke("local:open-workspace"),
 
+  code: {
+    createProject: (name) => invoke("code:create-project", name),
+    writeFiles: (root, files) => invoke("code:write-files", { root, files }),
+    runCommand: (root, cmd, options) => invoke("code:run-command", { root, cmd, ...(options || {}) }),
+    startServer: (root, cmd) => invoke("code:start-server", { root, cmd }),
+    scaffold: (kind, port) => invoke("code:scaffold", { kind, port }),
+    serverOutput: (id) => invoke("code:server-output", id),
+    stopServer: (id) => invoke("code:stop-server", id),
+    killCurrent: () => invoke("code:kill-current"),
+    listDir: (root, rel) => invoke("code:list-dir", { root, rel }),
+    readFile: (root, rel, max) => invoke("code:read-file", { root, rel, max }),
+    openFolder: (root) => invoke("code:open-folder", root),
+    openUrl: (url) => invoke("code:open-url", url),
+  },
   documents: {
     create: (spec) => invoke("doc:create", spec),
     list: () => invoke("doc:list"),
