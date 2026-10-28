@@ -1,8 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: light)" srcset="./assets/brand/hero-light.webp">
-    <img src="./assets/brand/hero-dark.webp" alt="Dream AI" width="440">
-  </picture>
+  <img src="./assets/brand/hero-dark.webp" alt="Dream AI" width="440">
 </p>
 
 <h1 align="center">Dream AI</h1>
