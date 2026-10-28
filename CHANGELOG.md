@@ -7,12 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `docs/README.md`: document index with the document map, the entry point of each
+  of the three deliverables, and the version-number cross-reference.
+- `docs/adr/0001-three-deliverables-one-repository.md`: the first Architecture
+  Decision Record, covering why the CLI, web, and desktop versions differ.
+- `.editorconfig` pinning UTF-8, LF, final newline, and indent size per file type.
+- `web/tools/README.md`: which maintenance scripts are supported, and the policy
+  for the new `web/tools/archive/` directory.
+- `tests/test_config.py`: nine cases covering settings defaults, invalid values,
+  directory overrides, and the CLI argument overrides.
+- Tests proving that a remembered preference reaches the payload sent to the
+  provider, both in a fresh session and after a restart.
+
+### Changed
+- `README.md` restructured: numbered plain-text headings, a rewritten project
+  tree that includes `web/`, `desktop/`, and `docs/adr/`, a deliverables table,
+  and a documentation table.
+- `docs/GUIDE.md` retitled to "命令行版" and scoped explicitly to the CLI package,
+  with links to the web and desktop documents.
+- `ruff format` applied to `dream_ai/`, `tests/`, and `examples/`; CI now also
+  lints `web/app` and `web/tools` and checks formatting of the CLI packages.
+- `Memory` gains `set_system_prompt()`; both backends implement it.
+- `.gitignore`: the ~70 hand-listed scratch files collapsed into anchored
+  patterns (`/*.txt` with `requirements*.txt` re-included); Python build rules
+  anchored to the repository root so they no longer hide `desktop/build/`.
+- Desktop packaging resources now live in `desktop/build/`, and the Node tests
+  are reachable through `pnpm test`, `pnpm test:tools`, `pnpm test:docs`.
+
 ### Fixed
+- Remembered preferences are now part of the system message actually sent to the
+  provider. Previously `/remember` updated only an internal property, so the
+  preference never influenced a reply in the default persistent configuration.
+  (`Memory.set_system_prompt()` and `DreamAIAgent._sync_system_prompt()`.)
+- `pnpm start:local` no longer depends on the undeclared `cross-env`; the target
+  URL is passed as `--url=` and `DREAMAI_URL` still works.
+- `desktop/build/icon.ico` added, so `pnpm dist` and the window icon no longer
+  fall back to the Electron default.
+- `web/tools/make_og.py` runs outside the author's machine: the mark path is
+  derived from the repository and CJK fonts are resolved per platform.
+- `dream_ai/config.py`: the `.env` precedence docstring matched neither the code
+  nor `.env.example`; it now states that a working-directory `.env` only fills
+  gaps.
+- `web_search` sends the current package version instead of a hardcoded `0.4`.
+- Unused imports and a placeholder-free f-string removed from `web/app/main.py`
+  and `web/tools/make_assets.py`.
 - Offline placeholder replies are no longer persisted to session history and
   are filtered out when restoring an old session, so demo replies cannot
   pollute the context sent to a hosted model after an API key is configured.
 - The project-root `.env` is loaded regardless of the current working
   directory; existing shell environment variables keep priority.
+
+### Removed
+- 21 `.jpeg` assets that were byte-identical to the `.jpg` file next to them
+  (4.9 MB in the working tree); `.jpg` is now the single retained format.
+- 42 single-use operational scripts moved from `web/tools/` to
+  `web/tools/archive/`, where they are kept for traceability but not maintained.
+
+### Notes
+- No version number was bumped: this batch is repository hygiene, documentation,
+  and small fixes. The three deliverables stay at `0.4.0` / `1.4.0` / `1.2.0`.
 
 ## [0.4.0] — 2026-10-24
 
