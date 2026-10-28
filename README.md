@@ -1,315 +1,299 @@
-# Dream AI
+<p align="center">
+  <img src="./assets/logo/DreamAI-Logo/03_组合标_含字标/DreamAI-lockup-1200.png" alt="Dream AI" width="520">
+</p>
 
-> Dream AI is a general-purpose AI assistant built around one shared dream: helping people everywhere think clearly, reason deeply, create freely, and solve what matters. It studies the world — its knowledge, logic, and deepest questions — and stays open to everyone, so thoughtful, capable intelligence can serve all people across the world.
+<p align="center">
+  <b>一个会思考、能协作的通用智能体</b><br>
+  写作 · 编程 · 推理 · 创意 —— 从一句话开始
+</p>
 
-[![Status: WIP](https://img.shields.io/badge/status-WIP-orange)](./README.md)
-[![CI](https://github.com/Li-Guijiang/DreamAI/actions/workflows/ci.yml/badge.svg)](https://github.com/Li-Guijiang/DreamAI/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/Li-Guijiang/DreamAI?sort=semver)](https://github.com/Li-Guijiang/DreamAI/releases)
-[![Container](https://img.shields.io/badge/container-ghcr.io-blue?logo=docker&logoColor=white)](https://github.com/Li-Guijiang/DreamAI/pkgs/container/dream-ai)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=white)](./README.md)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./docs/CONTRIBUTING.md)
+<p align="center">
+  <a href="https://liguijiang.com"><img src="https://img.shields.io/badge/在线体验-liguijiang.com-5b8cff?style=flat-square" alt="Online"></a>
+  <a href="https://liguijiang.com/download.html"><img src="https://img.shields.io/badge/桌面版-Windows_1.2-7c9cff?style=flat-square" alt="Desktop"></a>
+  <a href="./docs/README.md"><img src="https://img.shields.io/badge/文档-索引-9d7cff?style=flat-square" alt="Docs"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Li-Guijiang/DreamAI/actions/workflows/ci.yml"><img src="https://github.com/Li-Guijiang/DreamAI/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Li-Guijiang/DreamAI/releases"><img src="https://img.shields.io/github/v/release/Li-Guijiang/DreamAI?sort=semver&style=flat-square" alt="Release"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-3fb950?style=flat-square" alt="License"></a>
+  <a href="./README.md"><img src="https://img.shields.io/badge/python-3.11%2B-3776ab?style=flat-square&logo=python&logoColor=white" alt="Python"></a>
+  <a href="https://github.com/Li-Guijiang/DreamAI/pkgs/container/dream-ai"><img src="https://img.shields.io/badge/container-ghcr.io-2496ed?style=flat-square&logo=docker&logoColor=white" alt="Container"></a>
+  <a href="./docs/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-2ea043?style=flat-square" alt="PRs"></a>
+</p>
+
+<p align="center">
+  <sub><a href="./docs/GUIDE.md">中文上手指南</a> · <a href="./docs/ARCHITECTURE.md">架构设计</a> · <a href="./docs/ROADMAP.md">路线图</a> · <a href="./CHANGELOG.md">变更日志</a></sub>
+</p>
 
 ---
 
-## 1. About
+## 目录
 
-**Dream AI** is an open-source, general-purpose AI assistant being built from the ground up as a long-term, lifelong project. It reasons, remembers, uses tools, and plans — growing step by step into a capable assistant that serves everyone around the world.
+1. [项目简介](#1-项目简介)
+2. [三种形态](#2-三种形态)
+3. [界面预览](#3-界面预览)
+4. [核心能力](#4-核心能力)
+5. [架构](#5-架构)
+6. [快速开始](#6-快速开始)
+7. [命令与配置](#7-命令与配置)
+8. [路线图](#8-路线图)
+9. [目录结构](#9-目录结构)
+10. [参与贡献](#10-参与贡献)
 
-> **Status: early development (WIP).** Dream AI is under active construction. Many features described here are planned rather than finished. See the [Roadmap](./docs/ROADMAP.md) for what exists today and what comes next.
+---
 
-The repository ships three runnable forms that share one design language and one set of `DREAMAI_*` conventions:
+## 1. 项目简介
 
-| Form | Entry point | Version |
-|---|---|---|
-| Command-line package | `python -m dream_ai` · [`dream_ai/`](./dream_ai) | `0.4.0` |
-| Web service (FastAPI + static front end) | [`web/`](./web) | `1.4.0` |
-| Windows desktop app (Electron) | [`desktop/`](./desktop) | `1.2.0` |
+**Dream AI** 是一个从零开始构建的开源通用智能体。它会推理、会记忆、会调用工具、会为多步目标制定计划，并按阶段逐步长成一个能真正替人做事的助手。
 
-The three version numbers are intentionally independent; see [docs/README.md](./docs/README.md#3-版本号对照) for what must be updated together.
+项目由一个信念支撑：智能应当属于所有人。因此代码以 MIT 许可开放，模型后端可替换——任何 OpenAI 兼容端点、本地开源模型都能接入，核心不绑定任何厂商。
 
-## 2. Web & Desktop
+> Dream AI is an open-source, general-purpose AI assistant built around one shared dream: helping people everywhere think clearly, reason deeply, and create freely.
 
-- **Online:** <https://liguijiang.com> — chat / work / documents / coding modes, a free default model, or your own DeepSeek key.
-- **Windows desktop v1.2:** <https://liguijiang.com/download.html> — document generation, a coding mode (the agent scaffolds a project, writes code, installs dependencies, and starts the server), and a local file workbench.
-- **Source:** [`web/`](./web) (FastAPI + front end), [`desktop/`](./desktop) (Electron).
+> **状态：早期开发中（WIP）。** 功能按阶段推进，下文标注为计划的部分尚未实现。当前进度与验收标准见 [路线图](./docs/ROADMAP.md)。
 
-![Web](./web/docs/preview-hero.png)
+三种形态共用一套设计语言与 `DREAMAI_*` 配置约定：
 
-![Desktop](./web/web/assets/img/desktop-preview.png)
-
-Developed and maintained by Li Guijiang and the Dream AI team.
-
-## 3. Vision
-
-**Dream** is the shared promise behind this project: people everywhere, united by a common dream, seeking to understand the world — its knowledge, its logic, its deepest questions.
-
-Dream AI is the general-purpose assistant built to walk that path with us. It begins small and grows step by step into a capable, thoughtful intelligence, open to everyone across the world who wants to learn, build, or dream alongside it.
-
-This is a long-term project. It is small today, but every great system starts as a single dream.
-
-## 4. Features by Phase
-
-Status marks: `[x]` done · `[~]` in progress · `[ ]` planned.
-
-### Phase 1 — Conversation (`v0.1`)
-
-- [x] Project skeleton and package layout
-- [x] Pluggable provider interface (not locked to any vendor)
-- [x] CLI conversation loop with session history
-- [x] Hosted model integration (configure your own API key)
-- [ ] Streaming responses
-
-### Phase 2 — Memory (`v0.2`)
-
-- [x] Persistent session history stored locally (JSON, restored on restart)
-- [x] User preferences remembered across sessions and injected into context
-- [ ] Retrieval-based memory (vector search)
-
-### Phase 3 — Tool Use (`v0.3`)
-
-- [x] Tool registry schema with parameters, risk level, and confirmation gate
-- [x] Calculator and clock utilities (safe, always available)
-- [x] Sandboxed file read/write (opt-in; writes require confirmation)
-- [x] Instant-answer web search (opt-in, network access)
-- [ ] Native model function-calling loop
-
-### Phase 4 — Autonomous Planning (`v0.4`)
-
-- [x] Reasoning loop: think → act → observe → reflect
-- [x] Multi-step task decomposition into an ordered plan
-- [x] Retry and recovery on failed steps
-- [x] User confirmation before irreversible actions
-- [x] Step budget to prevent runaway loops
-- [ ] Model-driven plan decomposition (native function-calling)
-
-## 5. Architecture
-
-```
-+----------------------------------------------+
-|                 Dream AI Core                |
-|           CLI / Web UI / Desktop UI          |
-+----------------------+-----------------------+
-                       |
-+----------------------v-----------------------+
-|        Agent Core (reasoning loop)           |
-|   Plan -> Reason -> Act -> Observe -> Reflect |
-+------+----------------+---------------+------+
-       |                |               |
-+------v------+  +------v------+  +-----v------+
-|  Provider   |  |   Memory    |  |   Tools    |
-| pluggable:  |  | short term  |  | search, fs |
-| API / local |  | long term   |  | calculator |
-+-------------+  +-------------+  +------------+
-```
-
-The core depends only on small abstract interfaces, so hosted APIs, local open-source models, and future custom backends can be swapped in without rewriting the agent. Full details: [Architecture](./docs/ARCHITECTURE.md).
-
-## 6. Roadmap
-
-| Version | Milestone | Goal |
-|---|---|---|
-| `v0.1.0` | **Conversation** | Working conversational loop through a pluggable provider |
-| `v0.2.0` | **Memory** | Persistent session history and preferences restored across restarts |
-| `v0.3.0` | **Tools** | Safe calculator/clock, sandboxed file tools, optional web search with a confirmation gate |
-| `v0.4.0` | **Autonomy** | Think → act → observe → reflect loop, plan decomposition, retries, confirmation gate, and step budget |
-| `v1.0.0` | **Stable Assistant** | A reliable general-purpose personal agent |
-| `Future` | **Self-hosted & owned** | Local open-source model deployment for full independence |
-
-Detailed milestones and acceptance criteria: [docs/ROADMAP.md](./docs/ROADMAP.md).
-
-## 7. Releases
-
-Dream AI ships versioned releases through GitHub Releases. Each tagged version builds the sdist and wheel, validates metadata, and attaches both artifacts to the Release with auto-generated release notes.
-
-1. **Releases** — tagged versions (`vMAJOR.MINOR.PATCH`) appear on the [Releases page](https://github.com/Li-Guijiang/DreamAI/releases), with the built `sdist` and `wheel` attached for download.
-2. **Automation** — pushing a `v*` tag triggers [`release.yml`](./.github/workflows/release.yml), which builds the package and creates the Release, so no manual packaging step is required.
-3. **Container image** — a multi-architecture image `ghcr.io/li-guijiang/dream-ai` is published to GitHub Packages and listed in the [Packages section](https://github.com/Li-Guijiang/DreamAI/pkgs/container/dream-ai).
-4. **Package registry** — GitHub Packages does not host Python packages, so the `sdist` and `wheel` are attached to Releases here. The PyPI workflow ([`python-publish.yml`](./.github/workflows/python-publish.yml)) is opt-in: it builds distributions on demand and only publishes once trusted publishing is configured and the repository variable `ENABLE_PYPI_PUBLISH` is set.
-
-> Early-development versions are pre-release snapshots and may change before `v1.0.0`.
-
-## 8. Plans & Pricing (Vision)
-
-Dream AI is open-source and free to use. A future set of optional hosted plans is planned to support development and add convenience services. **These are vision-level plans only — none are available yet.**
-
-| | **Free** | **Pro** | **Team** |
+| 形态 | 入口 | 版本 | 适用场景 |
 |---|---|---|---|
-| Open-source code & self-hosting | Yes | Yes | Yes |
-| Local CLI / offline mode | Yes | Yes | Yes |
-| Conversation history | Session | Persistent | Persistent |
-| Priority hosted model access | — | Yes | Yes |
-| Long-term memory & tools | — | Yes | Yes |
-| Shared team workspaces | — | — | Yes |
-| Priority support | — | Yes | Yes |
+| 命令行包 | `python -m dream_ai` · [`dream_ai/`](./dream_ai) | `0.4.0` | 本地脚本、自动化、二次开发 |
+| Web 服务 | <https://liguijiang.com> · [`web/`](./web) | `1.4.0` | 打开即用，无需安装 |
+| Windows 桌面端 | [下载页](https://liguijiang.com/download.html) · [`desktop/`](./desktop) | `1.2.0` | 本地文件工作台、文档生成、编程模式 |
 
-Full plan definitions, feature matrix, and principles: [docs/PRICING.md](./docs/PRICING.md).
+三个版本号各自独立，是设计决定而非遗漏：原因见 [版本号对照](./docs/README.md#3-版本号对照) 与 [ADR 0001](./docs/adr/0001-three-deliverables-one-repository.md)。
 
-## 9. Quick Start
+## 2. 三种形态
 
-### 9.1 Run from source
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/Li-Guijiang/DreamAI.git
-cd DreamAI
-
-# 2. Create and activate a virtual environment
-python -m venv .venv
-# Windows:        .venv\Scripts\activate
-# macOS / Linux:  source .venv/bin/activate
-
-# 3. Install the project in editable mode with its dependencies
-pip install -e .
-
-# 4. Configure your model (copy the example and fill in your API key)
-# Windows:  copy .env.example .env
-# macOS/Linux: cp .env.example .env
-
-# 5. Start chatting
-python -m dream_ai
-```
-
-Pre-built `sdist` and `wheel` archives for each release are attached to the [Releases page](https://github.com/Li-Guijiang/DreamAI/releases).
-
-Without an API key, Dream AI starts in **offline demo mode** so you can explore the CLI and conversation flow. See [docs/SETUP.md](./docs/SETUP.md) for a step-by-step guide. A Chinese walkthrough for first-time users lives in [docs/GUIDE.md](./docs/GUIDE.md).
-
-### 9.2 Memory (v0.2)
-
-By default the session history and remembered preferences are saved to `~/.dream_ai/` and restored the next time Dream AI starts. In-chat commands:
-
-| Command | Action |
-|---|---|
-| `/remember <text>` | Record a preference to long-term memory |
-| `/memory` | Show remembered preferences |
-| `/forget` | Clear all remembered preferences |
-| `/clear` | Clear the current conversation history |
-
-Set `DREAMAI_PERSISTENCE=false` to keep everything in memory only, or change `DREAMAI_DATA_DIR` to choose where memory files are stored.
-
-### 9.3 Tools (v0.3)
-
-Safe tools (`calculator`, `clock`) are registered by default. File and web tools are opt-in through environment switches. In-chat commands:
-
-| Command | Action |
-|---|---|
-| `/tools` | List registered tools, risk level, and required arguments |
-| `/tool <name> <json>` | Run a tool, e.g. `/tool calculator {"expression": "2 * (3 + 4)"}` |
-
-`file_write` always asks for confirmation before changing files. Enable sandboxed file tools with `DREAMAI_FILE_ACCESS_ENABLED=true` and web search with `DREAMAI_WEB_SEARCH_ENABLED=true`; `DREAMAI_WORKSPACE_DIR` sets the file sandbox. Set `DREAMAI_TOOLS_ENABLED=false` to disable the whole registry.
-
-### 9.4 Autonomy (v0.4)
-
-Dream AI can run a multi-step goal through a **think → act → observe → reflect** loop: it decomposes the objective into an ordered plan, calls tools, records every observation, reflects on each result, retries failed steps within budget, and asks for approval before protected actions. In-chat commands:
-
-| Command | Action |
-|---|---|
-| `/run <objective>` | Run an autonomous multi-step task and print the plan and outcome |
-| `/trace` | Review the plan, step status, and full trace of the last autonomous task |
-
-Configuration switches:
-
-| Variable | Default | Purpose |
+| 模式 | 行为 | 适合 |
 |---|---|---|
-| `DREAMAI_AUTONOMY_ENABLED` | `true` | Master switch for autonomous mode |
-| `DREAMAI_MAX_STEPS` | `10` | Maximum tool actions before the loop stops to prevent runaway plans |
-| `DREAMAI_MAX_RETRIES` | `2` | Extra retries after a tool failure, per step |
-| `DREAMAI_AUTONOMY_VERBOSE` | `false` | Print every think/act/observe/reflect event live |
+| **对话** | 一次提问，一次回答 | 写作、问答、翻译、代码片段 |
+| **工作** | 先拆 3–6 步计划，逐步执行，最后汇总 | 调研、策划、多步骤任务 |
+| **编程**（桌面端） | 建项目、写文件、装依赖、把服务跑起来；命令执行前需确认 | 从零搭一个小项目 |
 
-> The v0.4 planner is a deterministic offline baseline: it maps simple time and calculation intents to built-in tools. A model-driven plan arrives with native function-calling in a later phase.
+## 3. 界面预览
 
-### 9.5 Run the container image
+| 首页 | 对话 |
+|---|---|
+| ![首页](./web/docs/preview-hero.png) | ![对话](./web/docs/preview-chat.png) |
 
-```bash
-# Pull the latest image from the GitHub Container Registry
-docker pull ghcr.io/li-guijiang/dream-ai:latest
+| 工作模式 | 桌面端 |
+|---|---|
+| ![工作模式](./web/docs/preview-work.png) | ![桌面端](./web/web/assets/img/desktop-preview.png) |
 
-# Offline demo mode (no API key needed)
-docker run -it --rm ghcr.io/li-guijiang/dream-ai:latest
+## 4. 核心能力
 
-# Connect a hosted model through environment variables
-docker run -it --rm \
-  -e DREAMAI_API_KEY=your-api-key \
-  -e DREAMAI_BASE_URL=https://api.deepseek.com/v1 \
-  -e DREAMAI_MODEL=deepseek-chat \
-  ghcr.io/li-guijiang/dream-ai:latest
+| 能力 | 说明 | 版本 |
+|---|---|---|
+| **可替换后端** | 任何 OpenAI 兼容端点（OpenAI / DeepSeek / 智谱 / Ollama / LM Studio），核心不感知厂商 | v0.1 |
+| **会话记忆** | 历史落盘为 JSON，重启自动恢复；离线占位回复不会写入历史 | v0.2 |
+| **长期偏好** | `/remember` 记下的偏好注入 system 消息，跨会话生效 | v0.2 |
+| **工具层** | 注册表带参数 schema、风险等级与二次确认；内置计算器、时钟、沙箱文件读写、联网搜索 | v0.3 |
+| **自主规划** | think → act → observe → reflect 循环，带步数预算、失败重试、保护动作确认、全程轨迹 | v0.4 |
+| **流式输出** | Web 端基于 SSE 逐字返回，思考过程可折叠查看 | web |
+| **文档生成** | 桌面端可导出 docx / xlsx / pptx / pdf | desktop |
+| **安全默认** | 工具与自主动作默认需显式确认；文件工具限制在沙箱目录内 | v0.3 |
+
+## 5. 架构
+
+```mermaid
+flowchart TB
+    subgraph entry["入口层"]
+        CLI["CLI · dream_ai"]
+        WEB["Web · FastAPI + SSE"]
+        DESK["Desktop · Electron"]
+    end
+
+    subgraph core["核心层"]
+        AGENT["DreamAIAgent<br/>推理循环"]
+        CONV["Conversation"]
+        AUTO["AutonomyEngine<br/>计划 · 执行 · 轨迹"]
+    end
+
+    subgraph ports["接口层"]
+        PROV["LLMProvider"]
+        MEM["Memory"]
+        TOOL["ToolRegistry"]
+    end
+
+    subgraph impl["实现层"]
+        P1["openai_compat"]
+        P2["local_echo"]
+        M1["InMemory"]
+        M2["Persistent JSON"]
+        T1["calculator / clock"]
+        T2["file_read / file_write"]
+        T3["web_search"]
+    end
+
+    CLI --> AGENT
+    WEB --> AGENT
+    DESK --> WEB
+    AGENT --> CONV
+    AGENT --> AUTO
+    AGENT --> PROV
+    CONV --> MEM
+    AGENT --> TOOL
+    AUTO --> TOOL
+    PROV -.-> P1
+    PROV -.-> P2
+    MEM -.-> M1
+    MEM -.-> M2
+    TOOL -.-> T1
+    TOOL -.-> T2
+    TOOL -.-> T3
 ```
 
-The multi-architecture image (`linux/amd64`, `linux/arm64`) is listed under the repository's [Packages section](https://github.com/Li-Guijiang/DreamAI/pkgs/container/dream-ai).
+核心只依赖三个窄接口（`LLMProvider` / `Memory` / `Tool`），因此换模型、换存储、加工具都不需要改 agent。分层细节与两条完整数据流见 [架构文档](./docs/ARCHITECTURE.md)。
 
-## 10. Project Structure
+## 6. 快速开始
+
+### 6.1 命令行（三步）
+
+```bash
+git clone https://github.com/Li-Guijiang/DreamAI.git && cd DreamAI
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e . && python -m dream_ai
+```
+
+没有 API Key 也能启动：会进入**离线演示模式**，回复由占位实现生成，用来熟悉命令与流程。接入真实模型只需复制配置并填入 Key：
+
+```bash
+cp .env.example .env      # Windows: copy .env.example .env
+# 编辑 .env，填写 DREAMAI_API_KEY / DREAMAI_BASE_URL / DREAMAI_MODEL
+```
+
+分步说明见 [安装指南](./docs/SETUP.md)，中文逐步讲解见 [上手指南](./docs/GUIDE.md)。
+
+### 6.2 容器
+
+```bash
+docker pull ghcr.io/li-guijiang/dream-ai:latest
+docker run -it --rm -e DREAMAI_API_KEY=your-key ghcr.io/li-guijiang/dream-ai:latest
+```
+
+### 6.3 Web 与桌面端
+
+```bash
+cd web && pip install -r requirements.txt && uvicorn app.main:app --port 8000   # Web
+cd desktop && pnpm install && pnpm start                                        # 桌面端
+```
+
+## 7. 命令与配置
+
+<details>
+<summary><b>会话内命令</b>（点击展开）</summary>
+
+| 命令 | 作用 |
+|---|---|
+| `/help` | 列出全部命令 |
+| `/run <objective>` | 运行一次多步自主任务，打印计划与结果 |
+| `/trace` | 查看上一次自主任务的计划、步骤状态与完整轨迹 |
+| `/tools` | 列出已注册工具、风险等级与必需参数 |
+| `/tool <name> <json>` | 直接调用工具，如 `/tool calculator {"expression": "2 * (3 + 4)"}` |
+| `/remember <text>` | 记入长期偏好 |
+| `/memory` | 查看已记住的偏好 |
+| `/forget` | 清空长期偏好 |
+| `/clear` | 清空当前会话历史 |
+| `/about` | 显示后端、工具数、自主模式状态与偏好统计 |
+
+</details>
+
+<details>
+<summary><b>环境变量</b>（点击展开，完整清单见 <code>.env.example</code>）</summary>
+
+| 变量 | 默认值 | 作用 |
+|---|---|---|
+| `DREAMAI_PROVIDER` | `openai_compat` | 后端类型：`openai_compat` / `local` |
+| `DREAMAI_BASE_URL` | `https://api.deepseek.com/v1` | 任意 OpenAI 兼容端点 |
+| `DREAMAI_API_KEY` | 空 | 为空时进入离线演示模式 |
+| `DREAMAI_MODEL` | `deepseek-chat` | 模型名称 |
+| `DREAMAI_PERSISTENCE` | `true` | 是否把会话与偏好落盘 |
+| `DREAMAI_DATA_DIR` | `~/.dream_ai` | 数据目录 |
+| `DREAMAI_TOOLS_ENABLED` | `true` | 工具注册表总开关 |
+| `DREAMAI_FILE_ACCESS_ENABLED` | `false` | 沙箱文件读写 |
+| `DREAMAI_WEB_SEARCH_ENABLED` | `false` | 联网搜索 |
+| `DREAMAI_WORKSPACE_DIR` | `<data_dir>/workspace` | 文件沙箱根目录 |
+| `DREAMAI_AUTONOMY_ENABLED` | `true` | 自主模式总开关 |
+| `DREAMAI_MAX_STEPS` | `10` | 单次任务的工具调用预算 |
+| `DREAMAI_MAX_RETRIES` | `2` | 每步失败后的额外重试次数 |
+| `DREAMAI_AUTONOMY_VERBOSE` | `false` | 实时打印每个阶段事件 |
+
+</details>
+
+## 8. 路线图
+
+| 版本 | 里程碑 | 目标 | 状态 |
+|---|---|---|---|
+| `v0.1.0` | Conversation | 打通可替换后端的对话闭环 | 已发布 |
+| `v0.2.0` | Memory | 会话与偏好跨重启恢复 | 已发布 |
+| `v0.3.0` | Tools | 安全工具层与确认机制 | 已发布 |
+| `v0.4.0` | Autonomy | 多步规划与可复盘的执行轨迹 | 已发布 |
+| `v1.0.0` | Stable Assistant | 可靠的个人通用智能体 | 进行中 |
+| `Future` | Self-hosted | 本地开源模型完全自主部署 | 规划中 |
+
+每一阶段的任务清单与验收标准见 [ROADMAP.md](./docs/ROADMAP.md)。
+
+## 9. 目录结构
 
 ```
 DreamAI/
-├── dream_ai/                  # CLI package (published as `dream-ai`)
-│   ├── cli.py                 # Command-line interface and in-chat commands
-│   ├── config.py              # Environment-based settings
-│   ├── agent_factory.py       # Assembles the agent from settings
-│   ├── core/                  # Agent and conversation
-│   ├── providers/             # Pluggable LLM backends
-│   ├── memory/                # Session history, preferences, persistence
-│   ├── tools/                 # Registry, built-in tools, call parser
-│   └── autonomy/              # Planner, think→act loop, trace models
-├── web/                       # Web service and static site
-│   ├── app/                   # FastAPI application (config, llm client, routes)
-│   ├── web/                   # Static front end served to the browser
-│   ├── deploy/                # nginx and systemd deployment templates
-│   ├── tools/                 # Maintenance scripts (see its README)
-│   └── docs/                  # Screenshots used by the documentation
-├── desktop/                   # Electron desktop client
-│   ├── electron/              # Main process, preload bridge, local tools
-│   ├── test/                  # Node-based tests and E2E helpers
-│   └── build/                 # Packaging resources (application icon)
-├── docs/                      # Documentation, see docs/README.md
-│   ├── adr/                   # Architecture Decision Records
-│   └── GUIDE.md               # Chinese walkthrough for first-time users
-├── tests/                     # Unit and smoke tests (pytest)
-├── examples/                  # Runnable examples
-├── assets/                    # Brand logos and media (see assets/README.md)
-├── .github/workflows/         # CI, release, PyPI, and container workflows
-├── Dockerfile                 # Container image definition
-├── .dockerignore              # Files excluded from the build context
-├── .editorconfig              # Editor indentation / encoding conventions
-├── pyproject.toml             # Package metadata, dependencies, tool config
-├── CHANGELOG.md               # Versioned change history
-└── LICENSE                    # MIT License
+├── dream_ai/                  # 命令行包（PyPI: dream-ai）
+│   ├── cli.py                 # 命令解析与会话循环
+│   ├── config.py              # 环境变量 → Settings
+│   ├── agent_factory.py       # 按配置组装 agent
+│   ├── core/                  # Agent 与 Conversation
+│   ├── providers/             # 可替换的模型后端
+│   ├── memory/                # 会话、偏好、原子化落盘
+│   ├── tools/                 # 注册表、内置工具、调用解析
+│   └── autonomy/              # 规划器、执行引擎、轨迹模型
+├── web/                       # Web 服务与静态站
+│   ├── app/                   # FastAPI（配置 / 流式客户端 / 路由）
+│   ├── web/                   # 浏览器端资源
+│   ├── deploy/                # nginx 与 systemd 模板
+│   ├── tools/                 # 维护脚本（见 tools/README.md）
+│   └── docs/                  # 文档截图
+├── desktop/                   # Electron 桌面端
+│   ├── electron/              # 主进程、preload 桥、本地工具
+│   ├── test/                  # Node 测试与 E2E 辅助
+│   └── build/                 # 打包资源（应用图标）
+├── docs/                      # 文档，入口见 docs/README.md
+│   └── adr/                   # 架构决策记录
+├── tests/                     # pytest 用例
+├── examples/                  # 可运行示例
+├── assets/                    # 品牌资源（见 assets/README.md）
+├── .github/workflows/         # CI / Release / PyPI / 容器
+├── Dockerfile                 # 容器镜像定义
+├── .editorconfig              # 编辑器缩进与编码约定
+├── pyproject.toml             # 打包元数据、依赖、工具配置
+├── CHANGELOG.md               # 变更历史
+└── LICENSE                    # MIT
 ```
 
-## 11. Documentation
+## 10. 参与贡献
 
-Start at [docs/README.md](./docs/README.md) for the full document map. The most-used entries:
+欢迎 issue、建议与 pull request。开始之前请阅读 [贡献指南](./docs/CONTRIBUTING.md) 与 [行为准则](./docs/CODE_OF_CONDUCT.md)；安全问题请按 [SECURITY.md](./docs/SECURITY.md) 私下报告。
 
-| Document | Purpose |
-|---|---|
-| [docs/GUIDE.md](./docs/GUIDE.md) | Chinese walkthrough: setup, every command, common errors |
-| [docs/SETUP.md](./docs/SETUP.md) | Local installation on Windows, macOS, and Linux |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Layers, module responsibilities, data flow |
-| [docs/ROADMAP.md](./docs/ROADMAP.md) | Phase plan and acceptance criteria |
-| [web/README.md](./web/README.md) | Web app features, API, deployment |
-| [desktop/README.md](./desktop/README.md) | Desktop development, packaging, security model |
-
-## 12. Contributing
-
-Dream AI is open to the whole world. Issues, suggestions, and pull requests are welcome — whether you are here to learn, to build, or to share your own dream. Start with the [Contributing Guide](./docs/CONTRIBUTING.md) and read the [Code of Conduct](./docs/CODE_OF_CONDUCT.md).
-
-Local checks before opening a pull request:
+提交前在本地跑一遍与 CI 相同的检查：
 
 ```bash
 pytest
-ruff check dream_ai tests examples
+ruff check dream_ai tests examples web/app web/tools
 ruff format --check dream_ai tests examples
 ```
 
-## 13. Security
-
-Found a vulnerability? Please report it privately following [SECURITY.md](./docs/SECURITY.md).
-
-## 14. License
-
-Released under the **MIT License**. Copyright (c) 2026 Li Guijiang. All rights reserved.
-
-The MIT License grants others freedom to use and learn from this code; copyright and project ownership remain with the author.
+| 文档 | 内容 |
+|---|---|
+| [docs/README.md](./docs/README.md) | 全部文档的索引与版本号对照 |
+| [docs/GUIDE.md](./docs/GUIDE.md) | 中文上手指南：逐条命令与常见报错 |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 分层设计、模块职责、数据流 |
+| [docs/ROADMAP.md](./docs/ROADMAP.md) | 阶段任务与验收标准 |
+| [web/README.md](./web/README.md) | Web 功能、接口、部署 |
+| [desktop/README.md](./desktop/README.md) | 桌面端开发、打包、安全模型 |
 
 ---
 
-> *From a shared dream to a world that understands itself — one step at a time.*
+<p align="center">
+  <sub>MIT License · Copyright (c) 2026 Li Guijiang · 由李贵江等人组成的团队开发与维护</sub><br>
+  <sub><i>From a shared dream to a world that understands itself — one step at a time.</i></sub>
+</p>
