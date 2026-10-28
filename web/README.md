@@ -69,7 +69,7 @@ dreamai-web/
 │     └─ vendor/           # marked / DOMPurify / Prism（本地托管）
 ├─ desktop/                # Electron 桌面版（本地文件工作台）
 ├─ deploy/                 # 部署脚本与配置模板
-├─ tools/                  # 本地开发辅助（Mock 模型、资产生成、UI 自测）
+├─ tools/                  # 本地维护脚本（Mock 模型、资产生成、SSH 助手），见 tools/README.md
 ├─ requirements.txt
 └─ .env.example
 ```
