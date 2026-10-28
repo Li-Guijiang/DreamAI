@@ -1,4 +1,11 @@
-"""Regenerate the social share card (1200×630)."""
+"""Regenerate the social share card (1200×630).
+
+Requires Pillow and numpy, plus a CJK font. The font list below covers the
+usual Windows / macOS / Linux locations; install any one of them, or edit the
+lists if your system keeps the font elsewhere.
+
+    python tools/make_og.py
+"""
 
 from __future__ import annotations
 
@@ -10,12 +17,43 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 IMG = ROOT / "web" / "assets" / "img"
-MARK = Path(
-    r"D:\Users\HI MATEBOOK 14\Documents\deepseek-harness\default-workspace\DreamAI"
-    r"\assets\logo\DreamAI-Logo\02_纯星球符号_透明底\DreamAI-mark-1024-透明底.png"
+MARK = (
+    ROOT.parent
+    / "assets"
+    / "logo"
+    / "DreamAI-Logo"
+    / "02_纯星球符号_透明底"
+    / "DreamAI-mark-1024-透明底.png"
 )
-FONT_BOLD = Path(r"C:\Windows\Fonts\msyhbd.ttc")
-FONT_REG = Path(r"C:\Windows\Fonts\msyh.ttc")
+
+
+def _first_existing(candidates: list[str], label: str) -> Path:
+    """Return the first font file that exists, or stop with a readable error."""
+    for raw in candidates:
+        path = Path(raw)
+        if path.is_file():
+            return path
+    raise SystemExit(f"{label} font not found. Install one of:\n  " + "\n  ".join(candidates))
+
+
+FONT_BOLD = _first_existing(
+    [
+        r"C:\Windows\Fonts\msyhbd.ttc",
+        "/System/Library/Fonts/PingFang.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc",
+    ],
+    "Bold CJK",
+)
+FONT_REG = _first_existing(
+    [
+        r"C:\Windows\Fonts\msyh.ttc",
+        "/System/Library/Fonts/PingFang.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    ],
+    "Regular CJK",
+)
 BG = (8, 9, 13)
 
 
