@@ -38,6 +38,8 @@ def _isolate_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         "DREAMAI_MAX_STEPS",
         "DREAMAI_MAX_RETRIES",
         "DREAMAI_AUTONOMY_VERBOSE",
+        "DREAMAI_ANIMATIONS",
+        "DREAMAI_ANIMATION_SPEED",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -126,7 +128,13 @@ def test_cli_overrides_replace_only_the_given_fields() -> None:
 
 def test_cli_without_overrides_returns_the_same_object() -> None:
     settings = load_settings()
-    args = argparse.Namespace(provider=None, model=None, base_url=None, api_key=None)
+    args = argparse.Namespace(
+        provider=None,
+        model=None,
+        base_url=None,
+        api_key=None,
+        no_animation=False,
+    )
 
     assert _apply_overrides(settings, args) is settings
 

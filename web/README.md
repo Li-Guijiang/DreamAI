@@ -6,173 +6,217 @@
 
 > Every idea deserves to be taken seriously.
 
-The web edition of Dream AI: a general-purpose agent you can use straight from a browser. It follows
-the positioning and configuration conventions of the [DreamAI](https://github.com/Li-Guijiang/DreamAI)
-repository (OpenAI-compatible providers, `DREAMAI_*` environment variables) and adds what a web
-product actually needs — streaming output, visible reasoning, multi-turn sessions, mobile layout,
-and a deliberately restrained interface.
+The browser edition of Dream AI — version **2.0.0**. It is a streaming chat product, an animated
+documentation reading room, and a download page, built as plain HTML / CSS / JavaScript behind a
+small FastAPI service. No front-end framework and no Node build step.
 
-- Live: <https://liguijiang.com>
-- Source: <https://github.com/Li-Guijiang/DreamAI>
-- Team: Li Guijiang and contributors
+- **Live app:** <https://liguijiang.com>
+- **Live documentation:** <https://liguijiang.com/docs.html>
+- **Desktop download:** <https://liguijiang.com/download.html>
+- **Source:** <https://github.com/Li-Guijiang/DreamAI/tree/main/web>
 
-![Home](docs/preview-hero.png)
+<p align="center">
+  <img src="docs/preview-motion-home.png" alt="Dream AI home page with a cosmic hero, typing greeting and animated cards" width="100%">
+</p>
 
-## Features
+## 1. A living interface
+
+The 2.0 release makes motion part of the product grammar, not a garnish:
+
+| Layer | What moves |
+|---|---|
+| **Cosmos** | Canvas starfield with pointer parallax, twinkling stars, occasional meteors, CSS nebula glows and orbit rings |
+| **Entry** | A short warp intro with an orbiting planet and loading line |
+| **Hero** | A greeting that types, holds and deletes; a terminal prompt ticker that can fill the composer with one click; an orbital planet mark with satellites and sparkles |
+| **Cards** | Pointer-driven 3D tilt, a radial spotlight, a rotating conic border, animated icon and arrow states |
+| **Controls** | Magnetic primary actions, button sheens, pulsing status LEDs and click sparks |
+| **Navigation** | Page-transition veil, animated brand mark and sidebar treatment, a top progress line |
+| **Docs** | Scroll-spy contents, typed terminal command, animated architecture map, reveal cards and a reading progress line |
+| **Download** | Typed headline, orbiting badge, tiltable preview window, marquee of output formats and an animated terminal |
+
+Motion is always optional:
+
+- every page has a **动态 / 静态** switch; the choice persists in `localStorage`;
+- `prefers-reduced-motion` turns effects off unless the visitor explicitly enables them;
+- the canvas caps device pixel ratio, reduces its star count on low-power devices, and pauses when
+  the tab is hidden;
+- content remains visible and usable with JavaScript disabled — motion is decoration.
+
+### Pages
+
+| Page | Purpose |
+|---|---|
+| `web/index.html` | Chat application and landing experience |
+| `web/docs.html` | Animated project documentation: overview, quick start, architecture, motion, commands, structure, roadmap, quality and deployment |
+| `web/download.html` | Windows desktop download and capability story |
+
+<p align="center">
+  <img src="docs/preview-motion-docs.png" alt="Dream AI documentation page with orbital hero and animated architecture" width="100%">
+</p>
+
+## 2. Features
 
 | | |
-| --- | --- |
-| **Streaming chat** | Server-Sent Events, buffering disabled in nginx, first token in about 0.7 s |
-| **Chat and work modes** | Chat answers directly; work mode drafts a plan, executes it step by step, then summarises |
-| **Desktop app** | Windows client with a local file workbench (organise / rename / export documents) |
-| **Visible reasoning** | Supports `deepseek-reasoner`-style models; the reasoning trace collapses on demand |
-| **Style presets** | Default / precise / creative / concise, adjusting tone and temperature in one click |
-| **Attachment reading** | Drop or upload txt / md / csv / json / code files and send them with the prompt |
-| **Voice input** | Browser speech recognition (Chrome / Edge), speaks straight into the composer |
-| **Session management** | Saved locally: search, rename, export one session or all of them |
-| **Message editing** | Edit a sent question and regenerate the answer |
-| **Markdown rendering** | Headings, tables, quotes, code blocks with Prism highlighting and one-click copy |
-| **Theme and type size** | Dark / light / follow system; compact, standard, and comfortable text sizes |
-| **Responsive** | Two columns on desktop, drawer sidebar and safe-area handling on mobile |
-| **Two model sources** | A free default model (GLM-4-Flash) or the visitor's own DeepSeek key for V3 / R1 |
-| **Private deployment** | API keys live only in the server `.env`; the browser never receives them |
-| **Abuse protection** | Per-IP sliding window, daily budget, concurrency semaphore, and input length checks |
+|---|---|
+| **Streaming chat** | SSE token output through FastAPI; Nginx buffering disabled |
+| **Four modes** | Chat, work, document and code |
+| **Reasoning** | Supports reasoning-capable providers with a collapsible trace |
+| **Attachments** | Text, Markdown, CSV, JSON and code files |
+| **Markdown** | Tables, quotes, code highlighting and copy-to-clipboard |
+| **Local-first sessions** | Conversations stay in the browser's `localStorage` |
+| **Model sources** | Site free model (GLM-4-Flash by default) or visitor-supplied BYOK DeepSeek key |
+| **Privacy** | Server key stays server-side; BYOK key is forwarded, never stored |
+| **Abuse protection** | Per-IP sliding window, daily budget, concurrency limit, input caps (counters are per worker; use one worker or shared storage for strict global quotas) |
+| **Security headers** | CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy` |
+| **Responsive** | Desktop, tablet and mobile; safe-area aware composer |
+| **Accessibility** | Semantic landmarks, focus rings, skip links, keyboard controls and a motion switch |
 
-![Chat](docs/preview-chat.png)
+## 3. Layout
 
-## Chat mode and work mode
-
-| | Chat mode | Work mode |
-| --- | --- | --- |
-| Best for | Writing, coding, Q&A, conversation | Planning, research, multi-step tasks |
-| Behaviour | One answer | Drafts a 3–6 step plan, executes it, summarises |
-| Interface | Plain messages | Expandable step cards, progress, final result |
-| Latency | 1–3 s | Tens of seconds to a minute |
-
-Work mode follows the plan → execute → summarise idea from the DreamAI repository: the model emits a
-JSON plan, the front end calls the model for each step, and a final pass assembles the answer. Every
-step's output can be expanded.
-
-![Work mode](docs/preview-work.png)
-
-![Attachments](docs/preview-files.png)
-
-## Layout
-
-```
+```text
 web/
-├─ app/                    # FastAPI service
-│  ├─ main.py              # Routes, SSE, rate limiting, security headers
-│  ├─ llm.py               # OpenAI-compatible streaming client (httpx)
-│  └─ config.py            # Environment parsing
-├─ web/                    # Static front end (no build step)
-│  ├─ index.html
+├─ app/                     # FastAPI service
+│  ├─ main.py               # Routes, SSE, rate limiting, security headers
+│  ├─ llm.py                # OpenAI-compatible streaming client (httpx)
+│  └─ config.py             # Environment parsing
+├─ web/                     # Static front end (no build step)
+│  ├─ index.html            # Chat + landing
+│  ├─ docs.html             # Animated documentation
+│  ├─ download.html         # Desktop download
 │  ├─ manifest.webmanifest
+│  ├─ sitemap.xml
 │  └─ assets/
-│     ├─ css/app.css       # Design system
-│     ├─ js/app.js         # Sessions, streaming render, Markdown, interactions
-│     ├─ img/              # Brand icons, favicon, social card
-│     └─ vendor/           # marked / DOMPurify / Prism (self-hosted)
-├─ deploy/                 # Deployment scripts and templates
-├─ tools/                  # Maintenance scripts (mock model, assets, SSH helper) — see tools/README.md
+│     ├─ css/
+│     │  ├─ app.css         # Base chat design system
+│     │  ├─ motion.css      # Shared stars, intro, aura, sparks, reveal, switch
+│     │  ├─ landing.css     # Landing hero, terminal, cards, composer
+│     │  ├─ pages.css       # Shared marketing shell + download page
+│     │  ├─ download.css    # Download base styles
+│     │  └─ docs.css        # Documentation reading experience
+│     ├─ js/
+│     │  ├─ app.js          # Chat, sessions, SSE and Markdown
+│     │  ├─ motion.js       # Shared motion engine (window.DreamMotion)
+│     │  ├─ landing.js      # Greeting/prompt typewriters
+│     │  ├─ docs.js         # Scroll spy, copy buttons, command typing
+│     │  ├─ download.js     # Release metadata
+│     │  └─ download-motion.js
+│     ├─ img/               # Brand icons, favicon, social card
+│     └─ vendor/            # marked / DOMPurify / Prism (self-hosted)
+├─ deploy/                  # systemd unit, Nginx template, install script
+├─ docs/                    # Screenshots used by the README
+├─ tools/                   # Supported maintenance scripts (see tools/README.md)
 ├─ requirements.txt
 └─ .env.example
 ```
 
-## Desktop app (Windows)
+The asset query strings (`?v=2.0.0`) are intentional cache busters. Bump them when shipping CSS or
+JavaScript changes.
 
-Download: <https://liguijiang.com/download.html> (the installer lives in `web/downloads/`).
+## 4. Run locally
 
-The desktop app is the same interface plus a local file workbench:
-
-- Organise a folder by file type (preview first, then confirm)
-- Batch rename (shared prefix plus a sequence number, extensions preserved)
-- Save the current conversation as Markdown
-
-Packaging instructions are in the [desktop guide](../desktop/README.md).
-
-## Run locally
-
-Python 3.10 or newer.
+Requires Python 3.10+.
 
 ```bash
+cd web
 python -m venv .venv
-.venv/bin/pip install -r requirements.txt
-cp .env.example .env        # fill in DREAMAI_FREE_API_KEY, or use the mock
-.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+# Windows:        .venv\Scripts\activate
+# macOS / Linux:  source .venv/bin/activate
+pip install -r requirements.txt
+
+cp .env.example .env       # add DREAMAI_FREE_API_KEY
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open <http://127.0.0.1:8000>.
+Open <http://127.0.0.1:8000>. If no key is configured, `/api/chat` returns a clear `503`; the
+interface still renders so you can work on the design.
 
-No key yet? `tools/mock_upstream.py` serves a fixed Markdown answer so you can work on styling and
-streaming:
+For a full local loop without a real key, `tools/mock_upstream.py` returns a fixed Markdown answer:
 
 ```bash
-.venv/bin/uvicorn mock_upstream:app --app-dir tools --port 8799
+uvicorn mock_upstream:app --app-dir tools --port 8799
 DREAMAI_FREE_API_KEY=test DREAMAI_FREE_BASE_URL=http://127.0.0.1:8799/v1 \
 DREAMAI_FREE_MODEL=mock-glm \
-  .venv/bin/uvicorn app.main:app --port 8000
+  uvicorn app.main:app --port 8000
 ```
 
-## Two model sources
-
-| Source | Description | Who pays |
-| --- | --- | --- |
-| **Free model** (default) | Provided by the site, Zhipu `GLM-4-Flash` by default; visitors use it instantly | The site owner (free quota, model can be swapped) |
-| **Bring your own key** | Visitors paste their DeepSeek key in Settings → Model source and can switch to V3 / R1 | The visitor |
-
-- The free model's key exists only in the server `.env`; the browser never sees it.
-- A visitor's key stays in their browser `localStorage` and is forwarded per request; the server does
-  not store it or log it.
-- The free model has a global daily budget; BYOK requests do not consume it.
-
-## Configuration
-
-Everything lives in `.env` (full sample in [`.env.example`](.env.example)):
-
-| Variable | Meaning | Default |
-| --- | --- | --- |
-| `DREAMAI_FREE_API_KEY` | Free-model key (Zhipu, SiliconFlow, …) | empty |
-| `DREAMAI_FREE_BASE_URL` | OpenAI-compatible endpoint for the free model | `https://open.bigmodel.cn/api/paas/v4` |
-| `DREAMAI_FREE_MODEL` | Free model name | `glm-4-flash` |
-| `DREAMAI_BYOK_BASE_URL` | Endpoint used with a visitor's own key | `https://api.deepseek.com/v1` |
-| `DREAMAI_BYOK_MODELS` | Selectable BYOK models, `id\|label\|reasoning` | DeepSeek V3 / R1 |
-| `DREAMAI_SYSTEM_PROMPT` | Custom persona (single line) | see `config.py` |
-| `DREAMAI_RATE_LIMIT` / `_WINDOW` | Requests per IP / window in seconds | 30 / 600 |
-| `DREAMAI_DAILY_LIMIT` | Global daily cap for the free model (BYOK excluded) | 2000 (600 is a common choice) |
-| `DREAMAI_MAX_CONCURRENCY` | Concurrent upstream requests | 6 |
-
-## Deploying to a server
-
-Target environment: a control panel stack with nginx and systemd, site directory
-`/www/wwwroot/<domain>`.
+### Checks
 
 ```bash
-# 1. Package locally (excluding the virtualenv and caches)
-tar czf dreamai-web.tar.gz --exclude .venv --exclude __pycache__ --exclude .env \
-    -C dreamai-web .
-
-# 2. Upload and unpack
-scp dreamai-web.tar.gz root@<server-ip>:/tmp/
-ssh root@<server-ip> 'mkdir -p /tmp/dreamai-release && tar xzf /tmp/dreamai-web.tar.gz -C /tmp/dreamai-release'
-
-# 3. One-shot deploy (backs up the old site, keeps /lsl, builds a venv, writes systemd and nginx)
-ssh root@<server-ip> 'bash /tmp/dreamai-release/deploy/install.sh'
+for file in web/assets/js/*.js; do node --check "$file"; done
+python -m pytest tests/test_web_assets.py
 ```
 
-The deploy script:
+The browser QA pass verifies the production Content-Security-Policy, the motion switch, 3D tilt,
+scroll spy and responsive layouts. CI syntax-checks every shipped JavaScript file and validates
+local asset references.
 
-1. archives the current site to `/www/backup/<domain>-site-<timestamp>.tar.gz`;
-2. clears the site directory, **keeping `lsl`** (it aborts when `lsl` is missing unless `FORCE=1`);
-3. creates `.venv` and installs dependencies from a regional mirror;
-4. writes `dreamai-web.service` and starts it (two uvicorn workers on `127.0.0.1:8000`, override with `PORT`);
-5. reuses the existing TLS certificate, writes the nginx config, and reloads;
-6. calls `/api/health` as a health check.
+## 5. Configuration
 
-> After the first deployment, edit `/www/wwwroot/<domain>/.env` on the server to set
-> `DREAMAI_FREE_API_KEY`, then run `systemctl restart dreamai-web`.
+All variables live in `.env` (full sample in [`.env.example`](.env.example)):
 
-Routine operations:
+| Variable | Meaning | Default |
+|---|---|---|
+| `DREAMAI_FREE_API_KEY` | Site-provided free-model key (Zhipu, SiliconFlow, …) | empty |
+| `DREAMAI_FREE_BASE_URL` / `_MODEL` / `_LABEL` | Free upstream identity | Zhipu GLM-4-Flash |
+| `DREAMAI_FREE_KEY_URL` | Where visitors can get a free key | Zhipu API keys |
+| `DREAMAI_BYOK_BASE_URL` | Endpoint for a visitor's own key | DeepSeek |
+| `DREAMAI_BYOK_MODELS` | Selectable BYOK models: `id\|label\|reasoning` | DeepSeek V3 / R1 |
+| `DREAMAI_SYSTEM_PROMPT` | Optional persona (single line) | see `app/config.py` |
+| `DREAMAI_RATE_LIMIT` / `_WINDOW` | Requests per IP / window in seconds | 30 / 600 |
+| `DREAMAI_DAILY_LIMIT` | Daily free-model budget (`0` disables) | 2000 |
+| `DREAMAI_MAX_CONCURRENCY` | Concurrent upstream requests | 6 |
+| `DREAMAI_MAX_INPUT_CHARS` / `_HISTORY_*` | Input and context limits | 12,000 / 30 / 60,000 |
+
+The free key exists only in the server environment. `/api/config` exposes labels, availability and
+limits — never a secret. A BYOK key is kept in the visitor's browser and forwarded per request; the
+server does not store it or log it.
+
+## 6. API
+
+| Route | Description |
+|---|---|
+| `GET /api/health` | Liveness, configured state, model list, uptime |
+| `GET /api/config` | Browser-safe model and site configuration |
+| `POST /api/chat` | SSE stream: `meta`, `delta`, `reasoning`, `done`, `error` |
+
+```text
+browser ──POST /api/chat──▶ nginx ──▶ FastAPI ──▶ OpenAI-compatible endpoint
+   ▲                        │          │
+   └──── SSE: meta/delta ───┘          └─ the key never leaves server memory
+         reasoning/done/error
+```
+
+The browser sends the conversation; the server trims it to the configured count and character
+budget before appending the persona. Any provider that speaks `/chat/completions` works.
+
+## 7. Deploy
+
+Target: a control-panel Linux stack with Nginx and systemd; static files are served by Nginx and
+`/api/` is proxied to Uvicorn on loopback.
+
+```bash
+# Build a source archive without secrets, virtualenv, caches or installers
+tar czf dreamai-web.tar.gz \
+  --exclude '.env' --exclude '.venv' --exclude '__pycache__' \
+  --exclude 'web/downloads/*.exe' -C web .
+
+# Upload / unpack on the server, then:
+bash deploy/install.sh
+```
+
+`deploy/install.sh`:
+
+1. archives the current site under `/www/backup/`;
+2. moves runtime state aside — `.env`, `.venv`, `data`, `lsl`, `.well-known`, `web/downloads` — so a
+   code deploy cannot delete a server key or a large installer;
+3. installs the new code and restores those assets (a failed run restores them before exiting);
+4. creates / reuses the virtualenv and installs dependencies;
+5. writes the systemd unit and Nginx vhost, reloads Nginx and calls `/api/health`.
+
+The script aborts when the site directory has no `lsl` marker unless `FORCE=1` is set. It never
+touches the host's other applications.
+
+Common operations:
 
 ```bash
 systemctl status dreamai-web
@@ -180,47 +224,25 @@ journalctl -u dreamai-web -f
 nginx -t && nginx -s reload
 ```
 
-### Deployment record (2026-10-25)
+The site key is read from `/www/wwwroot/<domain>/.env` (mode `600`). Never commit it.
 
-| | |
-| --- | --- |
-| Server | Alibaba Cloud Linux 3 · nginx 1.28 |
-| Site directory | `/www/wwwroot/<domain>` |
-| Service port | `127.0.0.1:8010` (8000 was taken by another project on the same host) |
-| systemd unit | `dreamai-web` (enabled at boot) |
-| TLS certificate | managed by the control panel, valid until 2027-01-05 |
-| Previous site backup | kept under `/www/backup/` |
-| nginx config backup | kept next to the original `.conf` with a timestamp suffix |
+## 8. Security and privacy
 
-When cleaning the old site, `lsl/` and `.well-known/` were preserved (the latter for certificate
-renewal); everything else was removed. Host addresses and absolute paths are intentionally omitted
-from this repository.
+- API keys live only in the server `.env` and never appear in front-end output.
+- Conversations stay in the visitor's browser; the service writes no conversation data to disk.
+- Model output is sanitised with DOMPurify before rendering; links use `noopener noreferrer`.
+- Responses carry CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy` and HSTS via Nginx.
+- Per-IP rate limiting plus a concurrency cap keep a public deployment from being hammered. The
+  in-memory counters are per process; use one worker or shared storage for strict global quotas.
 
-## Request path
+## 9. Relationship to the DreamAI repository
 
-```
-browser ──POST /api/chat──▶ nginx ──▶ FastAPI ──▶ OpenAI-compatible endpoint
-   ▲                        │          │
-   └──── SSE: meta/delta ───┘          └─ the key never leaves server memory
-         reasoning/done/error
-```
+`dream_ai/` is the command-line agent core (provider, memory, tools, autonomy). The web edition
+shares its product definition, `DREAMAI_*` vocabulary and visual language, but currently reaches
+model endpoints through its own FastAPI streaming layer. Connecting the web tools and autonomy to
+the same Python agent API is planned, not finished. The desktop app loads this interface and adds
+local file capabilities via Electron IPC.
 
-- The front end sends the whole conversation; the backend trims it to the last 30 messages / 60k
-  characters and prepends the persona.
-- Any provider that speaks `/chat/completions` works; switching models is a `.env` change.
-- `reasoning_content` is streamed as its own event and rendered as a collapsible "thinking" block.
+## License
 
-## Security and privacy
-
-- API keys live only in the server `.env` (mode `600`) and never appear in front-end output.
-- Conversations stay in the visitor's browser; the server writes nothing to disk and requires no login.
-- All model output is sanitised with DOMPurify before rendering; links use `noopener noreferrer`.
-- Responses carry CSP, `X-Frame-Options: DENY`, `nosniff`, and related headers.
-- Per-IP rate limiting and a concurrency cap keep a public deployment from being hammered.
-
-## Relationship to the DreamAI repository
-
-`dream_ai/` in the repository is the command-line agent core (provider, memory, tools, autonomy).
-The web edition reuses its product definition and configuration conventions and brings the
-conversation layer into the browser. A later step is to connect `dream_ai.tools` and the `autonomy`
-engine to the `/api/chat` tool events, so the web app gains web access, files, and multi-step tasks.
+MIT — same as the rest of Dream AI.

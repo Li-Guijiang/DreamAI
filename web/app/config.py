@@ -20,7 +20,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = BASE_DIR / "web"
 
-VERSION = "1.4.0"
+VERSION = "2.0.0"
 
 DEFAULT_SYSTEM_PROMPT = """你是 Dream AI，一个由李贵江等人组成的团队开发的开源通用人工智能助手。
 

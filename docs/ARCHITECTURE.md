@@ -80,6 +80,7 @@ Note that `AutonomyEngine` executes tools through `ToolRegistry`, not through th
 ### 3.1 Entry layer
 
 - `cli.py` — parses arguments, loads settings, builds the agent, runs the loop. **No business logic**: it only handles input, output, and command dispatch.
+- `ui/` — an optional terminal presentation layer: animated wordmark, typed replies, a live spinner, trace colours, and `/motion`. It only runs in a real TTY and degrades to stable plain text when redirected, when `NO_COLOR` is set, or when animations are disabled.
 - `agent_factory.py` — picks the memory backend and the tool set from `Settings` and injects them into `DreamAIAgent`. Filesystem and permission decisions are made here, which keeps the core clean.
 
 ### 3.2 Core layer
@@ -211,6 +212,6 @@ A run can end in exactly three ways: every step completed, the step budget exhau
 ## 7. Current state and next steps
 
 1. The v0.4 planner is deterministic and only recognises time and calculation intents. Model-driven decomposition and native function calling belong to a later phase and reuse the same engine, trace, budget, and confirmation gate.
-2. **The web service does not reuse the `dream_ai` agent loop.** `web/app/llm.py` talks to the endpoint directly so it can stream SSE tokens and forward reasoning output. The two share the `DREAMAI_*` conventions and the prompt design, but the code paths are separate; converging them on one agent API is a candidate refactor.
+2. **The web service does not reuse the `dream_ai` agent loop.** `web/app/llm.py` talks to the endpoint directly so it can stream SSE tokens and forward reasoning output. The web client has its own motion and SSE layers. The two surfaces share the `DREAMAI_*` conventions and the prompt design, but the code paths are separate; converging them on one agent API is a candidate refactor.
 3. The desktop app loads the web interface and implements no chat logic itself: it only exposes local files, document generation, and command execution over IPC.
 4. Local open-source models are added as another provider; the core does not change.

@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — web 2.0 and terminal motion
+
+#### A living interface
+
+- A shared, dependency-free web motion engine (`web/web/assets/js/motion.js`): canvas starfield with
+  pointer parallax, meteors, a warp intro, click sparks, cursor aura, scroll reveals, counters, 3D
+  tilt, magnetic controls, page transitions, a top progress line and an accessible motion switch
+  persisted in `localStorage`. All effects honour `prefers-reduced-motion`.
+- Landing motion (`landing.js` / `landing.css`): a greeting that types, holds and deletes; a terminal
+  prompt ticker that fills the composer on click; an orbital planet mark; a conic card border and
+  pointer spotlight; an animated composer ring and send orbit.
+- A new animated documentation page at `/docs.html` (`docs.html`, `docs.css`, `docs.js`): scroll-spy
+  contents, typed terminal command, animated architecture map, reveal cards, copy buttons and reading
+  progress. Sitemap and navigation now include it.
+- New download-page motion (`download-motion.js` / `pages.css`): typed headline, orbital decorations,
+  tiltable preview window with scanline, output-format marquee, animated terminal and timeline.
+- Updated previews under `web/docs/` for the new home, documentation, download and mobile surfaces.
+- CLI terminal motion (`dream_ai/ui/`): animated wordmark, typed replies, live thinking spinner,
+  coloured trace events and `/motion`; `--no-animation` / `--no-motion`, redirected output and
+  `NO_COLOR` all degrade to plain text. New `DREAMAI_ANIMATIONS` and `DREAMAI_ANIMATION_SPEED`
+  settings.
+- `tests/test_ui.py` for terminal fallbacks and motion settings; `tests/test_web_assets.py` for local
+  page/asset references, documentation images, the motion switch and sitemap coverage.
+- CI now syntax-checks every shipped web JavaScript file.
+- Web version `2.0.0`, exposed through `/api/config`.
+
+### Fixed — deploy and configuration
+
+- `web/deploy/install.sh` now preserves `.env`, `.venv`, `data`, `lsl`, `.well-known` and
+  `web/downloads` across a code deploy (and restores them if the deploy fails), instead of clearing
+  the site and deleting the server key and installers.
+- The web `.env.example` now matches the variables the service actually reads and fixes a literal
+  `/n` in a comment.
+- `web/app/main.py` documents that in-memory daily/rate counters are per worker.
+
+### Changed — documentation
+
+- `README.md`, `web/README.md`, `docs/README.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md` and
+  `docs/GUIDE.md` now document the motion layer, the web 2.0 version, the new `/motion` command and
+  the still-separate web request path.
+
 ### Added
 - `docs/SUPPORT.md`: self-check order and reporting channels, so the repository
   now covers every item in GitHub's community profile.
@@ -93,8 +134,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `web/tools/archive/`, where they are kept for traceability but not maintained.
 
 ### Notes
-- No version number was bumped: this batch is repository hygiene, documentation,
-  and small fixes. The three deliverables stay at `0.4.0` / `1.4.0` / `1.2.0`.
+- The earlier hygiene batch in this release left the versions untouched. This batch moves the web
+  surface to `2.0.0` for the motion release; the CLI stays at `0.4.0` and the desktop app at `1.2.0`.
+  Their independent cadence is recorded in `docs/adr/0001-three-deliverables-one-repository.md`.
 
 ## [0.4.0] — 2026-10-24
 

@@ -35,7 +35,8 @@ All project documentation lives here. The repository ships three runnable forms 
 1. **Command line (Python package)** — `pip install -e .`, then `python -m dream_ai` or `dream-ai`.
    Configuration lives in [.env.example](../.env.example); the walkthrough is [GUIDE.md](./GUIDE.md).
 2. **Web service (FastAPI)** — `cd web`, install the requirements, start uvicorn. See
-   [web/README.md](../web/README.md). Configuration lives in `web/.env.example`.
+   [web/README.md](../web/README.md). Configuration lives in `web/.env.example`. The deployed
+   animated documentation page is <https://liguijiang.com/docs.html>.
 3. **Windows desktop (Electron)** — `cd desktop`, `pnpm install`, `pnpm start`. See
    [desktop/README.md](../desktop/README.md) for packaging.
 
@@ -50,7 +51,7 @@ The repository produces three artifacts that version separately. This is intenti
 | Artifact | Version source | Current version | Notes |
 |---|---|---|---|
 | CLI package `dream-ai` | `pyproject.toml` → `[project].version` | `0.4.0` | Follows the CLI roadmap; tagged releases publish sdist and wheel |
-| Web service | `web/app/config.py` → `VERSION` | `1.4.0` | Ships on its own cadence, exposed through `/api/config` |
+| Web service | `web/app/config.py` → `VERSION` | `2.0.0` | Ships on its own cadence, exposed through `/api/config`; adds the motion system and `/docs.html` |
 | Windows desktop app | `desktop/package.json` → `version` | `1.2.0` | Embedded in the installer name `DreamAI-Setup-<version>.exe` |
 
 When bumping any of them, check the three companions:
@@ -65,7 +66,7 @@ When bumping any of them, check the three companions:
 
 1. New documents go in this directory and must be added to the table in section 1 — no orphan files.
 2. User-facing procedures use ordered lists; commands go in fenced code blocks.
-3. When a document mentions a configuration key, update the matching `.env.example` so both use the same variable name.
+3. When a document mentions a configuration key, update the matching `.env.example` so both use the same variable name. That includes the terminal motion keys `DREAMAI_ANIMATIONS` and `DREAMAI_ANIMATION_SPEED`.
 4. Architecture decisions are recorded in `adr/` as `0001-<topic>.md`, numbered upward. Do not rewrite accepted records; supersede them.
 5. Relative links only — no personal sites or temporary URLs.
 6. Everything is written in English. Readers who prefer another language can use browser translation.

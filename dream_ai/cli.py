@@ -14,19 +14,13 @@ import json
 import sys
 from typing import Any
 
+from . import __version__
 from .agent_factory import build_agent
 from .autonomy import PlanStep, TraceEntry
 from .config import Settings, load_settings
 from .core import DreamAIAgent
 from .exceptions import ConfigurationError, ProviderError, ToolConfirmationRequired, ToolError
-
-BANNER = r"""
-  ____  ____  __  __    _    __  __ _____
- |  _ \|  _ \|  \/  |  / \  |  \/  | ____|
- | |  \ | |_) | |\/| | / _ \ | |\/| |  _|
- | |__| |  _ <| |  | |/ ___ \| |  | | |___
- |_____/|_| \_\_|  |_/_/   \_\_|  |_|_____|
-"""
+from .ui import Console, prepare_output
 
 HELP_TEXT = """\
 Available commands:
@@ -40,6 +34,7 @@ Available commands:
   /memory          Show remembered preferences
   /forget          Clear all remembered preferences
   /clear           Clear the conversation history
+  /motion          Toggle the terminal launch / typing / spinner effects
   /about           Show provider, tools, autonomy, session info, and preferences
   /quit | /exit    Leave Dream AI
 Type anything else to chat with Dream AI.
@@ -60,11 +55,18 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--model", default=None, help="Override the model name.")
     parser.add_argument("--base-url", default=None, help="Override the API base URL.")
     parser.add_argument("--api-key", default=None, help="Override the API key.")
+    parser.add_argument(
+        "--no-animation",
+        "--no-motion",
+        action="store_true",
+        dest="no_animation",
+        help="Disable the launch sequence, typing effect, and spinner.",
+    )
     return parser.parse_args(argv)
 
 
 def _apply_overrides(settings: Settings, args: argparse.Namespace) -> Settings:
-    updates: dict[str, str] = {}
+    updates: dict[str, object] = {}
     if args.provider:
         updates["provider"] = args.provider
     if args.model:
@@ -73,41 +75,48 @@ def _apply_overrides(settings: Settings, args: argparse.Namespace) -> Settings:
         updates["base_url"] = args.base_url
     if args.api_key:
         updates["api_key"] = args.api_key
+    if getattr(args, "no_animation", False):
+        updates["animations_enabled"] = False
     return dataclasses.replace(settings, **updates) if updates else settings
 
 
-def _print_memory_status(agent: DreamAIAgent, settings: Settings) -> None:
+def _print_memory_status(agent: DreamAIAgent, settings: Settings, ui: Console) -> None:
     mode = "persistent" if settings.persistence_enabled else "in-memory"
     location = settings.data_dir if settings.persistence_enabled else "session only"
-    print(f"Memory: {mode} ({location})")
     autonomy = "on" if settings.autonomy_enabled else "off"
-    print(
-        f"Autonomy: {autonomy} (max steps: {settings.max_steps}, retries: {settings.max_retries})"
+    ui.line(f"{ui.muted('memory')}   {mode} {ui.muted(f'({location})')}")
+    ui.line(
+        f"{ui.muted('autonomy')} {autonomy} "
+        f"{ui.muted(f'(max steps: {settings.max_steps}, retries: {settings.max_retries})')}"
     )
-    print(f"Tools: {len(agent.tool_names)} registered\n")
+    ui.line(f"{ui.muted('tools')}    {len(agent.tool_names)} registered")
+    ui.blank()
 
 
-def _print_tools(agent: DreamAIAgent) -> None:
+def _print_tools(agent: DreamAIAgent, ui: Console) -> None:
     schemas = agent.list_tools()
     if not schemas:
-        print("No tools registered. Set DREAMAI_TOOLS_ENABLED=true to enable tools.\n")
+        ui.line(ui.muted("No tools registered. Set DREAMAI_TOOLS_ENABLED=true to enable tools."))
+        ui.blank()
         return
 
-    print("Registered tools:")
+    ui.line(ui.accent("Registered tools:"))
     for tool in schemas:
         confirmation = " (needs confirmation)" if tool["requires_confirmation"] else ""
-        print(f"  - {tool['name']} [{tool['risk']}]{confirmation}")
-        print(f"      {tool['description']}")
+        risk = tool["risk"]
+        ui.line(f"  {ui.accent('›')} {tool['name']} {ui.muted(f'[{risk}]{confirmation}')}")
+        ui.line(f"      {ui.muted(tool['description'])}")
         required = tool["parameters"].get("required", [])
         if required:
-            print(f"      arguments: {', '.join(required)}")
-    print()
+            ui.line(f"      {ui.muted('arguments:')} {', '.join(required)}")
+    ui.blank()
 
 
-def _run_tool(agent: DreamAIAgent, rest: str) -> None:
+def _run_tool(agent: DreamAIAgent, rest: str, ui: Console) -> None:
     rest = rest.strip()
     if not rest:
-        print('Usage: /tool <name> <json>  e.g. /tool calculator {"expression": "2+3"}\n')
+        ui.line('Usage: /tool <name> <json>  e.g. /tool calculator {"expression": "2+3"}')
+        ui.blank()
         return
 
     name, _, args_text = rest.partition(" ")
@@ -119,30 +128,38 @@ def _run_tool(agent: DreamAIAgent, rest: str) -> None:
         try:
             parsed = json.loads(args_text)
         except json.JSONDecodeError as exc:
-            print(f"⚠ Invalid tool arguments: {exc}\n")
+            ui.line(ui.error(f"⚠ Invalid tool arguments: {exc}"))
+            ui.blank()
             return
         if not isinstance(parsed, dict):
-            print("⚠ Tool arguments must be a JSON object.\n")
+            ui.line(ui.error("⚠ Tool arguments must be a JSON object."))
+            ui.blank()
             return
         arguments = parsed
 
     try:
-        result = agent.execute_tool(name, confirmed=False, **arguments)
+        with ui.status(f"running tool {ui.accent(name)}"):
+            result = agent.execute_tool(name, confirmed=False, **arguments)
     except ToolConfirmationRequired as exc:
         answer = input(f"Tool '{exc.tool_name}' will modify files. Confirm? [y/N] ").strip().lower()
         if answer not in {"y", "yes"}:
-            print("Tool call cancelled.\n")
+            ui.line(ui.muted("Tool call cancelled."))
+            ui.blank()
             return
         try:
-            result = agent.execute_tool(name, confirmed=True, **arguments)
+            with ui.status(f"running tool {ui.accent(name)}"):
+                result = agent.execute_tool(name, confirmed=True, **arguments)
         except ToolError as tool_exc:
-            print(f"⚠ Tool error: {tool_exc}\n")
+            ui.line(ui.error(f"⚠ Tool error: {tool_exc}"))
+            ui.blank()
             return
     except ToolError as exc:
-        print(f"⚠ Tool error: {exc}\n")
+        ui.line(ui.error(f"⚠ Tool error: {exc}"))
+        ui.blank()
         return
 
-    print(f"tool › {result}\n")
+    ui.line(f"{ui.success('tool ›')} {result}")
+    ui.blank()
 
 
 # --- Autonomous mode ---------------------------------------------------------
@@ -155,103 +172,127 @@ def _confirm_action(step: PlanStep, tool_name: str, arguments: dict[str, Any]) -
     return answer in {"y", "yes"}
 
 
-def _print_event(entry: TraceEntry) -> None:
+def _print_event(entry: TraceEntry, ui: Console) -> None:
     """Print one live autonomy trace event (verbose mode)."""
     step = f"step {entry.step_index + 1}" if entry.step_index is not None else "plan"
-    print(f"  [{entry.phase.value}] {step}: {entry.content}")
+    ui.event(entry.phase.value, step, entry.content)
 
 
-def _run_autonomous(agent: DreamAIAgent, settings: Settings, objective: str) -> None:
+def _print_steps(steps: list[PlanStep], ui: Console) -> None:
+    for index, step in enumerate(steps, start=1):
+        ui.line(f"  {ui.muted(f'{index:02d}')} {ui.accent(f'[{step.status.value}]')} {step.title}")
+        if step.observation:
+            ui.line(f"       {ui.muted('observation')}: {step.observation}")
+        if step.error:
+            ui.line(f"       {ui.error('error')}: {step.error}")
+
+
+def _run_autonomous(agent: DreamAIAgent, settings: Settings, objective: str, ui: Console) -> None:
     if not settings.autonomy_enabled:
-        print("⚠ Autonomous mode is disabled (DREAMAI_AUTONOMY_ENABLED=false).\n")
+        ui.line(ui.error("⚠ Autonomous mode is disabled (DREAMAI_AUTONOMY_ENABLED=false)."))
+        ui.blank()
         return
     if not objective:
-        print("Usage: /run <objective>  e.g. /run what time is it and calculate 12 * 7\n")
+        ui.line("Usage: /run <objective>  e.g. /run what time is it and calculate 12 * 7")
+        ui.blank()
         return
 
-    on_event = _print_event if settings.autonomy_verbose else None
+    on_event = (lambda entry: _print_event(entry, ui)) if settings.autonomy_verbose else None
 
     try:
+        if not settings.autonomy_verbose:
+            ui.line(ui.muted("dream-ai is planning the route…"))
         result = agent.autonomous_task(
             objective,
             confirmation_callback=_confirm_action,
             on_event=on_event,
         )
     except ConfigurationError as exc:
-        print(f"⚠ {exc}\n")
+        ui.line(ui.error(f"⚠ {exc}"))
+        ui.blank()
         return
 
     if not settings.autonomy_verbose:
-        print("\nPlan:")
-        for index, step in enumerate(result.steps, start=1):
-            print(f"  {index}. [{step.status.value}] {step.title}")
-            if step.observation:
-                print(f"      observation: {step.observation}")
-            if step.error:
-                print(f"      error: {step.error}")
-        print()
+        ui.blank()
+        ui.line(ui.accent("Plan"))
+        _print_steps(result.steps, ui)
+        ui.blank()
 
-    print(result.final_summary)
-    print()
+    ui.reply(result.final_summary)
 
 
-def _print_trace(agent: DreamAIAgent) -> None:
+def _print_trace(agent: DreamAIAgent, ui: Console) -> None:
     result = agent.last_execution
     if result is None:
-        print("No autonomous task has run yet. Use /run <objective>.\n")
+        ui.line(ui.muted("No autonomous task has run yet. Use /run <objective>."))
+        ui.blank()
         return
 
-    print(f"Last task: {result.objective}")
-    print(
-        f"Status: {result.status.value} "
-        f"({len(result.succeeded_steps)}/{result.total_steps} steps succeeded)\n"
+    ui.line(f"{ui.muted('Last task:')} {result.objective}")
+    ui.line(
+        f"{ui.muted('Status:')} {result.status.value} "
+        f"{ui.muted(f'({len(result.succeeded_steps)}/{result.total_steps} steps succeeded)')}"
     )
+    ui.blank()
 
-    print("Plan:")
-    for index, step in enumerate(result.steps, start=1):
-        print(f"  {index}. [{step.status.value}] {step.title}")
-        if step.observation:
-            print(f"      observation: {step.observation}")
-        if step.error:
-            print(f"      error: {step.error}")
+    ui.line(ui.accent("Plan"))
+    _print_steps(result.steps, ui)
 
-    print("\nTrace:")
+    ui.blank()
+    ui.line(ui.accent("Trace"))
     for entry in result.trace:
         step = f"step {entry.step_index + 1}" if entry.step_index is not None else "—"
-        print(f"  [{entry.phase.value}] {step}: {entry.content}")
-    print()
+        ui.event(entry.phase.value, step, entry.content)
+    ui.blank()
 
 
 def main(argv: list[str] | None = None) -> int:
+    prepare_output()
     args = _parse_args(argv)
     settings = _apply_overrides(load_settings(), args)
+    ui = Console(enabled=settings.animations_enabled, speed=settings.animation_speed)
 
     try:
         agent = build_agent(settings)
     except ConfigurationError as exc:
-        print(f"Configuration error: {exc}", file=sys.stderr)
+        ui.line(ui.error(f"Configuration error: {exc}"))
         return 2
 
-    print(BANNER)
-    print("Welcome to Dream AI — type /help for commands, /quit to exit.\n")
+    ui.intro(
+        __version__,
+        agent.provider_name,
+        settings.model,
+        agent.provider_name == "local-echo",
+    )
+    ui.line(f"Welcome to {ui.accent('Dream AI')} — type /help for commands, /quit to exit.")
+    ui.blank()
 
     if agent.provider_name == "local-echo":
-        print(
-            "ℹ Offline demo mode: no hosted API key was configured, so Dream AI "
-            "is running on the local placeholder provider.\n"
-            "  Copy `.env.example` to `.env`, set DREAMAI_API_KEY, and restart to "
-            "use a real model.\n"
+        ui.line(
+            ui.warn(
+                "ℹ Offline demo mode: no hosted API key was configured, so Dream AI "
+                "is running on the local placeholder provider."
+            )
         )
+        ui.line(
+            ui.muted(
+                "  Copy `.env.example` to `.env`, set DREAMAI_API_KEY, and restart to "
+                "use a real model."
+            )
+        )
+        ui.blank()
     else:
-        print(f"Connected via provider: {agent.provider_name}\n")
+        ui.line(f"{ui.muted('Connected via provider:')} {ui.success(agent.provider_name)}")
+        ui.blank()
 
-    _print_memory_status(agent, settings)
+    _print_memory_status(agent, settings, ui)
 
     while True:
         try:
-            user_input = input("you › ").strip()
+            user_input = input(ui.user_prompt()).strip()
         except (EOFError, KeyboardInterrupt):
-            print("\nGoodbye — keep dreaming.")
+            ui.blank()
+            ui.line(ui.muted("Goodbye — keep dreaming."))
             return 0
 
         if not user_input:
@@ -260,85 +301,110 @@ def main(argv: list[str] | None = None) -> int:
         command = user_input.lower()
 
         if command in {"/quit", "/exit"}:
-            print("Goodbye — keep dreaming.")
+            ui.line(ui.muted("Goodbye — keep dreaming."))
             return 0
 
         if command == "/help":
-            print(HELP_TEXT)
+            ui.line(HELP_TEXT)
+            continue
+
+        if command == "/motion":
+            active = ui.toggle()
+            if active:
+                ui.line(
+                    ui.success("Terminal motion on — typing, spinner, and launch effects enabled.")
+                )
+            elif sys.stdout.isatty():
+                ui.line(ui.muted("Terminal motion off — output is plain text for this session."))
+            else:
+                ui.line(
+                    ui.muted("Terminal motion needs an interactive terminal; output stays plain.")
+                )
+            ui.blank()
             continue
 
         if command.startswith("/run"):
             _, _, rest = user_input.partition(" ")
-            _run_autonomous(agent, settings, rest.strip())
+            _run_autonomous(agent, settings, rest.strip(), ui)
             continue
 
         if command == "/trace":
-            _print_trace(agent)
+            _print_trace(agent, ui)
             continue
 
         if command == "/tools":
-            _print_tools(agent)
+            _print_tools(agent, ui)
             continue
 
         if command.startswith("/tool"):
             _, _, rest = user_input.partition(" ")
-            _run_tool(agent, rest)
+            _run_tool(agent, rest, ui)
             continue
 
         if command.startswith("/remember"):
             _, _, note = user_input.partition(" ")
             note = note.strip()
             if not note:
-                print("Usage: /remember <your preference>\n")
+                ui.line("Usage: /remember <your preference>")
+                ui.blank()
                 continue
             agent.remember(note)
-            print("Saved to long-term memory.\n")
+            ui.line(ui.success("Saved to long-term memory."))
+            ui.blank()
             continue
 
         if command == "/memory":
             notes = agent.preference_notes
             if not notes:
-                print("No preferences remembered yet. Use /remember <text>.\n")
+                ui.line(ui.muted("No preferences remembered yet. Use /remember <text>."))
+                ui.blank()
                 continue
-            print("Remembered preferences:")
+            ui.line(ui.accent("Remembered preferences:"))
             for index, note in enumerate(notes, start=1):
-                print(f"  {index}. {note}")
-            print()
+                ui.line(f"  {index}. {note}")
+            ui.blank()
             continue
 
         if command == "/forget":
             agent.forget_preferences()
-            print("All remembered preferences cleared.\n")
+            ui.line(ui.muted("All remembered preferences cleared."))
+            ui.blank()
             continue
 
         if command in {"/clear", "/reset"}:
             agent.reset()
-            print("Conversation history cleared.\n")
+            ui.line(ui.muted("Conversation history cleared."))
+            ui.blank()
             continue
 
         if command == "/about":
             turns = sum(1 for msg in agent.history if msg["role"] == "user")
-            print(f"Provider: {agent.provider_name}")
-            print(f"Model: {settings.model}")
-            print(f"Tools: {len(agent.tool_names)} ({', '.join(agent.tool_names) or 'none'})")
+            ui.line(f"{ui.muted('Provider:')} {agent.provider_name}")
+            ui.line(f"{ui.muted('Model:')} {settings.model}")
+            ui.line(
+                f"{ui.muted('Tools:')} {len(agent.tool_names)} ({', '.join(agent.tool_names) or 'none'})"
+            )
             autonomy = "on" if agent.autonomy_enabled else "off"
-            print(
-                f"Autonomy: {autonomy} "
-                f"(max steps: {settings.max_steps}, retries: {settings.max_retries})"
+            ui.line(
+                f"{ui.muted('Autonomy:')} {autonomy} "
+                f"{ui.muted(f'(max steps: {settings.max_steps}, retries: {settings.max_retries})')}"
             )
             if agent.last_execution:
-                print(f"Last autonomous task: {agent.last_execution.status.value}")
-            print(f"Messages sent this session: {turns}")
-            print(f"Preferences remembered: {len(agent.preference_notes)}\n")
+                ui.line(f"{ui.muted('Last autonomous task:')} {agent.last_execution.status.value}")
+            ui.line(f"{ui.muted('Messages sent this session:')} {turns}")
+            ui.line(f"{ui.muted('Preferences remembered:')} {len(agent.preference_notes)}")
+            ui.blank()
             continue
 
         try:
-            reply = agent.chat(user_input)
+            with ui.status("thinking"):
+                reply = agent.chat(user_input)
         except ProviderError as exc:
-            print(f"⚠ Provider error: {exc}\n")
+            ui.line(ui.error(f"⚠ Provider error: {exc}"))
+            ui.blank()
             continue
 
-        print(f"dream-ai › {reply}\n")
+        ui.reply(reply)
 
 
 if __name__ == "__main__":  # pragma: no cover

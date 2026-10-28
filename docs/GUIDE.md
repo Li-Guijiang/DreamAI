@@ -202,7 +202,11 @@ Type after the `you ›` prompt and press Enter.
 |---|---|
 | Plain text | One chat turn with Dream AI |
 | `/clear` | Clear the current conversation (the system prompt is kept) |
+| `/motion` | Toggle the launch sequence, typed replies, and thinking spinner for this session |
 | `/about` | Show model, tools, autonomy state, message count, and preference count |
+
+> Motion only starts in an interactive terminal. Redirected output, `NO_COLOR`, or the
+> `--no-animation` flag automatically keeps the output plain and stable for logs.
 
 ### 4.2 Memory (v0.2)
 
@@ -364,6 +368,7 @@ It prints the objective, the final status, each step's title/status/observation,
 | `/memory` | Show remembered preferences |
 | `/forget` | Clear every preference |
 | `/clear` | Clear the current conversation |
+| `/motion` | Toggle terminal visual effects for the current session |
 | `/about` | Show model, tools, autonomy, turns, preferences, and the last task status |
 | `/quit` or `/exit` | Leave Dream AI |
 | Anything else | A normal chat turn |
@@ -406,6 +411,16 @@ It prints the objective, the final status, each step's title/status/observation,
 | `DREAMAI_MAX_STEPS` | `10` | Maximum tool calls per task (step budget) |
 | `DREAMAI_MAX_RETRIES` | `2` | Extra attempts per failed step; `0` disables retries |
 | `DREAMAI_AUTONOMY_VERBOSE` | `false` | Print every think/act/observe/reflect event live |
+
+### Terminal motion
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DREAMAI_ANIMATIONS` | `auto` | Enable the launch wordmark, typed replies, and spinner in an interactive terminal; `false` forces plain text |
+| `DREAMAI_ANIMATION_SPEED` | `1.0` | Speed multiplier for terminal effects (`0.25`–`4.0`) |
+
+`--no-animation` (alias `--no-motion`) disables effects for one run; `/motion` toggles them for the
+current session. The web surface has its own independent motion switch on every page.
 
 ---
 

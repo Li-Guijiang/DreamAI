@@ -58,7 +58,7 @@ Three deliverables share one design language and one set of `DREAMAI_*` conventi
 | Form | Entry point | Version | Best for |
 |---|---|---|---|
 | Command-line package | `python -m dream_ai` · [`dream_ai/`](./dream_ai) | `0.4.0` | Local scripts, automation, extending the core |
-| Web service | <https://liguijiang.com> · [`web/`](./web) | `1.4.0` | Open and use, nothing to install |
+| Web service | <https://liguijiang.com> · [`web/`](./web) | `2.0.0` | Open and use, nothing to install; full cosmic motion system + animated docs at `/docs.html` |
 | Windows desktop app | [Download](https://liguijiang.com/download.html) · [`desktop/`](./desktop) | `1.2.0` | Local file workbench, document generation, coding mode |
 
 The three version numbers are independent by design, not by drift: see the [version cross-reference](./docs/README.md#3-version-cross-reference) and [ADR 0001](./docs/adr/0001-three-deliverables-one-repository.md).
@@ -81,6 +81,21 @@ The three version numbers are independent by design, not by drift: see the [vers
 |---|---|
 | ![Work mode](./web/docs/preview-work.png) | ![Desktop](./web/web/assets/img/desktop-preview.png) |
 
+### A site that moves
+
+The web surface is now a living cosmic interface: a starfield that follows the
+pointer, a warp intro, a greeting that types and deletes itself, a terminal
+prompt ticker, orbital cards with 3D spotlight, magnetic buttons, click sparks,
+page transitions, scroll reveals and reading progress. Every effect can be
+switched off in one click or via `prefers-reduced-motion`.
+
+| Motion documentation | Motion download page |
+|---|---|
+| ![Animated docs page](./web/docs/preview-motion-docs.png) | ![Animated download page](./web/docs/preview-motion-download.png) |
+
+The CLI has its own quieter motion layer: a launch wordmark, typed replies, a
+live thinking spinner and `/motion` to turn it off mid-session.
+
 ## 4. Capabilities
 
 | Capability | What it does | Phase |
@@ -92,6 +107,8 @@ The three version numbers are independent by design, not by drift: see the [vers
 | **Autonomous planning** | think → act → observe → reflect loop with a step budget, retries, approval before protected actions, and a full trace | v0.4 |
 | **Streaming** | SSE token streaming on the web, with collapsible reasoning output | web |
 | **Document generation** | Export docx / xlsx / pptx / pdf from the desktop app | desktop |
+| **Living interface** | Shared web motion engine with a persistent on/off switch, reduced-motion support and a dedicated animated docs page | web 2.0 |
+| **Terminal motion** | Launch sequence, typed replies, live spinner, coloured trace, `/motion`, and plain-text fallback for redirected output | v0.4 |
 | **Safe by default** | Tools and autonomous actions require explicit approval; file tools stay inside a sandbox directory | v0.3 |
 
 ## 5. Architecture
@@ -127,7 +144,7 @@ flowchart TB
     end
 
     CLI --> AGENT
-    WEB --> AGENT
+    WEB -.->|planned: reuse core| AGENT
     DESK --> WEB
     AGENT --> CONV
     AGENT --> AUTO
@@ -144,7 +161,7 @@ flowchart TB
     TOOL -.-> T3
 ```
 
-The core depends on three narrow interfaces (`LLMProvider`, `Memory`, `Tool`), so swapping a model, a storage backend, or a tool never requires touching the agent. Layer-by-layer detail and both data flows: [architecture](./docs/ARCHITECTURE.md).
+The core depends on three narrow interfaces (`LLMProvider`, `Memory`, `Tool`), so swapping a model, a storage backend, or a tool never requires touching the agent. The web runtime currently has its own FastAPI streaming path (the dashed edge is planned work, not a shipped claim); the desktop app loads the web interface. Layer-by-layer detail and both data flows: [architecture](./docs/ARCHITECTURE.md).
 
 ## 6. Quick start
 
@@ -195,6 +212,7 @@ cd desktop && pnpm install && pnpm start                                        
 | `/memory` | Show remembered preferences |
 | `/forget` | Clear all remembered preferences |
 | `/clear` | Clear the current conversation |
+| `/motion` | Toggle the terminal launch / typing / spinner effects for this session |
 | `/about` | Show backend, tool count, autonomy status, and preference count |
 
 </details>
@@ -218,6 +236,8 @@ cd desktop && pnpm install && pnpm start                                        
 | `DREAMAI_MAX_STEPS` | `10` | Tool-call budget per task |
 | `DREAMAI_MAX_RETRIES` | `2` | Extra retries per failed step |
 | `DREAMAI_AUTONOMY_VERBOSE` | `false` | Print every phase event live |
+| `DREAMAI_ANIMATIONS` | `auto` | Terminal motion: `auto` only in a real TTY, `false` forces plain text |
+| `DREAMAI_ANIMATION_SPEED` | `1.0` | Motion speed multiplier (`0.25`–`4.0`) |
 
 </details>
 
@@ -229,6 +249,7 @@ cd desktop && pnpm install && pnpm start                                        
 | `v0.2.0` | Memory | Sessions and preferences survive restarts | Released |
 | `v0.3.0` | Tools | A safe tool layer with a confirmation gate | Released |
 | `v0.4.0` | Autonomy | Multi-step planning with a reviewable trace | Released |
+| `web 2.0.0` | Living web surface | Full motion system, animated docs page, accessible motion switch | Live |
 | `v1.0.0` | Stable assistant | A reliable general-purpose personal agent | In progress |
 | `Future` | Self-hosted | Fully local deployment on open-source models | Planned |
 
@@ -246,7 +267,8 @@ DreamAI/
 │   ├── providers/             # Replaceable model backends
 │   ├── memory/                # Sessions, preferences, atomic persistence
 │   ├── tools/                 # Registry, built-in tools, call parser
-│   └── autonomy/              # Planner, execution engine, trace models
+│   ├── autonomy/              # Planner, execution engine, trace models
+│   └── ui/                    # Terminal launch / typing / spinner effects
 ├── web/                       # Web service and static site
 │   ├── app/                   # FastAPI (config / streaming client / routes)
 │   ├── web/                   # Browser assets
@@ -280,6 +302,7 @@ Run the same checks as CI before opening a pull request:
 pytest
 ruff check dream_ai tests examples web/app web/tools
 ruff format --check dream_ai tests examples
+for file in web/web/assets/js/*.js; do node --check "$file"; done
 ```
 
 | Document | Contents |

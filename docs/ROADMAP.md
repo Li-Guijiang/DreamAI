@@ -93,6 +93,30 @@ locally with or without an API key.
 
 ---
 
+## `web 2.0.0` — Living Web Surface (released)
+
+**Goal:** Make the browser surface feel like the same universe as the agent, without making the
+content depend on motion.
+
+### Tasks
+- [x] Shared motion engine: canvas starfield, meteors, pointer parallax, warp intro, typewriter
+      greeting and prompt ticker, orbital hero, card tilt/spotlight, magnetic controls, click sparks,
+      page transitions, scroll reveals and reading progress
+- [x] Animated architecture diagram, scroll-spy contents and typed terminal inside `/docs.html`
+- [x] Per-page motion switch that persists, plus full `prefers-reduced-motion` behaviour
+- [x] Capped device pixel ratio, auto-paused canvas in hidden tabs, reduced star count on low-power devices
+- [x] Terminal motion in the CLI with plain-text fallbacks
+- [ ] Route web tool and autonomy requests through the Python agent core (next)
+
+### Acceptance criteria
+- [x] Every page works without JavaScript; motion is decoration, not a prerequisite.
+- [x] The motion switch takes effect immediately without a reload and is remembered.
+- [x] Local scripts and styles pass a browser smoke test under the production CSP.
+- [x] The static site has no Node build step and deploys behind nginx.
+- [ ] One shared tool/autonomy request path for CLI and web (deferred).
+
+---
+
 ## `v1.0.0` — Stable Assistant
 
 **Goal:** A reliable, polished general-purpose personal agent.

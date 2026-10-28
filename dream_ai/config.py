@@ -38,6 +38,8 @@ class Settings:
     max_steps: int = 10
     max_retries: int = 2
     autonomy_verbose: bool = False
+    animations_enabled: bool = True
+    animation_speed: float = 1.0
 
     @property
     def hosted_configured(self) -> bool:
@@ -93,6 +95,17 @@ def _nonnegative_int(raw: str, default: int) -> int:
     return value if value >= 0 else default
 
 
+def _animation_speed(raw: str, default: float = 1.0) -> float:
+    """Parse a positive animation-speed multiplier, clamped to 0.25–4.0."""
+    try:
+        value = float(raw.strip())
+    except ValueError:
+        return default
+    if value <= 0:
+        return default
+    return max(0.25, min(4.0, value))
+
+
 def _default_data_dir() -> Path:
     """Per-user directory where sessions and preferences are stored."""
     return Path.home() / ".dream_ai"
@@ -129,4 +142,6 @@ def load_settings() -> Settings:
         max_steps=_positive_int(os.getenv("DREAMAI_MAX_STEPS", "10"), 10),
         max_retries=_nonnegative_int(os.getenv("DREAMAI_MAX_RETRIES", "2"), 2),
         autonomy_verbose=_truthy(os.getenv("DREAMAI_AUTONOMY_VERBOSE", "false")),
+        animations_enabled=_truthy(os.getenv("DREAMAI_ANIMATIONS", "auto")),
+        animation_speed=_animation_speed(os.getenv("DREAMAI_ANIMATION_SPEED", "1.0")),
     )

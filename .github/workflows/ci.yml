@@ -36,5 +36,11 @@ jobs:
       - name: Check formatting
         run: ruff format --check dream_ai tests examples
 
+      - name: Check web JavaScript syntax
+        run: |
+          for file in web/web/assets/js/*.js; do
+            node --check "$file"
+          done
+
       - name: Run tests with pytest
         run: pytest

@@ -4,8 +4,8 @@
 #
 #  用法：
 #     tar czf dreamai-web.tar.gz -C release .
-#     scp dreamai-web.tar.gz root@8.156.85.180:/tmp/
-#     ssh root@8.156.85.180
+#     scp dreamai-web.tar.gz root@YOUR_SERVER_IP:/tmp/
+#     ssh root@YOUR_SERVER_IP
 #     mkdir -p /tmp/dreamai-release && tar xzf /tmp/dreamai-web.tar.gz -C /tmp/dreamai-release
 #     bash /tmp/dreamai-release/deploy/install.sh
 #
@@ -38,16 +38,48 @@ if [[ ! -e "${APP_DIR}/lsl" && "${FORCE:-0}" != "1" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 1. 备份 + 清理（保留 lsl）
+# 1. 备份 + 清理
+#    Runtime state (`.env`, `.venv`, `data`, installers) is moved aside first
+#    so a code deploy can never delete a site key or a 100+ MB installer.
 # ---------------------------------------------------------------------------
 mkdir -p "${BACKUP_DIR}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_FILE="${BACKUP_DIR}/${DOMAIN}-site-${STAMP}.tar.gz"
+PRESERVE_DIR="${BACKUP_DIR}/dreamai-preserve-${STAMP}"
+PRESERVE_ITEMS=(".env" ".venv" "data" "lsl" ".well-known" "web/downloads")
+mkdir -p "${PRESERVE_DIR}"
+
+restore_preserved() {
+  local item
+  [[ -d "${PRESERVE_DIR}" ]] || return 0
+  for item in "${PRESERVE_ITEMS[@]}"; do
+    if [[ -d "${PRESERVE_DIR}/${item}" ]]; then
+      mkdir -p "${APP_DIR}/${item}"
+      # -n means newly shipped files (for example downloads/latest.json) win;
+      # only missing runtime files and installers are restored.
+      cp -a -n "${PRESERVE_DIR}/${item}/." "${APP_DIR}/${item}/" 2>/dev/null || true
+    elif [[ -e "${PRESERVE_DIR}/${item}" ]]; then
+      mkdir -p "${APP_DIR}/$(dirname "${item}")"
+      cp -a -n "${PRESERVE_DIR}/${item}" "${APP_DIR}/${item}" 2>/dev/null || true
+    fi
+  done
+  rm -rf "${PRESERVE_DIR}"
+}
+trap restore_preserved EXIT
+
 log "备份原站点到 ${BACKUP_FILE}"
 tar czf "${BACKUP_FILE}" -C "${APP_DIR}" . 2>/dev/null || warn "备份时出现警告，继续执行"
 
-log "清理站点目录（保留 lsl 与 .well-known）"
-find "${APP_DIR}" -mindepth 1 -maxdepth 1 ! -name 'lsl' ! -name '.well-known' -exec rm -rf {} +
+log "暂存运行时资产（.env / .venv / data / lsl / .well-known / 安装包）"
+for item in "${PRESERVE_ITEMS[@]}"; do
+  if [[ -e "${APP_DIR}/${item}" ]]; then
+    mkdir -p "${PRESERVE_DIR}/$(dirname "${item}")"
+    mv "${APP_DIR}/${item}" "${PRESERVE_DIR}/${item}"
+  fi
+done
+
+log "清理代码目录"
+find "${APP_DIR}" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 
 # ---------------------------------------------------------------------------
 # 2. 复制程序文件
@@ -58,6 +90,10 @@ for item in app web requirements.txt .env.example deploy README.md; do
     cp -a "${SRC_DIR}/${item}" "${APP_DIR}/"
   fi
 done
+
+log "恢复运行时资产"
+restore_preserved
+trap - EXIT
 
 mkdir -p "${APP_DIR}/data"
 
@@ -82,11 +118,11 @@ log "安装依赖（${PIP_INDEX}）"
 # ---------------------------------------------------------------------------
 if [[ ! -f "${APP_DIR}/.env" ]]; then
   cp "${APP_DIR}/.env.example" "${APP_DIR}/.env"
-  warn "已生成 .env，请填写 DREAMAI_API_KEY 后执行：systemctl restart dreamai-web"
+  warn "已生成 .env，请填写 DREAMAI_FREE_API_KEY 后执行：systemctl restart dreamai-web"
 fi
 
-if grep -q '^DREAMAI_API_KEY=$' "${APP_DIR}/.env" 2>/dev/null; then
-  warn "警告：DREAMAI_API_KEY 仍为空，网站可以打开但无法对话。"
+if grep -q '^DREAMAI_FREE_API_KEY=$' "${APP_DIR}/.env" 2>/dev/null; then
+  warn "警告：DREAMAI_FREE_API_KEY 仍为空，网站可以打开，但免费模型不可用。"
 fi
 
 # ---------------------------------------------------------------------------

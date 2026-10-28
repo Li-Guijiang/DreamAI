@@ -96,7 +96,12 @@ _daily_state = {"date": time.strftime("%Y-%m-%d"), "count": 0}
 
 
 async def consume_daily_budget() -> bool:
-    """Global per-process daily request budget (protects the API key)."""
+    """Daily request budget for this worker process (protects the API key).
+
+    The production unit runs two Uvicorn workers, so the effective ceiling is
+    roughly ``daily_limit * workers``. Use one worker or shared storage when a
+    strict process-independent quota is required.
+    """
     if settings.daily_limit <= 0:
         return True
     today = time.strftime("%Y-%m-%d")
@@ -410,6 +415,16 @@ async def index() -> FileResponse:
     return FileResponse(WEB_DIR / "index.html", headers={"Cache-Control": "no-cache"})
 
 
+@app.get("/docs.html")
+async def docs() -> FileResponse:
+    return FileResponse(WEB_DIR / "docs.html", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/download.html")
+async def download_page() -> FileResponse:
+    return FileResponse(WEB_DIR / "download.html", headers={"Cache-Control": "no-cache"})
+
+
 @app.get("/favicon.ico")
 async def favicon() -> FileResponse:
     return FileResponse(WEB_DIR / "assets" / "img" / "favicon.ico")
@@ -432,15 +447,12 @@ async def robots() -> Response:
 
 
 @app.get("/sitemap.xml")
-async def sitemap() -> Response:
-    body = (
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        "  <url><loc>https://liguijiang.com/</loc><changefreq>weekly</changefreq>"
-        "<priority>1.0</priority></url>\n"
-        "</urlset>\n"
+async def sitemap() -> FileResponse:
+    return FileResponse(
+        WEB_DIR / "sitemap.xml",
+        media_type="application/xml",
+        headers={"Cache-Control": "no-cache"},
     )
-    return Response(body, media_type="application/xml")
 
 
 app.mount("/assets", StaticFiles(directory=str(WEB_DIR / "assets")), name="assets")
