@@ -1,5 +1,7 @@
 # Local Setup Guide
 
+<sub>[Back to the documentation index](./README.md)</sub>
+
 A step-by-step guide to run Dream AI on your own machine. Windows steps are
 primary; macOS and Linux notes are included where they differ.
 

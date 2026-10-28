@@ -1,5 +1,7 @@
 # Security Policy
 
+<sub>[Back to the documentation index](./README.md)</sub>
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in Dream AI, please report it

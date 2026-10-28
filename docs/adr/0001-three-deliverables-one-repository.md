@@ -1,5 +1,7 @@
 # 0001 — One repository, three deliverables, three version numbers
 
+<sub>[ADR 索引](./README.md) · [文档索引](../README.md)</sub>
+
 - **Status:** Accepted
 - **Date:** 2026-10-28
 - **Deciders:** Dream AI maintainers

@@ -1,5 +1,7 @@
 # Plans & Pricing — Vision Document
 
+<sub>[Back to the documentation index](./README.md)</sub>
+
 > ⚠️ **These plans are a long-term vision only. Nothing is sold or available
 > today.** Dream AI is free and open-source under the MIT License. This
 > document records the intended direction so the community can give feedback.

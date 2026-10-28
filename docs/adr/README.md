@@ -1,5 +1,7 @@
 # Architecture Decision Records (ADR)
 
+<sub>[Back to the documentation index](../README.md)</sub>
+
 This folder stores short, dated records of important architecture decisions.
 
 Each ADR answers: what was decided, why, and what alternatives were rejected.

@@ -1,5 +1,7 @@
 # Contributing to Dream AI
 
+<sub>[Back to the documentation index](./README.md)</sub>
+
 Thank you for helping build Dream AI. Contributions of all kinds are welcome:
 code, documentation, bug reports, ideas, and feedback.
 

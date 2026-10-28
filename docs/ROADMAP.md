@@ -1,5 +1,7 @@
 # Dream AI Roadmap
 
+<sub>[Back to the documentation index](./README.md)</sub>
+
 This roadmap organizes Dream AI into small, shippable phases. Each version
 has a clear goal, a task list, and acceptance criteria. Dates are not fixed —
 quality and a working deliverable matter more than deadlines.

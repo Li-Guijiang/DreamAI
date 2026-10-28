@@ -1,5 +1,7 @@
 # Code of Conduct
 
+<sub>[Back to the documentation index](./README.md)</sub>
+
 ## Our Pledge
 
 We as members, contributors, and maintainers pledge to make participation in
