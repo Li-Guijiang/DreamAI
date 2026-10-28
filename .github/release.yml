@@ -1,0 +1,33 @@
+# 自动生成 Release Notes 时的分类规则（配合 release.yml 的
+# generate_release_notes: true 使用）。按合并进 main 的 PR 标签归类；
+# 没有标签的提交会落入最后的默认分类。
+
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+      - skip-changelog
+  categories:
+    - title: 新功能
+      labels:
+        - feat
+        - enhancement
+        - feature
+    - title: 缺陷修复
+      labels:
+        - fix
+        - bug
+    - title: 文档
+      labels:
+        - docs
+        - documentation
+    - title: 工程与依赖
+      labels:
+        - chore
+        - refactor
+        - style
+        - dependencies
+        - ci
+    - title: 其他变更
+      labels:
+        - "*"
