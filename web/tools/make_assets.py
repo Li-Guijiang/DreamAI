@@ -10,12 +10,11 @@ Sources: the official Dream AI mark shipped in the repository
 
 from __future__ import annotations
 
-import math
 import random
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 IMG = ROOT / "web" / "assets" / "img"

@@ -27,8 +27,12 @@ code, documentation, bug reports, ideas, and feedback.
 
   ```bash
   pytest
-  ruff check dream_ai tests
+  ruff check dream_ai tests examples web/app web/tools
+  ruff format --check dream_ai tests examples
   ```
+
+  `web/tools/archive/` is excluded from lint and format checks: those are
+  one-off operational scripts kept for traceability (see `web/tools/README.md`).
 
 ## Commit Message Style
 
@@ -50,7 +54,8 @@ Use short imperative messages, prefixed by a type:
 ## Pull Request Checklist
 
 - [ ] `pytest` passes locally.
-- [ ] `ruff check dream_ai tests` reports no errors.
+- [ ] `ruff check` reports no errors on the paths CI checks.
+- [ ] `ruff format --check dream_ai tests examples` reports no changes.
 - [ ] New behavior has tests.
 - [ ] Documentation is updated for user-facing changes.
 - [ ] No secrets, API keys, or personal data are committed.

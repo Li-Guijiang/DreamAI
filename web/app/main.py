@@ -13,7 +13,6 @@ import time
 from collections import defaultdict, deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, Request
@@ -22,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from . import llm
-from .config import BASE_DIR, VERSION, WEB_DIR, load_settings
+from .config import VERSION, WEB_DIR, load_settings
 
 logging.basicConfig(
     level=logging.INFO,
@@ -427,7 +426,7 @@ async def robots() -> Response:
         "User-agent: *\n"
         "Allow: /\n"
         "Disallow: /api/\n"
-        f"Sitemap: https://liguijiang.com/sitemap.xml\n"
+        "Sitemap: https://liguijiang.com/sitemap.xml\n"
     )
     return Response(body, media_type="text/plain")
 

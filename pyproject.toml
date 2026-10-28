@@ -49,6 +49,8 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# One-off operational scripts kept for traceability, not maintained.
+extend-exclude = ["web/tools/archive"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
