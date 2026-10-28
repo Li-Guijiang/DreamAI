@@ -1,6 +1,6 @@
 # Documentation index
 
-<p align="center"><img src="../assets/brand/banner-docs.gif" alt="" width="720"></p>
+<p align="center"><img src="https://github.com/user-attachments/assets/9ec27a73-47d4-489f-b71e-106a84e1b70c" alt="Animated Dream AI documentation banner" width="720"></p>
 
 <sub>[Back to the repository home](../README.md)</sub>
 
@@ -68,5 +68,5 @@ When bumping any of them, check the three companions:
 2. User-facing procedures use ordered lists; commands go in fenced code blocks.
 3. When a document mentions a configuration key, update the matching `.env.example` so both use the same variable name. That includes the terminal motion keys `DREAMAI_ANIMATIONS` and `DREAMAI_ANIMATION_SPEED`.
 4. Architecture decisions are recorded in `adr/` as `0001-<topic>.md`, numbered upward. Do not rewrite accepted records; supersede them.
-5. Relative links only — no personal sites or temporary URLs.
+5. Document links stay relative. Images use GitHub user-attachment URLs registered in [`assets/readme/attachments.json`](../assets/readme/attachments.json): repository-relative images depend on `raw.githubusercontent.com`, which is unreachable on some networks. The manifest records the original local source and the optimization applied.
 6. Everything is written in English. Readers who prefer another language can use browser translation.

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/brand/hero.svg" alt="Dream AI" width="900">
+  <img src="https://github.com/user-attachments/assets/3b8522d0-ca94-43bc-abc7-93a08de5f335" alt="Dream AI" width="900">
 </p>
 
 <h1 align="center">Dream AI</h1>
@@ -75,15 +75,17 @@ The three version numbers are independent by design, not by drift: see the [vers
 
 | Home | Chat |
 |---|---|
-| ![Home](./web/docs/preview-hero.png) | ![Chat](./web/docs/preview-chat.png) |
+| ![Home](https://github.com/user-attachments/assets/8b840543-f6f1-40e3-9533-e9f6a320931c) | ![Chat](https://github.com/user-attachments/assets/5ae723c7-dfa7-49d9-a5ca-61d496ba7bf7) |
 
 | Work mode | Desktop |
 |---|---|
-| ![Work mode](./web/docs/preview-work.png) | ![Desktop](./web/web/assets/img/desktop-preview.png) |
+| ![Work mode](https://github.com/user-attachments/assets/19f8a9a5-5c2f-4df9-9baf-106059ef4aad) | ![Desktop](https://github.com/user-attachments/assets/0f915957-509b-468f-b919-e2ea893e2446) |
+
+<sub>图片由 GitHub 内置附件托管，避免仓库内图片域名不可达造成空白；若仍在加载，可直接访问 [liguijiang.com](https://liguijiang.com)。</sub>
 
 ### A site that moves
 
-<p align="center"><img src="./assets/brand/banner-web.gif" alt="Animated Dream AI orrery banner" width="720"></p>
+<p align="center"><img src="https://github.com/user-attachments/assets/5b9a894c-ffae-400c-bba1-3282a9107dfa" alt="Animated Dream AI orrery banner" width="720"></p>
 
 The web surface is now a living cosmic interface: a starfield that follows the
 pointer, a warp intro, a greeting that types and deletes itself, a terminal
@@ -93,7 +95,7 @@ switched off in one click or via `prefers-reduced-motion`.
 
 | Motion documentation | Motion download page |
 |---|---|
-| ![Animated docs page](./web/docs/preview-motion-docs.png) | ![Animated download page](./web/docs/preview-motion-download.png) |
+| ![Animated docs page](https://github.com/user-attachments/assets/3ecce2df-f7e1-4967-a6d8-e31054745fdd) | ![Animated download page](https://github.com/user-attachments/assets/c8ca16c1-c293-4379-8412-77c7b365bc39) |
 
 The CLI has its own quieter motion layer: a launch wordmark, typed replies, a
 live thinking spinner and `/motion` to turn it off mid-session.

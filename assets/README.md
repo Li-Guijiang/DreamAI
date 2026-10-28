@@ -1,8 +1,14 @@
 # Assets
 
-<p align="center"><img src="brand/banner-assets.gif" alt="" width="720"></p>
+<p align="center"><img src="https://github.com/user-attachments/assets/de9a940f-8d02-4cce-9da8-2b1cecd8d1d7" alt="Animated Dream AI brand banner" width="720"></p>
 
 Logos, banners, icons, and other visual materials for Dream AI.
+
+> **README images live elsewhere.** GitHub's repository-relative image CDN
+> (`raw.githubusercontent.com`) is unreachable on some networks, so Markdown
+> illustrations use GitHub user attachments. The source-of-truth mapping and
+> regeneration notes live in [`readme/`](readme/README.md). Local originals
+> still live under `brand/` and `logo/`.
 
 ## Directory Structure
 

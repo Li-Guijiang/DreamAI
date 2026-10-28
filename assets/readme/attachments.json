@@ -1,0 +1,63 @@
+{
+  "version": "web-2.0",
+  "generated": "2026-10-28",
+  "repository": "Li-Guijiang/DreamAI",
+  "note": "Images are GitHub user attachments because repository-relative image URLs depend on raw.githubusercontent.com, which is unreachable on some networks. Update this manifest and the Markdown references together.",
+  "images": {
+    "hero": {
+      "url": "https://github.com/user-attachments/assets/3b8522d0-ca94-43bc-abc7-93a08de5f335",
+      "source": "assets/brand/hero.svg",
+      "processing": "Chrome render, transparent PNG, 1000x340"
+    },
+    "preview_desktop": {
+      "url": "https://github.com/user-attachments/assets/0f915957-509b-468f-b919-e2ea893e2446",
+      "source": "web/web/assets/img/desktop-preview.png",
+      "processing": "1200px JPEG q82"
+    },
+    "banner_web": {
+      "url": "https://github.com/user-attachments/assets/5b9a894c-ffae-400c-bba1-3282a9107dfa",
+      "source": "assets/brand/banner-web.gif",
+      "processing": "animated GIF, unchanged"
+    },
+    "preview_home": {
+      "url": "https://github.com/user-attachments/assets/8b840543-f6f1-40e3-9533-e9f6a320931c",
+      "source": "web/docs/preview-hero.png",
+      "processing": "1400px JPEG q84"
+    },
+    "banner_desktop": {
+      "url": "https://github.com/user-attachments/assets/b985a5e6-9d3e-4ac0-bc8f-f0ee4c005245",
+      "source": "assets/brand/banner-desktop.gif",
+      "processing": "animated GIF, unchanged"
+    },
+    "preview_work": {
+      "url": "https://github.com/user-attachments/assets/19f8a9a5-5c2f-4df9-9baf-106059ef4aad",
+      "source": "web/docs/preview-work.png",
+      "processing": "1200px JPEG q82"
+    },
+    "preview_motion_download": {
+      "url": "https://github.com/user-attachments/assets/c8ca16c1-c293-4379-8412-77c7b365bc39",
+      "source": "web/docs/preview-motion-download.png",
+      "processing": "1400px JPEG q84"
+    },
+    "preview_chat": {
+      "url": "https://github.com/user-attachments/assets/5ae723c7-dfa7-49d9-a5ca-61d496ba7bf7",
+      "source": "web/docs/preview-chat.png",
+      "processing": "1200px JPEG q82"
+    },
+    "preview_motion_docs": {
+      "url": "https://github.com/user-attachments/assets/3ecce2df-f7e1-4967-a6d8-e31054745fdd",
+      "source": "web/docs/preview-motion-docs.png",
+      "processing": "1400px JPEG q84"
+    },
+    "banner_assets": {
+      "url": "https://github.com/user-attachments/assets/de9a940f-8d02-4cce-9da8-2b1cecd8d1d7",
+      "source": "assets/brand/banner-assets.gif",
+      "processing": "animated GIF, unchanged"
+    },
+    "banner_docs": {
+      "url": "https://github.com/user-attachments/assets/9ec27a73-47d4-489f-b71e-106a84e1b70c",
+      "source": "assets/brand/banner-docs.gif",
+      "processing": "animated GIF, unchanged"
+    }
+  }
+}

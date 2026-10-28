@@ -35,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed — deploy and configuration
 
+- Documentation images are now hosted as GitHub user attachments instead of repository-relative
+  paths. GitHub serves relative README images through `raw.githubusercontent.com`, which returned
+  `502`/timed out on some networks and left the hero, screenshots and every docs banner blank.
+  `assets/readme/attachments.json` records each attachment URL, its local source and the optimization
+  applied; a test rejects unregistered remote images.
 - `web/deploy/install.sh` now preserves `.env`, `.venv`, `data`, `lsl`, `.well-known` and
   `web/downloads` across a code deploy (and restores them if the deploy fails), instead of clearing
   the site and deleting the server key and installers.

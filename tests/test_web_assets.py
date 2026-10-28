@@ -7,11 +7,13 @@ references in every shipped page and every documentation image.
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web" / "web"
+ATTACHMENT_MANIFEST = ROOT / "assets" / "readme" / "attachments.json"
 
 PAGES = [WEB / "index.html", WEB / "download.html", WEB / "docs.html"]
 HTML_REF_RE = re.compile(r"\b(?:src|href)=\"(/[^\"#?]+)")
@@ -24,14 +26,14 @@ def _markdown_files() -> list[Path]:
     return [path for path in ROOT.rglob("*.md") if not any(part in ignored for part in path.parts)]
 
 
-def _local_images(path: Path) -> list[str]:
+def _markdown_images(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8")
-    references = IMG_RE.findall(text) + MD_IMG_RE.findall(text)
-    return [
-        reference
-        for reference in references
-        if not re.match(r"^(https?:|data:|mailto:|#)", reference)
-    ]
+    return IMG_RE.findall(text) + MD_IMG_RE.findall(text)
+
+
+def _attachments() -> dict[str, dict[str, str]]:
+    payload = json.loads(ATTACHMENT_MANIFEST.read_text(encoding="utf-8"))
+    return payload["images"]
 
 
 def test_web_pages_reference_existing_local_assets():
@@ -51,14 +53,42 @@ def test_web_pages_reference_existing_local_assets():
     assert not missing, "missing web assets:\n" + "\n".join(missing)
 
 
-def test_every_documentation_image_exists():
+def test_every_documentation_image_is_local_or_in_the_manifest():
+    """GitHub's raw image CDN is unreachable on some networks.
+
+    Documentation illustrations therefore use GitHub user attachments registered
+    in ``assets/readme/attachments.json``. Relative images remain valid for
+    contributor-facing files on disk; anything else must be registered.
+    """
+    attachments = _attachments()
+    allowed_urls = {entry["url"] for entry in attachments.values()}
+    allowed_badge_prefixes = (
+        "https://img.shields.io/",
+        "https://github.com/Li-Guijiang/DreamAI/actions/workflows/ci.yml/badge.svg",
+    )
     missing = []
+    unregistered = []
     for path in _markdown_files():
-        for reference in _local_images(path):
-            target = (path.parent / reference.split("?")[0]).resolve()
+        for reference in _markdown_images(path):
+            clean = reference.split("?")[0]
+            if clean in allowed_urls or reference.startswith(allowed_badge_prefixes):
+                continue
+            if re.match(r"^(https?:|data:|mailto:|#)", clean):
+                unregistered.append(f"{path.relative_to(ROOT)} -> {reference}")
+                continue
+            target = (path.parent / clean).resolve()
             if not target.is_file():
                 missing.append(f"{path.relative_to(ROOT)} -> {reference}")
-    assert not missing, "broken documentation images:\n" + "\n".join(missing)
+    assert not missing, "broken local documentation images:\n" + "\n".join(missing)
+    assert not unregistered, "unregistered remote images:\n" + "\n".join(unregistered)
+
+
+def test_attachment_manifest_points_at_existing_sources():
+    attachments = _attachments()
+    assert attachments, "the README attachment manifest is empty"
+    for name, entry in attachments.items():
+        assert entry["url"].startswith("https://github.com/user-attachments/assets/"), name
+        assert (ROOT / entry["source"]).is_file(), f"{name}: missing {entry['source']}"
 
 
 def test_every_web_page_has_the_motion_switch():

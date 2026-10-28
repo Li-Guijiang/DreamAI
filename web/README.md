@@ -1,6 +1,6 @@
 # Dream AI · Web
 
-<p align="center"><img src="../assets/brand/banner-web.gif" alt="" width="720"></p>
+<p align="center"><img src="https://github.com/user-attachments/assets/5b9a894c-ffae-400c-bba1-3282a9107dfa" alt="Animated Dream AI orrery banner" width="720"></p>
 
 <sub>[Back to the repository home](../README.md) · [Documentation index](../docs/README.md)</sub>
 
@@ -16,7 +16,7 @@ small FastAPI service. No front-end framework and no Node build step.
 - **Source:** <https://github.com/Li-Guijiang/DreamAI/tree/main/web>
 
 <p align="center">
-  <img src="docs/preview-motion-home.png" alt="Dream AI home page with a cosmic hero, typing greeting and animated cards" width="100%">
+  <img src="https://github.com/user-attachments/assets/8b840543-f6f1-40e3-9533-e9f6a320931c" alt="Dream AI home page with a cosmic hero, typing greeting and animated cards" width="100%">
 </p>
 
 ## 1. A living interface
@@ -51,7 +51,7 @@ Motion is always optional:
 | `web/download.html` | Windows desktop download and capability story |
 
 <p align="center">
-  <img src="docs/preview-motion-docs.png" alt="Dream AI documentation page with orbital hero and animated architecture" width="100%">
+  <img src="https://github.com/user-attachments/assets/3ecce2df-f7e1-4967-a6d8-e31054745fdd" alt="Dream AI documentation page with orbital hero and animated architecture" width="100%">
 </p>
 
 ## 2. Features
