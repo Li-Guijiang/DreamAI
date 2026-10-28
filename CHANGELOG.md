@@ -52,6 +52,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed the four hero capability chips (“流式输出 / 深度思考 / 多轮记忆 / 隐私优先”) from the
   landing page. They read as generic AI-product boilerplate and added noise after the capability
   cards. The homepage preview used by the docs was refreshed.
+- Restored the animated README hero using the repo's existing 8-second orbital GIF, now served as a
+  GitHub user attachment. The static PNG was reliable but lost the motion the README previously had.
 - `README.md`, `web/README.md`, `docs/README.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md` and
   `docs/GUIDE.md` now document the motion layer, the web 2.0 version, the new `/motion` command and
   the still-separate web request path.

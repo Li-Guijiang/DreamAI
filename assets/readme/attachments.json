@@ -5,9 +5,9 @@
   "note": "Images are GitHub user attachments because repository-relative image URLs depend on raw.githubusercontent.com, which is unreachable on some networks. Update this manifest and the Markdown references together.",
   "images": {
     "hero": {
-      "url": "https://github.com/user-attachments/assets/3b8522d0-ca94-43bc-abc7-93a08de5f335",
-      "source": "assets/brand/hero.svg",
-      "processing": "Chrome render, transparent PNG, 1000x340"
+      "url": "https://github.com/user-attachments/assets/3423e0dc-624f-4fe6-8929-6a1415851185",
+      "source": "assets/brand/hero.gif",
+      "processing": "animated GIF, unchanged; preferred over SVG because GitHub does not animate repo SVGs and raw images are unreachable on some networks"
     },
     "preview_desktop": {
       "url": "https://github.com/user-attachments/assets/0f915957-509b-468f-b919-e2ea893e2446",

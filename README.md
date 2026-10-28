@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/3b8522d0-ca94-43bc-abc7-93a08de5f335" alt="Dream AI" width="900">
+  <img src="https://github.com/user-attachments/assets/3423e0dc-624f-4fe6-8929-6a1415851185" alt="Dream AI — animated orbital hero" width="900">
 </p>
 
 <h1 align="center">Dream AI</h1>
