@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="./assets/logo/DreamAI-Logo/03_组合标_含字标/DreamAI-lockup-1200.png" alt="Dream AI" width="520">
+  <img src="./assets/brand/hero.svg" alt="Dream AI" width="440">
 </p>
+
+<h1 align="center">Dream AI</h1>
 
 <p align="center">
   <b>一个会思考、能协作的通用智能体</b><br>
