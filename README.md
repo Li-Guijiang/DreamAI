@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/brand/hero.svg" alt="Dream AI" width="440">
+  <img src="./assets/brand/hero.gif" alt="Dream AI" width="440">
 </p>
 
 <h1 align="center">Dream AI</h1>
