@@ -1,74 +1,80 @@
-# Dream AI 使用指南（命令行版 · v0.4.0）
+# Dream AI — Command-line guide (v0.4.0)
 
-<sub>[返回文档索引](./README.md)</sub>
+<sub>[Back to the documentation index](./README.md)</sub>
 
-> 这份指南面向第一次打开本项目的人，从零讲清楚：**现在这个 AI 能做什么、
-> 怎么把它跑起来、每个命令怎么用、常见报错怎么处理。**
-> 项目会持续迭代到 `v0.5`、`v0.6`……直到 `v1.0`，本指南会跟着版本一起更新。
+> This guide is written for someone opening the project for the first time. It answers four
+> questions: **what the assistant can do today, how to get it running, how each command works,
+> and what to do when something fails.**
+> The project will keep moving through `v0.5`, `v0.6` … up to `v1.0`, and this guide moves with it.
 >
-> 阅读范围说明：
-> 1. 本文件只讲**命令行（`dream_ai` 包）**。Web 服务见 [../web/README.md](../web/README.md)；
->    Windows 桌面端见 [../desktop/README.md](../desktop/README.md)。
-> 2. 英文对外说明见 [README.md](../README.md)，全部文档的索引见同目录的 [文档索引](./README.md)。
-> 3. 只想知道怎么装、不想看功能讲解，可直接看 [SETUP.md](./SETUP.md)。
+> Scope:
+> 1. This document covers the **command line (`dream_ai` package)** only. For the web service see
+>    [../web/README.md](../web/README.md); for the Windows desktop app see
+>    [../desktop/README.md](../desktop/README.md).
+> 2. For the project overview see [README.md](../README.md); for every document see the
+>    [documentation index](./README.md).
+> 3. If you only want installation steps, go straight to [SETUP.md](./SETUP.md).
 
 ---
 
-## 0. 先搞清楚：现在的 Dream AI 能做什么
+## 0. What Dream AI can do today
 
-当前版本是 **v0.4.0（Autonomous Planning，自主规划）**。它由四层能力组成：
+The current version is **v0.4.0 (Autonomous Planning)**. It consists of four capability layers:
 
-| 能力层 | 版本 | 现在能做什么 | 默认状态 |
+| Layer | Version | What it does today | Default |
 |---|---|---|---|
-| **对话** | v0.1 | 通过可替换的模型后端聊天；不绑定任何厂商 | 开启 |
-| **记忆** | v0.2 | 会话历史存到本地、下次启动自动恢复；记住你的长期偏好并注入提示词 | 开启（持久化） |
-| **工具** | v0.3 | 调用计算器、时钟；沙箱内读写文件；可选联网搜索；写操作要二次确认 | 计算器/时钟默认开，文件/搜索默认关 |
-| **自主规划** | v0.4 | 把一个目标拆成有序计划，按 **思考 → 行动 → 观察 → 反思** 循环执行；有步数预算、失败重试、保护动作确认、全程轨迹可复盘 | 开启 |
+| **Conversation** | v0.1 | Chat through a replaceable model backend; no vendor lock-in | On |
+| **Memory** | v0.2 | Conversation history persisted locally and restored on restart; long-term preferences injected into the prompt | On (persistent) |
+| **Tools** | v0.3 | Calculator and clock; sandboxed file read/write; optional web search; writes require confirmation | Calculator/clock on, files/search off |
+| **Autonomy** | v0.4 | Splits a goal into an ordered plan and runs a **think → act → observe → reflect** loop with a step budget, retries, approval for protected actions, and a full trace | On |
 
-### 现在还做不到的事（不要误解）
+### What it cannot do yet
 
-- **没有 API Key 时是离线占位模式**：回复只是把你说的话回显出来，**不是真实模型在理解**，用来熟悉命令和流程。
-- **规划器目前是离线规则版**：只能识别简单的"时间、计算"意图；由模型自己理解目标、自主拆解计划，属于后续版本。
-- **模型自动选工具（原生 function-calling）还没接**：现在工具由 `/tool` 手动调用，或自主循环按计划调用。
-- 暂不支持流式打字输出、向量语义记忆、本地开源模型托管。这些都在路线图里，见 [ROADMAP.md](ROADMAP.md)。
+- **Without an API key it runs in offline placeholder mode.** Replies simply echo what you said —
+  **no model is reasoning** — which is enough to learn the commands and the flow.
+- **The planner is a deterministic offline baseline.** It recognises time and calculation intents
+  only; model-driven decomposition arrives in a later phase.
+- **Native function calling is not wired up.** Tools are invoked through `/tool` or by the
+  autonomous loop following a plan.
+- Streaming output, vector memory, and local open-source models are not available yet. They are on
+  the [roadmap](ROADMAP.md).
 
 ---
 
-## 1. 环境准备（只做一次）
+## 1. Environment setup (once)
 
-### 1.1 需要什么
+### 1.1 Requirements
 
-- **Python 3.11 或更高版本**（本项目在 3.11 / 3.12 / 3.13 上测试通过）。
-- 终端里能运行 `python` 命令。
-- 想跑容器才需要 Docker；纯命令行使用不需要。
+- **Python 3.11 or newer** (tested on 3.11, 3.12, and 3.13).
+- A terminal where the `python` command works.
+- Docker only if you want to run the container; the command line does not need it.
 
-### 1.2 检查 Python
+### 1.2 Check Python
 
-在项目目录打开终端（PowerShell），执行：
+Open a terminal in the project directory and run:
 
 ```powershell
 python --version
 ```
 
-看到类似 `Python 3.13.16` 即可。如果提示 `python 不是内部或外部命令`，先去 python.org 安装 Python，安装时勾选 **Add Python to PATH**，然后重开终端。
+Anything like `Python 3.13.16` is fine. If you get `'python' is not recognized`, install Python from
+python.org, tick **Add Python to PATH** during installation, then reopen the terminal.
 
-### 1.3 进入项目目录
-
-你的仓库在 `D:\Github\Dream-AI`：
+### 1.3 Enter the project directory
 
 ```powershell
-cd D:\Github\Dream-AI
+cd C:\path\to\DreamAI
 ```
 
-> 全新克隆（在别的机器上）：
+> Cloning on a new machine:
 > ```powershell
 > git clone https://github.com/Li-Guijiang/DreamAI.git
 > cd DreamAI
 > ```
 
-### 1.4（推荐）创建虚拟环境并安装依赖
+### 1.4 Create a virtual environment and install (recommended)
 
-**Windows PowerShell：**
+**Windows PowerShell:**
 
 ```powershell
 python -m venv .venv
@@ -77,7 +83,7 @@ python -m pip install --upgrade pip
 pip install -e .
 ```
 
-**macOS / Linux：**
+**macOS / Linux:**
 
 ```bash
 python3 -m venv .venv
@@ -86,145 +92,148 @@ python3 -m pip install --upgrade pip
 pip install -e .
 ```
 
-> 装开发工具（跑测试、lint、打包）用：
+> Development tools (tests, lint, packaging):
 > ```powershell
 > pip install -e ".[dev]"
 > ```
 
-成功后，命令行提示符前面会出现 `(.venv)`。以后每次使用前，先 `cd` 进项目目录并激活虚拟环境。
+When it works, your prompt is prefixed with `(.venv)`. Before every later session, `cd` into the
+project and activate the environment again.
 
 ---
 
-## 2. 第一次启动
+## 2. First start
 
-### 2.1 复制配置文件
+### 2.1 Copy the configuration file
 
-**Windows：**
+**Windows:**
 
 ```powershell
 copy .env.example .env
 ```
 
-**macOS / Linux：**
+**macOS / Linux:**
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` 已经被 `.gitignore` 忽略，**永远不会提交到 GitHub**，里面可以放心写 Key。
+`.env` is ignored by `.gitignore` and **is never committed**, so it is safe to put keys there.
 
-### 2.2 启动
+### 2.2 Start
 
 ```powershell
 python -m dream_ai
 ```
 
-安装包之后也可以直接用命令：
+After installing the package you can also use:
 
 ```powershell
 dream-ai
 ```
 
-启动成功会先看到横幅和欢迎语，随后是一行离线/在线提示，最后是三行状态：
+A successful start prints the banner, a welcome line, an offline/online notice, and three status
+lines:
 
 ```text
-ℹ Offline demo mode: no hosted API key was configured ...
-Memory: persistent (C:\Users\你\.dream_ai)
+Offline demo mode: no hosted API key was configured ...
+Memory: persistent (C:\Users\you\.dream_ai)
 Autonomy: on (max steps: 10, retries: 2)
 Tools: 2 registered
 ```
 
-- 没填 Key 时先出现 **Offline demo mode（离线演示模式）** 提示，这是正常的。
-- `Memory: persistent`：会话和偏好会存到本地。
-- `Autonomy: on`：自主任务已开启。
-- `Tools: 2 registered`：当前注册了计算器和时钟。
+- **Offline demo mode** appears when no key is configured, which is expected.
+- `Memory: persistent` — history and preferences are written to disk.
+- `Autonomy: on` — autonomous tasks are enabled.
+- `Tools: 2 registered` — the calculator and the clock.
 
-退出：输入 `/quit` 或 `/exit`。
+Exit with `/quit` or `/exit`.
 
 ---
 
-## 3. 两种运行模式
+## 3. The two run modes
 
-### 3.1 离线演示模式（不需要 Key）
+### 3.1 Offline demo mode (no key needed)
 
-`.env` 里 `DREAMAI_API_KEY=` 留空，程序自动回退到本地占位后端。
-此时可以完整体验命令、记忆、工具、自主循环，但对话内容是回显，不做真实理解。
+Leave `DREAMAI_API_KEY=` empty in `.env` and the program falls back to the local placeholder
+backend. Commands, memory, tools, and the autonomous loop all work; the conversation content is an
+echo, not real reasoning.
 
-### 3.2 接入真实模型（以 DeepSeek 为例）
+### 3.2 Connect a real model (DeepSeek as the example)
 
-1. 到 DeepSeek 开放平台申请一个 API Key。
-2. 打开项目根目录的 `.env`，填这几项：
+1. Create an API key in the DeepSeek platform.
+2. Open `.env` in the project root and fill in:
 
 ```ini
 DREAMAI_PROVIDER=openai_compat
 DREAMAI_BASE_URL=https://api.deepseek.com/v1
-DREAMAI_API_KEY=你的Key粘贴到这里
+DREAMAI_API_KEY=paste-your-key-here
 DREAMAI_MODEL=deepseek-chat
 ```
 
-3. 保存后重启 `python -m dream_ai`。启动后不再提示离线模式，而是显示
-   `Connected via provider: openai-compat`。
+3. Save and restart `python -m dream_ai`. The offline notice disappears and the startup line shows
+   `Connected via provider: openai-compat`.
 
-**其他兼容接口对照**（改 `DREAMAI_BASE_URL` 和 `DREAMAI_MODEL` 即可）：
+**Other compatible endpoints** (change `DREAMAI_BASE_URL` and `DREAMAI_MODEL`):
 
-| 平台 | `DREAMAI_BASE_URL` | `DREAMAI_MODEL` 示例 |
+| Platform | `DREAMAI_BASE_URL` | `DREAMAI_MODEL` example |
 |---|---|---|
 | DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
 | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
-| 通义 DashScope 兼容模式 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
+| DashScope compatible mode | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
 
-> 也可以不写进 `.env`，启动时临时覆盖参数（优先级高于 `.env`）：
+> You can also skip `.env` and override values on the command line (these take precedence):
 >
 > ```powershell
-> python -m dream_ai --provider openai_compat --api-key 你的Key --model deepseek-chat --base-url https://api.deepseek.com/v1
+> python -m dream_ai --provider openai_compat --api-key YOUR_KEY --model deepseek-chat --base-url https://api.deepseek.com/v1
 > ```
 
 ---
 
-## 4. 四大功能怎么用
+## 4. Using the four capability layers
 
-### 4.1 聊天
+### 4.1 Conversation
 
-直接在 `you ›` 后面输入内容，回车发送即可。
+Type after the `you ›` prompt and press Enter.
 
-| 命令 | 作用 |
+| Command | Action |
 |---|---|
-| 直接输入文字 | 和 Dream AI 对话一轮 |
-| `/clear` | 清空当前会话历史（保留系统提示词） |
-| `/about` | 查看当前模型、工具、自主模式、消息轮数、偏好数量 |
+| Plain text | One chat turn with Dream AI |
+| `/clear` | Clear the current conversation (the system prompt is kept) |
+| `/about` | Show model, tools, autonomy state, message count, and preference count |
 
-### 4.2 记忆（v0.2）
+### 4.2 Memory (v0.2)
 
-| 命令 | 作用 | 示例 |
+| Command | Action | Example |
 |---|---|---|
-| `/remember <内容>` | 记住一条长期偏好，之后自动注入系统提示 | `/remember 我喜欢骑自行车，回复简洁一点` |
-| `/memory` | 查看已记住的偏好 | — |
-| `/forget` | 清空全部偏好 | — |
-| `/clear` | 只清空会话历史，不动偏好 | — |
+| `/remember <text>` | Store a long-term preference that is injected into the prompt | `/remember I cycle to work, keep replies short` |
+| `/memory` | Show remembered preferences | — |
+| `/forget` | Clear every preference | — |
+| `/clear` | Clear the conversation only, keeping preferences | — |
 
-默认会话历史和偏好存在 `~/.dream_ai/`（Windows 是 `C:\Users\你\.dream_ai\`），
-下次启动自动恢复。相关开关见第 6 节配置表。
+History and preferences live in `~/.dream_ai/` (`C:\Users\you\.dream_ai\` on Windows) and are
+restored on the next start. The switches are listed in section 6.
 
-### 4.3 工具（v0.3）
+### 4.3 Tools (v0.3)
 
-**先看当前有哪些工具：**
+**List what is registered:**
 
 ```text
 /tools
 ```
 
-**手动调用某个工具：**
+**Call a tool manually:**
 
 ```text
-/tool <工具名> {"参数名": "参数值"}
+/tool <tool-name> {"argument": "value"}
 ```
 
-四个内置工具说明：
+The four built-in tools:
 
-#### ① `calculator`（安全计算器，默认开启，safe）
+#### 1. `calculator` (safe, on by default)
 
-支持数字、`+ - * / % // **`、括号，以及 `abs`、`round`、`min`、`max`、`sqrt`。
-**不使用 `eval`**，会拒绝变量、导入、下标等一切危险写法。
+Supports numbers, `+ - * / % // **`, parentheses, and `abs` / `round` / `min` / `max` / `sqrt`.
+It does **not use `eval`** and rejects names, imports, subscripts, and every other unsafe construct.
 
 ```text
 /tool calculator {"expression": "2 + 3 * 4"}
@@ -232,7 +241,7 @@ DREAMAI_MODEL=deepseek-chat
 /tool calculator {"expression": "sqrt(144)"}
 ```
 
-真实输出：
+Actual output:
 
 ```text
 tool › 2 + 3 * 4 = 14
@@ -240,46 +249,47 @@ tool › (12 + 8) / 5 = 4
 tool › sqrt(144) = 12
 ```
 
-#### ② `clock`（本地时钟，默认开启，safe）
+#### 2. `clock` (safe, on by default)
 
 ```text
 /tool clock
 ```
 
-真实输出：
+Actual output:
 
 ```text
 tool › Current local time: 2026-10-24 19:56:07 +0800
 Weekday: Saturday
 ```
 
-#### ③ `file_read` / `file_write`（沙箱文件，默认关闭，protected）
+#### 3. `file_read` / `file_write` (protected, off by default)
 
-先在 `.env` 开启：
+Enable them in `.env` first:
 
 ```ini
 DREAMAI_FILE_ACCESS_ENABLED=true
-# DREAMAI_WORKSPACE_DIR=.dream_ai/workspace   # 可选：自定义沙箱目录
+# DREAMAI_WORKSPACE_DIR=.dream_ai/workspace   # optional: custom sandbox directory
 ```
 
-- 所有路径都限制在工作区目录内，**禁止绝对路径、禁止 `..` 越界**。
-- `file_write` 属于写操作，**执行前必须二次确认**。
+- Every path stays inside the workspace directory: **absolute paths and `..` traversal are rejected**.
+- `file_write` changes state, so it **asks for confirmation** before running.
 
-读取：
+Read:
 
 ```text
 /tool file_read {"path": "notes.txt"}
 ```
 
-写入（回车后会问 `Tool 'file_write' will modify files. Confirm? [y/N]`，输入 `y` 或 `yes` 才执行，其他输入都取消）：
+Write (the prompt `Tool 'file_write' will modify files. Confirm? [y/N]` appears; only `y` or `yes`
+proceeds):
 
 ```text
-/tool file_write {"path": "notes.txt", "content": "Dream AI v0.4 第一条笔记"}
+/tool file_write {"path": "notes.txt", "content": "First note from Dream AI v0.4"}
 ```
 
-#### ④ `web_search`（联网即时答案，默认关闭，protected）
+#### 4. `web_search` (protected, off by default)
 
-先在 `.env` 开启：
+Enable it in `.env` first:
 
 ```ini
 DREAMAI_WEB_SEARCH_ENABLED=true
@@ -289,45 +299,48 @@ DREAMAI_WEB_SEARCH_ENABLED=true
 /tool web_search {"query": "OpenAI"}
 ```
 
-> 该工具走 DuckDuckGo 即时答案接口，只返回简短摘要；网络不通会报友好错误，不会让程序崩溃。
+> This tool uses the DuckDuckGo instant-answer endpoint and returns a short summary only. When the
+> network is unavailable it raises a clear error instead of crashing.
 
-**总开关：** `DREAMAI_TOOLS_ENABLED=false` 会关闭整个工具注册表。
+**Master switch:** `DREAMAI_TOOLS_ENABLED=false` disables the whole registry.
 
-### 4.4 自主任务（v0.4）
+### 4.4 Autonomous tasks (v0.4)
 
-让 Dream AI 自己拆计划、逐步执行。
+Let Dream AI decompose a goal and work through it step by step.
 
-#### 发起一个自主任务
+#### Start a task
 
 ```text
 /run What time is it now, and calculate 12 * 7?
 ```
 
-引擎会：**规划 → 思考 → 调用工具 → 观察结果 → 反思 → 进入下一步**，
-全部记录进轨迹。开启详细日志后能看到每一步事件：
+The engine **plans → thinks → calls a tool → observes → reflects → moves on**, recording every event
+in the trace. Turn on verbose logging to watch it live:
 
 ```ini
 DREAMAI_AUTONOMY_VERBOSE=true
 ```
 
-#### 复盘上一次任务
+#### Review the last task
 
 ```text
 /trace
 ```
 
-会打印：目标、最终状态、每一步的标题/状态/观察结果，以及完整的
-`plan / think / act / observe / reflect / confirm / done / abort` 事件轨迹。
+It prints the objective, the final status, each step's title/status/observation, and the full
+`plan / think / act / observe / reflect / confirm / done / abort` trace.
 
-#### 安全机制
+#### Safety rails
 
-- **步数预算**：`DREAMAI_MAX_STEPS` 限制一次任务最多调用多少次工具，耗尽自动停止，防止死循环。
-- **失败重试**：`DREAMAI_MAX_RETRIES` 设置每步失败后额外重试次数，耗尽则该步标记失败并停止。
-- **保护动作确认**：文件写入等保护动作在自主执行前会弹出
-  `⚠ Protected action 'file_write' {...}` 和 `Confirm this action? [y/N]`；
-  输入 `y`/`yes` 才执行，拒绝后整个任务安全取消。
+- **Step budget** — `DREAMAI_MAX_STEPS` caps how many tool calls one task may make; when it runs out
+  the loop stops, so a plan cannot run away.
+- **Retries** — `DREAMAI_MAX_RETRIES` sets extra attempts per failed step; when they are spent the
+  step is marked failed and the run stops.
+- **Protected actions** — writing files and similar actions ask
+  `Protected action 'file_write' {...}` / `Confirm this action? [y/N]` before running. Declining
+  cancels the whole task safely.
 
-#### 离线演示目标示例
+#### Offline demo objectives
 
 ```text
 /run What time is it now?
@@ -336,127 +349,129 @@ DREAMAI_AUTONOMY_VERBOSE=true
 
 ---
 
-## 5. 命令速查表（v0.4.0 全量）
+## 5. Command reference (v0.4.0, complete)
 
-| 命令 | 作用 |
+| Command | Action |
 |---|---|
-| `/help` | 显示帮助 |
-| `/run <目标>` | 发起自主多步任务 |
-| `/trace` | 复盘上次任务的计划、步骤与轨迹 |
-| `/tools` | 列出已注册工具、风险等级、必填参数 |
-| `/tool <名称> <JSON>` | 手动调用工具，如 `/tool calculator {"expression": "2 * 3"}` |
-| `/remember <内容>` | 记录一条长期偏好 |
-| `/memory` | 查看已记住的偏好 |
-| `/forget` | 清空全部偏好 |
-| `/clear` | 清空当前会话历史 |
-| `/about` | 查看模型、工具、自主模式、轮数、偏好、上次任务状态 |
-| `/quit` 或 `/exit` | 退出 |
-| 其他任意文字 | 进入普通聊天 |
+| `/help` | Show help |
+| `/run <objective>` | Start an autonomous multi-step task |
+| `/trace` | Review the plan, steps, and trace of the last task |
+| `/tools` | List registered tools, risk level, and required arguments |
+| `/tool <name> <JSON>` | Call a tool, e.g. `/tool calculator {"expression": "2 * 3"}` |
+| `/remember <text>` | Store a long-term preference |
+| `/memory` | Show remembered preferences |
+| `/forget` | Clear every preference |
+| `/clear` | Clear the current conversation |
+| `/about` | Show model, tools, autonomy, turns, preferences, and the last task status |
+| `/quit` or `/exit` | Leave Dream AI |
+| Anything else | A normal chat turn |
 
 ---
 
-## 6. 配置项速查表（`.env`）
+## 6. Configuration reference (`.env`)
 
-### 模型后端
+### Model backend
 
-| 变量 | 默认值 | 说明 |
+| Variable | Default | Meaning |
 |---|---|---|
-| `DREAMAI_PROVIDER` | `openai_compat` | `openai_compat` 任意兼容接口；`local` 强制离线 |
-| `DREAMAI_BASE_URL` | `https://api.deepseek.com/v1` | 接口地址 |
-| `DREAMAI_API_KEY` | 空 | 留空自动回退离线占位模式 |
-| `DREAMAI_MODEL` | `deepseek-chat` | 模型名 |
-| `DREAMAI_SYSTEM_PROMPT` | 内置人设 | 助手的系统提示词 |
+| `DREAMAI_PROVIDER` | `openai_compat` | `openai_compat` for any compatible endpoint, `local` to force offline |
+| `DREAMAI_BASE_URL` | `https://api.deepseek.com/v1` | Endpoint URL |
+| `DREAMAI_API_KEY` | empty | Empty falls back to the offline placeholder |
+| `DREAMAI_MODEL` | `deepseek-chat` | Model name |
+| `DREAMAI_SYSTEM_PROMPT` | built-in persona | System prompt for the assistant |
 
-### 记忆
+### Memory
 
-| 变量 | 默认值 | 说明 |
+| Variable | Default | Meaning |
 |---|---|---|
-| `DREAMAI_PERSISTENCE` | `true` | 是否把会话和偏好持久化到磁盘；`false` 仅当前进程内存 |
-| `DREAMAI_DATA_DIR` | `~/.dream_ai` | 记忆文件目录；可写相对路径如 `.dream_ai` |
+| `DREAMAI_PERSISTENCE` | `true` | Persist conversation and preferences; `false` keeps them in memory only |
+| `DREAMAI_DATA_DIR` | `~/.dream_ai` | Directory for memory files; a relative path such as `.dream_ai` also works |
 
-### 工具
+### Tools
 
-| 变量 | 默认值 | 说明 |
+| Variable | Default | Meaning |
 |---|---|---|
-| `DREAMAI_TOOLS_ENABLED` | `true` | 工具注册表总开关 |
-| `DREAMAI_FILE_ACCESS_ENABLED` | `false` | 是否开启沙箱文件读写 |
-| `DREAMAI_WEB_SEARCH_ENABLED` | `false` | 是否开启联网搜索 |
-| `DREAMAI_WORKSPACE_DIR` | `<数据目录>/workspace` | 文件工具的沙箱根目录 |
+| `DREAMAI_TOOLS_ENABLED` | `true` | Master switch for the registry |
+| `DREAMAI_FILE_ACCESS_ENABLED` | `false` | Enable sandboxed file read/write |
+| `DREAMAI_WEB_SEARCH_ENABLED` | `false` | Enable web search |
+| `DREAMAI_WORKSPACE_DIR` | `<data dir>/workspace` | Sandbox root for the file tools |
 
-### 自主规划
+### Autonomy
 
-| 变量 | 默认值 | 说明 |
+| Variable | Default | Meaning |
 |---|---|---|
-| `DREAMAI_AUTONOMY_ENABLED` | `true` | 自主模式总开关；`false` 后 `/run` 不可用 |
-| `DREAMAI_MAX_STEPS` | `10` | 单次任务最大工具调用次数（步数预算） |
-| `DREAMAI_MAX_RETRIES` | `2` | 单步失败后的额外重试次数；`0` 不重试 |
-| `DREAMAI_AUTONOMY_VERBOSE` | `false` | 是否实时打印每一步 think/act/observe/reflect 事件 |
+| `DREAMAI_AUTONOMY_ENABLED` | `true` | Master switch; with `false`, `/run` is unavailable |
+| `DREAMAI_MAX_STEPS` | `10` | Maximum tool calls per task (step budget) |
+| `DREAMAI_MAX_RETRIES` | `2` | Extra attempts per failed step; `0` disables retries |
+| `DREAMAI_AUTONOMY_VERBOSE` | `false` | Print every think/act/observe/reflect event live |
 
 ---
 
-## 7. 运行内置示例（不用进交互命令行）
+## 7. Run the bundled examples (no interactive shell needed)
 
-在项目根目录执行：
+From the project root:
 
 ```powershell
-python examples/basic_chat.py      # 单轮最小聊天示例
-python examples/tool_demo.py       # 列出工具并跑计算器、时钟
-python examples/autonomy_demo.py   # 跑一个两步自主任务并打印计划与轨迹
+python examples/basic_chat.py      # minimal single-turn chat
+python examples/tool_demo.py       # list tools, run the calculator and clock
+python examples/autonomy_demo.py   # run a two-step autonomous task and print plan + trace
 ```
 
-这些示例不需要 API Key，离线即可运行。
+None of them need an API key.
 
 ---
 
-## 8. 用容器运行（可选，需要 Docker）
+## 8. Run in a container (optional, Docker required)
 
 ```bash
-# 拉取镜像
+# Pull the image
 docker pull ghcr.io/li-guijiang/dream-ai:latest
 
-# 离线演示模式
+# Offline demo mode
 docker run -it --rm ghcr.io/li-guijiang/dream-ai:latest
 
-# 接入真实模型
+# Connect a real model
 docker run -it --rm \
-  -e DREAMAI_API_KEY=你的Key \
+  -e DREAMAI_API_KEY=your-key \
   -e DREAMAI_BASE_URL=https://api.deepseek.com/v1 \
   -e DREAMAI_MODEL=deepseek-chat \
   ghcr.io/li-guijiang/dream-ai:latest
 ```
 
-镜像同时提供 `linux/amd64` 和 `linux/arm64` 架构。镜像包页面见
-[Packages](https://github.com/Li-Guijiang/DreamAI/pkgs/container/dream-ai)。
+The image is published for both `linux/amd64` and `linux/arm64`. See the
+[Packages page](https://github.com/Li-Guijiang/DreamAI/pkgs/container/dream-ai).
 
 ---
 
-## 9. 常见问题排查
+## 9. Troubleshooting
 
-| 现象 | 原因 | 处理 |
+| Symptom | Cause | Fix |
 |---|---|---|
-| `python 不是内部或外部命令` | Python 未加入 PATH | 重装 Python 勾选 Add to PATH，重开终端 |
-| `No module named openai` | 依赖没装或虚拟环境没激活 | 激活 `.venv` 后 `pip install -e .` |
-| 回复开头是 `[Local demo mode]` | 没填 `DREAMAI_API_KEY` | 在 `.env` 填 Key 后重启；这属于离线回退，不是报错 |
-| 提示 Provider authentication error | Key、地址、模型名不匹配，或 Key 过期 | 核对 `.env` 三项与平台要求一致 |
-| 联网搜索报错 | 网络不通或接口超时 | 检查代理/防火墙；工具本身不会让程序崩溃 |
-| `Path escapes the workspace sandbox` | 文件路径越界 | 只能用工作区相对路径，不要写绝对路径或 `..` |
-| `Tool error: Unknown tool: 'xxx'` | 工具名拼错或该工具被开关关闭 | 先 `/tools` 看当前注册了哪些工具 |
-| 改了 `.env` 不生效 | 没有重启程序 | 退出 `/quit` 后重新 `python -m dream_ai` |
-| `/run` 提示自主模式关闭 | `DREAMAI_AUTONOMY_ENABLED=false` | 改回 `true` 并重启 |
+| `'python' is not recognized` | Python is not on PATH | Reinstall Python with "Add to PATH", then reopen the terminal |
+| `No module named openai` | Dependencies missing or the environment is not active | Activate `.venv`, then `pip install -e .` |
+| Replies start with `[Local demo mode]` | `DREAMAI_API_KEY` is empty | Set the key in `.env` and restart; this is the offline fallback, not an error |
+| Provider authentication error | Key, URL, or model name mismatch, or an expired key | Check all three against the provider's documentation |
+| Web search fails | Network unreachable or endpoint timeout | Check proxy/firewall; the tool never crashes the program |
+| `Path escapes the workspace sandbox` | The path leaves the workspace | Use workspace-relative paths only, no absolute paths or `..` |
+| `Tool error: Unknown tool: 'xxx'` | Typo, or the tool is disabled | Run `/tools` to see what is registered |
+| `.env` changes have no effect | The program was not restarted | `/quit`, then run `python -m dream_ai` again |
+| `/run` reports autonomy disabled | `DREAMAI_AUTONOMY_ENABLED=false` | Set it back to `true` and restart |
 
-跑测试和代码检查（开发者用）：
+Tests and lint (for developers):
 
 ```powershell
 pytest
-ruff check dream_ai tests examples
+ruff check dream_ai tests examples web/app web/tools
 ```
 
 ---
 
-## 10. 版本路线与接下来会有什么
+## 10. Where the project goes next
 
-- **v0.5 / v0.6 ……**：在现有基础上逐步增强模型集成、计划质量与能力面。
-- **v1.0.0**：稳定版——公开 API 稳定、配置与记忆备份、错误处理加固、面向普通用户的友好体验。
-- **Future**：优先支持本地开源模型自托管、模型切换不丢会话与记忆、数据默认留在本地。
+- **v0.5 / v0.6 …** — stronger model integration, better plans, and a wider capability surface.
+- **v1.0.0** — a stable release: stable public API, configuration and memory backup, hardened error
+  handling, and a friendly experience for non-developers.
+- **Future** — self-hosted open-source models, model switching without losing sessions or memory,
+  and data that stays local by default.
 
-完整计划见 [ROADMAP.md](ROADMAP.md)，版本变更记录见 [CHANGELOG.md](../CHANGELOG.md)。
+The full plan is in [ROADMAP.md](ROADMAP.md); version history is in [CHANGELOG.md](../CHANGELOG.md).

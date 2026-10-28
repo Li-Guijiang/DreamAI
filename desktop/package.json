@@ -2,7 +2,7 @@
   "name": "dream-ai-desktop",
   "version": "1.2.0",
   "private": true,
-  "description": "Dream AI 桌面版 · 本地文件工作台",
+  "description": "Dream AI desktop - local file workbench",
   "main": "electron/main.js",
   "author": {
     "name": "Dream AI Team",

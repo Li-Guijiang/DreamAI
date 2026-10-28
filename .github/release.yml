@@ -1,6 +1,7 @@
-# 自动生成 Release Notes 时的分类规则（配合 release.yml 的
-# generate_release_notes: true 使用）。按合并进 main 的 PR 标签归类；
-# 没有标签的提交会落入最后的默认分类。
+# Categories used when GitHub generates release notes (paired with
+# generate_release_notes: true in release.yml). Notes are grouped by the labels
+# of the pull requests merged into main; anything unlabelled lands in the
+# catch-all group.
 
 changelog:
   exclude:
@@ -8,26 +9,26 @@ changelog:
       - ignore-for-release
       - skip-changelog
   categories:
-    - title: 新功能
+    - title: Features
       labels:
         - feat
         - enhancement
         - feature
-    - title: 缺陷修复
+    - title: Bug fixes
       labels:
         - fix
         - bug
-    - title: 文档
+    - title: Documentation
       labels:
         - docs
         - documentation
-    - title: 工程与依赖
+    - title: Engineering and dependencies
       labels:
         - chore
         - refactor
         - style
         - dependencies
         - ci
-    - title: 其他变更
+    - title: Other changes
       labels:
         - "*"

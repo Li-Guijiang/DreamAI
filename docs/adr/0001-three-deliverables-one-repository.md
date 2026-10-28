@@ -1,6 +1,6 @@
 # 0001 — One repository, three deliverables, three version numbers
 
-<sub>[ADR 索引](./README.md) · [文档索引](../README.md)</sub>
+<sub>[ADR index](./README.md) · [Documentation index](../README.md)</sub>
 
 - **Status:** Accepted
 - **Date:** 2026-10-28

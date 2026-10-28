@@ -1,83 +1,84 @@
-name: 缺陷报告
-description: 报告一个可复现的错误（功能异常、报错、渲染问题）
+name: Bug report
+description: Report a reproducible defect (wrong behaviour, an error, a rendering problem)
 title: "[Bug] "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        感谢反馈。请尽量把信息填完整，缺少复现步骤的问题通常无法定位。
+        Thanks for the report. Please fill in as much as you can - issues without reproduction
+        steps usually cannot be diagnosed.
 
-        如果是安全问题，请**不要**在这里提交，按 [SECURITY.md](https://github.com/Li-Guijiang/DreamAI/blob/main/docs/SECURITY.md) 私下报告。
+        If this is a security problem, do NOT file it here. Follow SECURITY.md instead.
 
   - type: dropdown
     id: component
     attributes:
-      label: 影响范围
-      description: 问题出现在哪个形态上？
+      label: Affected component
+      description: Which deliverable does the problem appear in?
       options:
-        - 命令行包（python -m dream_ai）
-        - Web 服务（liguijiang.com 或本地 uvicorn）
-        - Windows 桌面端
-        - 文档
-        - 构建 / CI / 打包
+        - CLI package (python -m dream_ai)
+        - Web service (liguijiang.com or a local uvicorn)
+        - Windows desktop app
+        - Documentation
+        - Build / CI / packaging
     validations:
       required: true
 
   - type: input
     id: version
     attributes:
-      label: 版本
-      description: 命令行包写 `dream-ai --version` 或 `pip show dream-ai`；Web 写 `/api/config` 返回的 version；桌面端写安装包文件名。
-      placeholder: 例如 0.4.0 / 1.4.0 / DreamAI-Setup-1.2.0.exe
+      label: Version
+      description: For the CLI run "pip show dream-ai"; for the web app use the version from /api/config; for the desktop app give the installer file name.
+      placeholder: e.g. 0.4.0 / 1.4.0 / DreamAI-Setup-1.2.0.exe
     validations:
       required: true
 
   - type: textarea
     id: steps
     attributes:
-      label: 复现步骤
-      description: 按顺序写出最小复现路径。
+      label: Steps to reproduce
+      description: The minimal path, in order.
       placeholder: |
-        1. 执行 ...
-        2. 输入 ...
-        3. 看到 ...
+        1. Run ...
+        2. Enter ...
+        3. See ...
     validations:
       required: true
 
   - type: textarea
     id: expected
     attributes:
-      label: 期望结果
+      label: Expected result
     validations:
       required: true
 
   - type: textarea
     id: actual
     attributes:
-      label: 实际结果
-      description: 有报错请粘贴完整堆栈；界面问题请附截图。
+      label: Actual result
+      description: Paste the full stack trace for errors; attach a screenshot for UI problems.
     validations:
       required: true
 
   - type: textarea
     id: environment
     attributes:
-      label: 运行环境
+      label: Environment
       placeholder: |
-        操作系统：Windows 11 / macOS 15 / Ubuntu 24.04
-        Python：3.12.4
-        Node（桌面端）：22
-        模型后端：DeepSeek / 智谱 / 本地 Ollama
+        OS: Windows 11 / macOS 15 / Ubuntu 24.04
+        Python: 3.12.4
+        Node (desktop): 22
+        Model backend: DeepSeek / Zhipu / local Ollama
     validations:
       required: false
 
   - type: checkboxes
     id: checks
     attributes:
-      label: 提交前确认
+      label: Before submitting
       options:
-        - label: 已搜索现有 issue，没有重复
+        - label: I searched existing issues and found no duplicate
           required: true
-        - label: 已从日志或截图中移除 API Key 等敏感信息
+        - label: I removed API keys and other secrets from logs and screenshots
           required: true

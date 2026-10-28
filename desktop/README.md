@@ -1,81 +1,87 @@
 # Dream AI Desktop
 
-<sub>[返回仓库主页](../README.md) · [文档索引](../docs/README.md)</sub>
+<sub>[Back to the repository home](../README.md) · [Documentation index](../docs/README.md)</sub>
 
-Dream AI 的 Windows 桌面版：一个 Electron 外壳，加载官网同一套界面，并通过安全的
-IPC 桥接提供**本地文件工作台**（整理、批量重命名、保存文档）。
+The Windows desktop edition of Dream AI: an Electron shell that loads the same interface as the
+website and adds a **local file workbench** (organise, batch rename, export documents) through a
+narrow IPC bridge.
 
-## 开发
+## Development
 
 ```bash
 cd desktop
-pnpm install          # 需要 ELECTRON_MIRROR 时见下方
-pnpm start            # 默认加载 https://liguijiang.com
+pnpm install          # see the mirror settings below if needed
+pnpm start            # loads https://liguijiang.com by default
 
-# 本地调试（配合 dreamai-web 的 uvicorn），等价于 electron . --url=http://127.0.0.1:8787
+# Local development against the dreamai-web uvicorn server;
+# equivalent to: electron . --url=http://127.0.0.1:8787
 pnpm start:local
 ```
 
-镜像（国内）：
+Mirrors:
 
 ```bash
 ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
 ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/
 ```
 
-## 打包
+## Packaging
 
 ```bash
 pnpm dist
-# 产物：release/DreamAI-Setup-1.2.0.exe
+# output: release/DreamAI-Setup-1.2.0.exe
 ```
 
-打包图标固定读取 `build/icon.ico`（含 16–256 多尺寸），由品牌资产
-`assets/logo/DreamAI-Logo/01_软件图标_圆角底板/DreamAI-icon-1024.png` 导出，
-输出目录与资源目录由 `package.json` 的 `build.directories` 指定。替换图标时保持文件名不变。
+Packaging always reads `build/icon.ico` (16–256 px sizes), exported from the brand asset
+`assets/logo/DreamAI-Logo/01_软件图标_圆角底板/DreamAI-icon-1024.png`. The output and resource
+directories are set by `build.directories` in `package.json`. Keep the file name stable when
+replacing the icon so the packaging config does not need to change.
 
-## 测试
+## Testing
 
 ```bash
-pnpm test            # 依次执行下面两个脚本，需先 pnpm install
-pnpm test:tools      # 纯 Node，测试文件整理/重命名/路径约束
-pnpm test:docs       # 文档生成（docx / xlsx / pptx），依赖 docx、exceljs、pptxgenjs
+pnpm test            # runs both scripts below; requires pnpm install first
+pnpm test:tools      # pure Node: organise / rename / path constraints
+pnpm test:docs       # document generation (docx / xlsx / pptx); needs docx, exceljs, pptxgenjs
 ```
 
-Electron 端到端（需要先启动本地 Web）：
+Electron end-to-end (start the local web service first):
 
 ```bash
-# 启动后额外开放调试端口
+# start with a debugging port
 electron --remote-debugging-port=9222 . --url=http://127.0.0.1:8787
-# 另一个终端
-DREAMAI_DEV_WORKSPACE=<测试文件夹> node test/e2e.js
+# in another terminal
+DREAMAI_DEV_WORKSPACE=<test-folder> node test/e2e.js
 ```
 
-调试用参数与环境变量（仅本地）：
+Development-only flags and variables:
 
-| 参数 / 变量 | 作用 |
+| Flag / variable | Purpose |
 | --- | --- |
-| `--url=<地址>` | 覆盖加载的站点地址，优先级高于 `DREAMAI_URL` |
-| `DREAMAI_URL` | 覆盖加载的站点地址 |
-| `DREAMAI_DEV_WORKSPACE` | 启动时预选工作文件夹，跳过系统选择框 |
-| `DREAMAI_DEV_AUTO_CONFIRM=1` | 自动通过写操作确认框，仅用于自动化测试 |
+| `--url=<address>` | Override the loaded site; takes precedence over `DREAMAI_URL` |
+| `DREAMAI_URL` | Override the loaded site |
+| `DREAMAI_DEV_WORKSPACE` | Preselect the working folder and skip the system dialog |
+| `DREAMAI_DEV_AUTO_CONFIRM=1` | Auto-approve write confirmations; automated tests only |
 
-## 安全模型
+## Security model
 
-- `contextIsolation: true`、`nodeIntegration: false`、`sandbox: true`
-- 预加载脚本只暴露固定 IPC 方法，不暴露 `fs` / `child_process`
-- 只能访问用户通过系统对话框选择的文件夹，路径做包含校验
-- 忽略符号链接与隐藏文件
-- 每次移动 / 重命名 / 写入都先预览，再由主进程弹原生确认框
-- 禁止页面导航离开官网域名，外部链接交给系统浏览器
+- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`.
+- The preload script exposes a fixed set of IPC methods only — never `fs` or `child_process`.
+- Only folders the user picks through a system dialog can be touched, and every path is checked for
+  containment.
+- Symbolic links and hidden files are ignored.
+- Every move, rename, and write is previewed first, then confirmed through a native dialog owned by
+  the main process.
+- Navigation away from the official domain is blocked; external links open in the system browser.
 
-## 本地能力（MVP）
+## Local capabilities (MVP)
 
-| 能力 | 说明 |
+| Capability | Description |
 | --- | --- |
-| 按类型整理 | 图片 / 文档 / 视频 / 音频 / 压缩包 / 安装包 / 代码 / 其他 |
-| 批量重命名 | 统一前缀 + 序号，保留扩展名，预览新旧对照 |
-| 保存对话 | 将当前会话导出为 Markdown 到工作文件夹 |
-| 文件夹概览 | 文件数、文件夹数、总大小、类型分布 |
+| Organise by type | Images / documents / video / audio / archives / installers / code / other |
+| Batch rename | Shared prefix plus a sequence number, extensions preserved, before/after preview |
+| Save conversation | Export the current session as Markdown into the working folder |
+| Folder overview | File count, folder count, total size, type distribution |
 
-后续可以按同样模式扩展：Word/Excel/PPT 生成、图片压缩、重复文件检测、定时整理等。
+The same pattern extends naturally to Word/Excel/PPT generation, image compression, duplicate
+detection, and scheduled tidying.

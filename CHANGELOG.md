@@ -46,8 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   agent loop.
 - Every document under `docs/` plus the web and desktop READMEs now carries the
   same muted breadcrumb back to the documentation index.
-- `docs/GUIDE.md` retitled to "命令行版" and scoped explicitly to the CLI package,
-  with links to the web and desktop documents.
+- `docs/GUIDE.md` retitled to "Command-line guide" and scoped explicitly to the CLI
+  package, with links to the web and desktop documents.
 - `ruff format` applied to `dream_ai/`, `tests/`, and `examples/`; CI now also
   lints `web/app` and `web/tools` and checks formatting of the CLI packages.
 - `Memory` gains `set_system_prompt()`; both backends implement it.

@@ -1,50 +1,56 @@
-# Web 维护脚本
+# Web maintenance scripts
 
-本目录存放 Web 服务相关的**本地维护脚本**，不属于线上运行时，服务器部署也不需要它们。
-脚本以仓库内的相对路径为基准，运行环境基于 `web/requirements.txt`（部分脚本额外需要
-`pillow`、`numpy`、`paramiko`、`requests`）。
+<sub>[Back to the repository home](../../README.md) · [Documentation index](../../docs/README.md)</sub>
 
-## 1. 保留在根目录的脚本
+This directory holds **local maintenance scripts** for the web service. They are not part of the
+runtime, and deploying the server does not need them. Paths are resolved relative to the repository;
+the environment comes from `web/requirements.txt`, and some scripts additionally need `pillow`,
+`numpy`, `paramiko`, or `requests`.
 
-| 脚本 | 用途 | 何时使用 |
+## 1. Scripts kept at the top level
+
+| Script | Purpose | When to use |
 |---|---|---|
-| `make_assets.py` | 从品牌资产生成站点图标（favicon、PWA 图标、社交分享图） | 更换品牌图形后重新生成 `web/assets/img/` |
-| `make_og.py` | 单独重新生成 1200×630 社交分享卡 `web/assets/img/og.png` | 调整站点标语或分享卡版式 |
-| `mock_upstream.py` | 本地模拟一个 OpenAI 兼容的流式接口 | 没有 API Key 时调试界面与流式渲染 |
-| `server_exec.py` | 通用 SSH 助手（`exec` / `put` / `get` / `shell`） | 需要临时在服务器执行命令或传输文件 |
+| `make_assets.py` | Generate the site icons (favicon, PWA icons, social card) from the brand assets | After a brand change, to rebuild `web/web/assets/img/` |
+| `make_og.py` | Regenerate only the 1200×630 social card `web/web/assets/img/og.png` | After changing the tagline or the card layout |
+| `mock_upstream.py` | Local mock of an OpenAI-compatible streaming endpoint | Developing the UI without an API key |
+| `server_exec.py` | Generic SSH helper (`exec` / `put` / `get` / `shell`) | Running a command or moving a file on the server |
 
-用法示例：
+Examples:
 
 ```bash
-# 用 Mock 模型启动本地前端
+# Start the front end against the mock model
 .venv/bin/uvicorn mock_upstream:app --app-dir tools --port 8799
 
-# 重新生成品牌图标
+# Rebuild the brand icons
 python tools/make_assets.py
 
-# 远程执行一段脚本（密码来自环境变量，不落盘）
+# Run a script remotely (the password comes from the environment, never from disk)
 export DREAMAI_SSH_PASSWORD=...
 python tools/server_exec.py exec ./some-script.sh
 ```
 
-## 2. `archive/` 目录
+## 2. The `archive/` directory
 
-`archive/` 保存**一次性运维与诊断脚本**：发布某一版本时写的一次性上传脚本、排查
-nginx 与静态资源时写的 `fix_*` / `check_*` / `test_*` 脚本等。
+`archive/` keeps **one-off operations and diagnostic scripts**: the upload script written while
+shipping one particular release, the `fix_*` / `check_*` / `test_*` scripts used to chase an nginx
+or static-asset problem, and so on.
 
-这些脚本的共同特征：
+What they have in common:
 
-1. 内含写死的主机地址、服务器绝对路径或本机 `D:\...` 路径，换机器即失效；
-2. 面向某一个具体版本（例如 `deploy_v12.py`），版本推进后不再复用；
-3. 只输出诊断信息，不参与构建、测试或部署流水线。
+1. they hardcode a host, an absolute server path, or a local `D:\...` path, so they only ever ran on
+   one machine;
+2. they target a specific version (for example `deploy_v12.py`) and stop being useful afterwards;
+3. they only print diagnostics — they take no part in build, test, or deployment.
 
-保留它们的原因是可追溯：需要回看某次发布做了什么改动时，脚本本身就是记录。
-**它们不保证可运行，也不要在生产环境直接执行。**
+They are kept for traceability: when you need to know what a past release actually did, the script
+is the record. **They are not maintained and should not be run against production.**
 
-新增脚本的归档约定：
+Rules for new scripts:
 
-1. 一次性脚本直接放进 `archive/`，命名以 `check_` / `fix_` / `push_` / `test_` 开头；
-2. 需要长期复用的脚本留在本目录根下，并在上表登记；
-3. 新脚本不要写入本机绝对路径，统一用
-   `ROOT = Path(__file__).resolve().parent.parent` 推导；
-4. 涉及密钥的脚本只从环境变量读取，不要写进源码或示例。
+1. one-off scripts go straight into `archive/`, named with a `check_` / `fix_` / `push_` / `test_`
+   prefix;
+2. scripts that will be reused stay in this directory and are added to the table above;
+3. never hardcode a local absolute path — derive it with
+   `ROOT = Path(__file__).resolve().parent.parent`;
+4. never put a secret in the source; read it from the environment.

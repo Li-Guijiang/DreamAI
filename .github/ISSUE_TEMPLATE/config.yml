@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 使用问题与配置求助
-    url: https://github.com/Li-Guijiang/DreamAI/blob/main/docs/GUIDE.md
-    about: 先看中文上手指南第 9 节「常见问题排查」，多数启动与配置问题已有答案。
-  - name: 安全漏洞
+  - name: Usage questions and setup help
+    url: https://github.com/Li-Guijiang/DreamAI/blob/main/docs/SUPPORT.md
+    about: Start with the support guide - most startup and configuration problems are answered there.
+  - name: Security vulnerabilities
     url: https://github.com/Li-Guijiang/DreamAI/blob/main/docs/SECURITY.md
-    about: 请勿公开提交，按 SECURITY.md 的渠道私下报告。
-  - name: 在线体验与反馈
+    about: Please do not file these publicly; follow SECURITY.md instead.
+  - name: Try it online
     url: https://liguijiang.com
-    about: 只想试用产品、不想配置环境的，可直接访问官网。
+    about: Want to use the product without setting anything up? Open the live site.
