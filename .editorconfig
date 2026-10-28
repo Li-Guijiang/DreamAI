@@ -1,0 +1,32 @@
+# EditorConfig — https://editorconfig.org
+#
+# Keeps indentation, encoding, and line endings identical across editors so a
+# commit does not mix formatting changes with functional ones. Line endings
+# are also normalised by `.gitattributes`; both files are kept in sync.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Python package, tests, examples (PEP 8 style, compatible with ruff)
+[*.{py,pyi}]
+indent_style = space
+indent_size = 4
+max_line_length = 100
+
+# Web assets and configuration
+[*.{js,cjs,mjs,jsx,ts,tsx,json,yml,yaml,css,html,webmanifest,svg}]
+indent_style = space
+indent_size = 2
+
+# Markdown: trailing spaces are meaningful (hard line breaks)
+[*.md]
+trim_trailing_whitespace = false
+
+# Batch files must keep CRLF to run under cmd.exe
+[*.{bat,cmd}]
+end_of_line = crlf
