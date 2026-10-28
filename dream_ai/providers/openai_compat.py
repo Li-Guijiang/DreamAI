@@ -65,7 +65,7 @@ class OpenAICompatProvider(LLMProvider):
                 messages=payload_messages,
                 temperature=temperature,
             )
-        except Exception as exc:  # noqa: BLE001 - normalize provider errors
+        except Exception as exc:  # normalise every client/network failure
             raise ProviderError(f"LLM request failed: {exc}") from exc
 
         choice = response.choices[0]

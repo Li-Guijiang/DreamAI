@@ -49,8 +49,10 @@ def _load_dotenv() -> None:
     """Load variables from `.env` if python-dotenv is installed.
 
     The project-root `.env` is loaded first so configuration works regardless
-    of the current working directory; a `.env` in the current directory then
-    overrides it when present. The dependency is optional: if it is missing,
+    of the current working directory. A `.env` in the current directory is
+    loaded afterwards as a fallback only: both loads use ``override=False``, so
+    a variable that already exists (in the shell, or from the project-root
+    file) is never overwritten. The dependency is optional: if it is missing,
     environment variables from the shell are still used.
     """
     try:

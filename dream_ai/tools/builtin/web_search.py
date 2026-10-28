@@ -12,6 +12,7 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+from ... import __version__
 from ...exceptions import ToolError
 from ..base import Tool
 
@@ -61,7 +62,7 @@ class WebSearchTool(Tool):
         )
         url = f"{_ENDPOINT}?{params}"
         request = urllib.request.Request(
-            url, headers={"User-Agent": "DreamAI/0.4 (offline-friendly)"}
+            url, headers={"User-Agent": f"DreamAI/{__version__}"}
         )
         try:
             with urllib.request.urlopen(request, timeout=_TIMEOUT) as response:
