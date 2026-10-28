@@ -154,6 +154,55 @@ def test_forget_preferences_removes_them_from_system_prompt() -> None:
     assert "Base." in agent.system_prompt
 
 
+def test_remember_reaches_the_prompt_sent_to_the_provider() -> None:
+    """The system message — not just the property — must carry the preference."""
+    agent = DreamAIAgent(provider=LocalEchoProvider(), system_prompt="Base.")
+    agent.chat("First question")
+
+    agent.remember("I like cycling")
+
+    system_messages = [m for m in agent.history if m["role"] == "system"]
+    assert len(system_messages) == 1
+    assert "I like cycling" in system_messages[0]["content"]
+    # Earlier turns must survive the prompt update.
+    assert [m["role"] for m in agent.history] == ["system", "user", "assistant"]
+
+
+def test_forget_preferences_restores_the_base_system_message() -> None:
+    agent = DreamAIAgent(provider=LocalEchoProvider(), system_prompt="Base.")
+    agent.remember("I like cycling")
+
+    agent.forget_preferences()
+
+    assert agent.history[0] == {"role": "system", "content": "Base."}
+
+
+def test_persistent_agent_sends_preferences_after_restart(tmp_path: Path) -> None:
+    """A preference remembered yesterday must still be in today's payload."""
+    settings = _settings(tmp_path, persistence=True)
+    first = build_agent(settings)
+    first.remember("I drink tea")
+
+    restored = build_agent(settings)
+
+    system_messages = [m for m in restored.history if m["role"] == "system"]
+    assert len(system_messages) == 1
+    assert "I drink tea" in system_messages[0]["content"]
+
+
+def test_persistent_set_system_prompt_keeps_saved_turns(tmp_path: Path) -> None:
+    file_path = tmp_path / "session.json"
+    memory = PersistentSessionMemory("v1", file_path)
+    memory.append("user", "Hello")
+
+    memory.set_system_prompt("v2")
+
+    assert memory.messages()[0] == {"role": "system", "content": "v2"}
+    # The prompt is never written to disk; only the turns are.
+    restored = PersistentSessionMemory("v2", file_path)
+    assert [message["role"] for message in restored.messages()] == ["system", "user"]
+
+
 # --- Factory wiring ---------------------------------------------------------
 
 

@@ -35,3 +35,14 @@ class InMemorySessionMemory(Memory):
         self._messages = []
         if self._system_prompt:
             self._messages.append({"role": "system", "content": self._system_prompt})
+
+    def set_system_prompt(self, system_prompt: str | None) -> None:
+        """Replace the system prompt while keeping the conversation turns."""
+        self._system_prompt = system_prompt.strip() if system_prompt else ""
+        self._messages = [
+            message for message in self._messages if message["role"] != "system"
+        ]
+        if self._system_prompt:
+            self._messages.insert(
+                0, {"role": "system", "content": self._system_prompt}
+            )

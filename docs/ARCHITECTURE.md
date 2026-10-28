@@ -31,7 +31,10 @@ loop. It contains no business logic.
 - `__init__.py`: `build_provider(settings)` factory with safe fallback.
 
 ### 4. Memory (`dream_ai/memory/`)
-- `base.py`: `Memory.append()`, `messages()`, `clear()`.
+- `base.py`: `Memory.append()`, `messages()`, `clear()`, `set_system_prompt()`.
+  The agent calls `set_system_prompt()` on start-up and whenever a preference is
+  remembered or cleared, so the first message sent to the provider always
+  contains the effective prompt.
 - `session_memory.py`: in-memory session buffer.
 - `persistent_session.py`: JSON-backed session history restored on restart.
 - `preferences.py`: long-term user preferences injected into the system prompt.

@@ -46,6 +46,10 @@ class PersistentSessionMemory(Memory):
         self._core.clear()
         self._persist()
 
+    def set_system_prompt(self, system_prompt: str | None) -> None:
+        """Replace the system prompt; it is only held in memory, never on disk."""
+        self._core.set_system_prompt(system_prompt)
+
     def _restore(self) -> None:
         """Load previously saved user/assistant turns from disk."""
         if self._file is None:

@@ -36,8 +36,11 @@ class DreamAIAgent:
         self._provider = provider
         self._preferences = preferences or PreferenceMemory()
         self._base_system_prompt = system_prompt or ""
-        composed = self._compose_system_prompt(self._base_system_prompt)
-        self._memory = memory or InMemorySessionMemory(composed)
+        self._memory = memory or InMemorySessionMemory()
+        # The effective prompt (base + remembered preferences) is pushed into the
+        # memory backend, so it is the first message the provider receives no
+        # matter which backend was injected.
+        self._sync_system_prompt()
         self._conversation = Conversation(self._memory)
         self.tools = tools or ToolRegistry()
         self._autonomy_enabled = autonomy_enabled
@@ -81,12 +84,14 @@ class DreamAIAgent:
         return self._last_execution
 
     def remember(self, text: str) -> None:
-        """Record a long-term preference."""
+        """Record a long-term preference and apply it to the live conversation."""
         self._preferences.remember(text)
+        self._sync_system_prompt()
 
     def forget_preferences(self) -> None:
-        """Clear all remembered preferences."""
+        """Clear all remembered preferences and restore the base prompt."""
         self._preferences.forget()
+        self._sync_system_prompt()
 
     def chat(self, user_text: str) -> str:
         """Send one user message and return the assistant's reply."""
@@ -183,6 +188,12 @@ class DreamAIAgent:
         return result
 
     # --- Internals ---------------------------------------------------------
+
+    def _sync_system_prompt(self) -> None:
+        """Push the effective system prompt into the memory backend."""
+        self._memory.set_system_prompt(
+            self._compose_system_prompt(self._base_system_prompt)
+        )
 
     def _compose_system_prompt(self, base: str | None) -> str:
         """Append remembered preferences to the base system prompt."""

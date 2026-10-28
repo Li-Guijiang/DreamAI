@@ -23,3 +23,13 @@ class Memory(ABC):
     @abstractmethod
     def clear(self) -> None:
         """Reset memory, keeping the system prompt if one is stored."""
+
+    @abstractmethod
+    def set_system_prompt(self, system_prompt: str | None) -> None:
+        """Replace the stored system prompt and keep the conversation turns.
+
+        The agent calls this whenever the effective prompt changes (on start-up
+        and after a remembered preference is added or cleared), so the prompt
+        that reaches the provider is always the current one. Implementations
+        must keep the prompt in the position the model expects — first message.
+        """
