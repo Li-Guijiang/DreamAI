@@ -83,6 +83,8 @@ The three version numbers are independent by design, not by drift: see the [vers
 
 ### A site that moves
 
+<p align="center"><img src="./assets/brand/banner-web.gif" alt="Animated Dream AI orrery banner" width="720"></p>
+
 The web surface is now a living cosmic interface: a starfield that follows the
 pointer, a warp intro, a greeting that types and deletes itself, a terminal
 prompt ticker, orbital cards with 3D spotlight, magnetic buttons, click sparks,
