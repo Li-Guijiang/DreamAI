@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `docs/SUPPORT.md`: self-check order and reporting channels, so the repository
+  now covers every item in GitHub's community profile.
+- Issue forms for bug reports and feature requests, plus an issue chooser config
+  that routes setup questions, vulnerabilities, and "just want to try it"
+  elsewhere. `.github/release.yml` adds categories for generated release notes.
+- `.github/PULL_REQUEST_TEMPLATE.md`: linked issue, change type, affected
+  packages, and the commands that were actually executed.
 - `docs/README.md`: document index with the document map, the entry point of each
   of the three deliverables, and the version-number cross-reference.
 - `docs/adr/0001-three-deliverables-one-repository.md`: the first Architecture
@@ -21,9 +28,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   provider, both in a fresh session and after a restart.
 
 ### Changed
-- `README.md` restructured: numbered plain-text headings, a rewritten project
-  tree that includes `web/`, `desktop/`, and `docs/adr/`, a deliverables table,
-  and a documentation table.
+- `README.md` rebuilt as a landing page: centred brand lockup, grouped badges, a
+  table of contents, a 2x2 screenshot gallery, a capability table keyed by phase,
+  and a Mermaid architecture diagram. Commands and environment variables moved
+  into collapsible blocks. The body is Chinese; the English mission statement is
+  kept as a quote.
+- `docs/ARCHITECTURE.md` rebuilt around three Mermaid diagrams (module graph, one
+  chat turn, one autonomous task) with an interface-contract table; two stale
+  claims corrected, including the note that the web service does not reuse the
+  agent loop.
+- Every document under `docs/` plus the web and desktop READMEs now carries the
+  same muted breadcrumb back to the documentation index.
 - `docs/GUIDE.md` retitled to "命令行版" and scoped explicitly to the CLI package,
   with links to the web and desktop documents.
 - `ruff format` applied to `dream_ai/`, `tests/`, and `examples/`; CI now also
