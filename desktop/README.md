@@ -1,5 +1,7 @@
 # Dream AI Desktop
 
+<sub>[返回仓库主页](../README.md) · [文档索引](../docs/README.md)</sub>
+
 Dream AI 的 Windows 桌面版：一个 Electron 外壳，加载官网同一套界面，并通过安全的
 IPC 桥接提供**本地文件工作台**（整理、批量重命名、保存文档）。
 

@@ -1,5 +1,7 @@
 # Dream AI · Web
 
+<sub>[返回仓库主页](../README.md) · [文档索引](../docs/README.md)</sub>
+
 > 让每一个想法，都被认真对待。
 
 Dream AI 的网页版：一个可以直接在浏览器里使用的通用智能体。它延续了

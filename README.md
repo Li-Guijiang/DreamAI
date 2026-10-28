@@ -272,7 +272,7 @@ DreamAI/
 
 ## 10. 参与贡献
 
-欢迎 issue、建议与 pull request。开始之前请阅读 [贡献指南](./docs/CONTRIBUTING.md) 与 [行为准则](./docs/CODE_OF_CONDUCT.md)；安全问题请按 [SECURITY.md](./docs/SECURITY.md) 私下报告。
+欢迎 issue、建议与 pull request。开始之前请阅读 [贡献指南](./docs/CONTRIBUTING.md) 与 [行为准则](./docs/CODE_OF_CONDUCT.md)；遇到使用问题先看 [获取帮助](./docs/SUPPORT.md)，安全问题请按 [SECURITY.md](./docs/SECURITY.md) 私下报告。
 
 提交前在本地跑一遍与 CI 相同的检查：
 
@@ -288,6 +288,7 @@ ruff format --check dream_ai tests examples
 | [docs/GUIDE.md](./docs/GUIDE.md) | 中文上手指南：逐条命令与常见报错 |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 分层设计、模块职责、数据流 |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | 阶段任务与验收标准 |
+| [docs/SUPPORT.md](./docs/SUPPORT.md) | 遇到问题时的自查顺序与反馈渠道 |
 | [web/README.md](./web/README.md) | Web 功能、接口、部署 |
 | [desktop/README.md](./desktop/README.md) | 桌面端开发、打包、安全模型 |
 
