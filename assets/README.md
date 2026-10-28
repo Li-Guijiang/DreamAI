@@ -6,9 +6,10 @@ Logos, banners, icons, and other visual materials for Dream AI.
 
 ```
 assets/
-├── brand/                 # 为网页与文档准备的成品图（可直接引用）
-│   ├── hero.svg           # README 首屏：透明底矢量标志（动效以 CSS/SMIL 声明）
-│   └── hero.gif           # 同一首屏的动效栅格版，供官网 / PPT / 演示使用
+├── brand/                 # Deliverables ready to be referenced directly
+│   ├── build_hero.py      # Generator for the README hero (run it, do not hand-edit)
+│   ├── hero.svg           # README hero: transparent vector mark with animation
+│   └── hero.gif           # Same hero as raster frames, for sites / slides
 └── logo/                  # DreamAI brand logo assets
     ├── 00_原始母版/        # Master design files (visual baseline)
     ├── 01_软件图标_圆角底板/  # App icons (rounded square, iOS style)
@@ -25,8 +26,8 @@ assets/
 
 | Use Case | File Location |
 |----------|--------------|
-| README 首屏（任何网络可显示） | `brand/hero.svg` |
-| 动效栅格版（官网 / PPT / 演示） | `brand/hero.gif` |
+| README hero (renders on any network) | `brand/hero.svg` |
+| Animated raster version (site / slides) | `brand/hero.gif` |
 | App / software icon | `logo/01_软件图标_圆角底板/` |
 | Transparent planet mark | `logo/02_纯星球符号_透明底/` |
 | Brand lockup (with text) | `logo/03_组合标_含字标/` |
@@ -34,49 +35,57 @@ assets/
 | Favicon | `logo/06_favicon/` |
 | Full documentation | `logo/README-文件清单与使用指南.md` |
 
-## `brand/hero.svg` 与 `brand/hero.gif`
+## `brand/hero.svg` and `brand/hero.gif`
 
-README 顶部使用 **`hero.svg`**：透明背景，在 GitHub 深色与浅色主题下都不会出现白色色块
-（`logo/03_组合标_含字标/` 里的组合标是白底 PNG，只适合放在白底文档中）。172 KB，
-由 github.com 直接返回，任何网络下都能显示。
+The README opens with **`hero.svg`**: transparent background, so it never shows a white block
+on the dark theme (the lockup in `logo/03_组合标_含字标/` is a white-background PNG and only
+suits light documents). It is about 112 KB and served as text by github.com, so it renders on
+any network.
 
-`hero.gif` 是同一套动效的栅格版本（400×214、24 帧、8 秒循环、527 KB），README 未引用，
-留给官网、PPT、演示包等会播放 GIF 的场合，或上传到自有域名后替代首屏。
+`hero.gif` is the same design as raster frames (400×214, 24 frames, 8-second loop, 527 KB).
+The README does not reference it; it is there for the website, slides, demo packages, or for
+replacing the hero once it is hosted on our own domain.
 
-两个文件基于同一份设计：星球主体取自
-`logo/02_纯星球符号_透明底/DreamAI-mark-1024-透明底.png`，光晕、轨道、星点为矢量，
-动画周期全部整除 8 秒，循环无缝。
+Both files come from the same artwork. The planet is
+`logo/02_纯星球符号_透明底/DreamAI-mark-1024-透明底.png`; the nebulae, orbits, companion planet,
+moon, comet, and starfield are vectors. Every animation period divides 8 seconds, so the loop
+is seamless.
 
-| 层 | 效果 | 周期 |
+| Layer | Effect | Period |
 |---|---|---|
-| 光晕 | 紫色径向渐变呼吸缩放 | 8 s |
-| 外层轨道 | 虚线沿轨道流动，另有光点绕行 | 8 s |
-| 内层轨道 | 更淡的虚线反向流动 | 8 s |
-| 主体 | 整体上下浮动 7 px | 8 s |
-| 星点 | 四角星交错闪烁 | 2 s / 4 s |
+| Nebulae | Three soft washes drifting and breathing on opposite phases | 8 s |
+| Milky way | Blurred diagonal band with 120 dust stars | 8 s |
+| Starfield | 165 stars in four colours, about 60% twinkling | 2 s / 4 s |
+| Orbits | Three dashed ellipses flowing in alternating directions | 8 s |
+| Main planet | Floats 7 px up and down | 8 s |
+| Companion planet | Floats on an offset phase, with rim light and a dashed ring | 8 s |
+| Comet | Sweeps along an arc with a tapered tail, then fades | 8 s |
 
-### 为什么 README 用 SVG 而不是 GIF
+### Why the README uses SVG rather than GIF
 
-1. **SVG 的动画在 GitHub README 里不播**：同一浏览器会话间隔 4 秒的两张截图逐像素一致，
-   而同一文件在普通网页里以 `<img>` 引用时是会动的。渲染环境不播放，不是文件写错。
-2. **GIF 能播，但代价明显**：256 色让星球渐变出现噪点；且 GitHub 对二进制文件会重定向到
-   `raw.githubusercontent.com`，该域名在部分网络（含国内）经常很慢或不可达，首屏可能直接空白。
-3. 因此首屏优先保证「一定显示、一定清晰」；动效放在 SVG 源文件里，直接用浏览器打开
-   `assets/brand/hero.svg` 即可看到完整效果。
+1. **SVG animation does not play inside a GitHub README.** Two screenshots taken four seconds
+   apart in the same browser session are pixel-identical, while the same file referenced by an
+   `<img>` on an ordinary page animates. The renderer does not play it; the file is fine.
+2. **GIF plays, but costs twice.** Its 256-colour palette puts visible noise into the planet
+   gradient, and GitHub serves binary files through `raw.githubusercontent.com`, which is often
+   slow or unreachable from some networks — the hero can end up blank.
+3. So the hero prioritises "always visible, always crisp". The animation lives in the SVG: open
+   `brand/hero.svg` directly in a browser to see the full effect.
 
-### 想在 README 里放动效时
+### Enabling motion in the README
 
-把 `hero.gif` 上传到自有域名（例如 `https://liguijiang.com/assets/img/hero.gif`），
-再把 README 首屏那一行改成该地址。自有域名在国内访问稳定，GIF 也会正常播放。
-注意 GIF 已经把 GitHub 深色底 `#0d1117` 烘进画面，浅色主题下会是一块深色横幅。
+Upload `hero.gif` to our own domain (for example `https://liguijiang.com/assets/img/hero.gif`)
+and point the hero line at that URL. A self-hosted domain is fast everywhere, and the GIF will
+play. Note that the GIF bakes in the GitHub dark background `#0d1117`, so on the light theme it
+appears as a dark banner.
 
-### 重新生成
+### Regenerating
 
-1. 用 Pillow 把 `logo/02_纯星球符号_透明底/DreamAI-mark-1024-透明底.png` 按 alpha
-   边界裁切、留 10 px 边距、缩放到 480 px 宽。
-2. 以 base64 替换 `hero.svg` 中 `<image>` 的 `xlink:href`，其余动画参数不用改。
-3. 如需 GIF：用无头浏览器暂停动画后按时间步进逐帧导出，合成 400×214、8 秒、24 帧，
-   背景填 `#0d1117`。
+1. `python assets/brand/build_hero.py` rewrites `hero.svg` from the brand mark. Layout constants
+   at the top of the script control planet size and position, orbits, and star count.
+2. For the GIF: pause the animations in an inlined copy of the SVG, step `currentTime` frame by
+   frame through an 8-second loop, and encode 400×214 at 24 frames with `#0d1117` as the
+   background.
 
 ## Notes
 

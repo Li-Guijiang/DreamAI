@@ -1,43 +1,42 @@
-# 架构设计
+# Architecture
 
-<sub>[返回文档索引](./README.md)</sub>
+<sub>[Back to the documentation index](./README.md)</sub>
 
-Dream AI 的核心目标只有一个：**换模型、换存储、加工具时，不需要改 agent**。
-本文说明这条约束是如何落到代码结构上的，以及一次对话、一次自主任务分别经过哪些环节。
-
----
-
-## 1. 设计原则
-
-1. **接口优先于实现。** 核心只依赖 `LLMProvider`、`Memory`、`Tool` 三个窄接口，不引用任何具体后端。
-2. **厂商中立。** 没有一行核心逻辑假定某个模型供应商；OpenAI 兼容端点、本地模型都通过同一个接口接入。
-3. **小部件、可替换。** 每层都能单独替换与测试，改一层不影响其它层。
-4. **默认安全。** 涉及写入、沙箱、联网的工具，以及自主任务中的受保护动作，都必须显式确认并留痕。
-5. **渐进暴露。** 简单用法保持简单；高级能力（文件、联网、自主规划）全部通过开关按需开启。
+Dream AI has exactly one architectural constraint: **swapping a model, a storage backend, or a tool must never require changing the agent.** This page shows how that constraint maps onto the code, and what happens during a single chat turn and a single autonomous task.
 
 ---
 
-## 2. 模块关系
+## 1. Design principles
+
+1. **Interfaces over implementations.** The core depends on three narrow contracts — `LLMProvider`, `Memory`, `Tool` — and never on a concrete backend.
+2. **Vendor-neutral.** No core logic assumes a provider; OpenAI-compatible endpoints and local models enter through the same interface.
+3. **Small, replaceable parts.** Every layer can be replaced and tested on its own.
+4. **Safe by default.** Anything that writes, touches the sandbox, or reaches the network requires explicit approval and leaves a trace.
+5. **Progressive disclosure.** Simple usage stays simple; advanced capabilities (files, web, autonomy) are opt-in switches.
+
+---
+
+## 2. Module map
 
 ```mermaid
 flowchart LR
-    subgraph entry["入口层"]
-        CLI["cli.py<br/>命令循环"]
-        FACTORY["agent_factory.py<br/>按配置组装"]
+    subgraph entry["Entry layer"]
+        CLI["cli.py<br/>command loop"]
+        FACTORY["agent_factory.py<br/>assembles from settings"]
     end
 
-    subgraph core["核心层"]
+    subgraph core["Core layer"]
         AGENT["core/agent.py<br/>DreamAIAgent"]
         CONV["core/conversation.py<br/>Conversation"]
     end
 
-    subgraph ports["接口层（抽象）"]
+    subgraph ports["Ports (abstract)"]
         PROV["providers/base.py<br/>LLMProvider"]
         MEM["memory/base.py<br/>Memory"]
         TOOL["tools/base.py<br/>Tool"]
     end
 
-    subgraph adapters["实现层"]
+    subgraph adapters["Adapters"]
         OAI["providers/openai_compat.py"]
         LOCAL["providers/local.py"]
         IM["memory/session_memory.py"]
@@ -47,7 +46,7 @@ flowchart LR
         BUILTIN["tools/builtin/*"]
     end
 
-    subgraph auto["自主规划层"]
+    subgraph auto["Autonomy"]
         PLAN["autonomy/planner.py"]
         ENG["autonomy/engine.py"]
         MODEL["autonomy/models.py"]
@@ -70,59 +69,59 @@ flowchart LR
     REG --> TOOL
 ```
 
-要点：`AutonomyEngine` 不直接调用工具实现，而是通过 `ToolRegistry` 执行，因此「自主调用」和「手动 `/tool` 调用」走的是同一条确认与错误处理路径。
+Note that `AutonomyEngine` executes tools through `ToolRegistry`, not through the tool classes directly. That is why an autonomous call and a manual `/tool` call share the same confirmation gate and the same error handling.
 
 ---
 
-## 3. 分层职责
+## 3. Layers
 
-### 3.1 入口层
+### 3.1 Entry layer
 
-- `cli.py`：解析参数、加载配置、构建 agent、跑会话循环。**不含业务逻辑**，只负责输入输出与命令分发。
-- `agent_factory.py`：根据 `Settings` 选择记忆后端与工具集合，把依赖注入 `DreamAIAgent`。文件系统、权限开关的判断集中在这里，核心层因此保持干净。
+- `cli.py` — parses arguments, loads settings, builds the agent, runs the loop. **No business logic**: it only handles input, output, and command dispatch.
+- `agent_factory.py` — picks the memory backend and the tool set from `Settings` and injects them into `DreamAIAgent`. Filesystem and permission decisions are made here, which keeps the core clean.
 
-### 3.2 核心层
+### 3.2 Core layer
 
-- `core/agent.py`：组装 provider、memory、conversation、tools；对外暴露 `chat()`、`reset()`、`execute_tool()`、`autonomous_task()`。
-- `core/conversation.py`：在 `Memory` 之上提供 `add_user` / `add_assistant` / `history` / `clear` 四个语义化操作，屏蔽消息细节。
+- `core/agent.py` — composes provider, memory, conversation, and tools; exposes `chat()`, `reset()`, `execute_tool()`, `autonomous_task()`.
+- `core/conversation.py` — turns `add_user` / `add_assistant` / `history` / `clear` into a small vocabulary on top of `Memory`.
 
-### 3.3 接口层
+### 3.3 Ports
 
-| 接口 | 方法 | 约定 |
+| Port | Methods | Contract |
 |---|---|---|
-| `LLMProvider` | `name`、`generate(messages) -> str` | 输入有序消息列表，输出纯文本回复 |
-| `Memory` | `append`、`messages`、`clear`、`set_system_prompt` | system 消息永远位于首位；`messages()` 返回副本 |
-| `Tool` | `name`、`description`、`parameters`、`risk`、`requires_confirmation`、`run(**kwargs)` | `parameters` 为标准 JSON Schema，`risk` 为 `safe` / `protected` |
+| `LLMProvider` | `name`, `generate(messages) -> str` | Takes an ordered message list, returns plain text |
+| `Memory` | `append`, `messages`, `clear`, `set_system_prompt` | The system message is always first; `messages()` returns a copy |
+| `Tool` | `name`, `description`, `parameters`, `risk`, `requires_confirmation`, `run(**kwargs)` | `parameters` is JSON Schema; `risk` is `safe` or `protected` |
 
-`Memory.set_system_prompt()` 是提示词唯一的下发通道：agent 在启动时、以及每次记住或清除偏好后调用它，保证发给 provider 的首条消息始终是最新提示词。
+`Memory.set_system_prompt()` is the single path for the prompt: the agent calls it at start-up and after every remembered or cleared preference, so the first message the provider sees is always current.
 
-### 3.4 实现层
+### 3.4 Adapters
 
-- **Provider**：`openai_compat.py` 走任意 OpenAI 兼容 HTTP 端点（`openai` 包延迟导入，离线可用）；`local.py` 是无网络的占位实现，用于测试与演示。
-- **Memory**：`session_memory.py` 进程内缓冲；`persistent_session.py` 在其上叠加 JSON 落盘（原子写、只存对话轮次、过滤离线占位回复）；`preferences.py` 独立保存长期偏好。
-- **Tools**：`registry.py` 负责注册与查找；`parser.py` 解析 `<<TOOL {...}>>` 文本块；`factory.py` 按权限开关装配；`builtin/` 提供计算器（AST 白名单，不用 `eval`）、时钟、沙箱文件读写、联网搜索。
+- **Providers** — `openai_compat.py` reaches any OpenAI-compatible HTTP endpoint (the `openai` package is imported lazily, so the package stays usable offline); `local.py` is a network-free placeholder for tests and demos.
+- **Memory** — `session_memory.py` is an in-process buffer; `persistent_session.py` layers JSON persistence on top (atomic writes, turns only, offline placeholder replies filtered out); `preferences.py` stores long-term notes separately.
+- **Tools** — `registry.py` registers and looks up tools; `parser.py` extracts `<<TOOL {...}>>` blocks; `factory.py` wires the permission switches; `builtin/` ships the calculator (AST allowlist, no `eval`), clock, sandboxed file read/write, and web search.
 
-### 3.5 自主规划层
+### 3.5 Autonomy
 
-- `models.py`：`PlanStep`、`TraceEntry`、`ExecutionResult` 与生命周期枚举，全部可序列化，供 CLI 展示与日志留存。
-- `planner.py`：`Planner` 接口 + 确定性 `RuleBasedPlanner`；后续模型驱动的规划器实现同一接口即可替换。
-- `engine.py`：think → act → observe → reflect 循环，负责步数预算、失败重试、保护动作确认、轨迹记录。
+- `models.py` — `PlanStep`, `TraceEntry`, `ExecutionResult`, and the lifecycle enums. All serializable, for the CLI view and for logs.
+- `planner.py` — the `Planner` interface plus a deterministic `RuleBasedPlanner`; a model-driven planner can implement the same interface later.
+- `engine.py` — the think → act → observe → reflect loop: step budget, retries, approval for protected actions, and trace recording.
 
 ---
 
-## 4. 数据流：一次对话
+## 4. Data flow: one chat turn
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant U as 用户
+    participant U as User
     participant C as CLI
     participant A as DreamAIAgent
     participant V as Conversation
     participant M as Memory
     participant P as LLMProvider
 
-    U->>C: 输入文本
+    U->>C: input
     C->>A: chat(text)
     A->>V: add_user(text)
     V->>M: append("user", text)
@@ -133,14 +132,14 @@ sequenceDiagram
     A->>V: add_assistant(reply)
     V->>M: append("assistant", reply)
     A-->>C: reply
-    C-->>U: 打印回复
+    C-->>U: print
 ```
 
-关键点：provider 收到的始终是 `Memory` 的完整快照，而不是 agent 内部的临时结构，因此记忆后端的替换对上层完全透明。
+The provider always receives a snapshot of `Memory`, never an internal structure of the agent, which is why the memory backend can be replaced without touching the caller.
 
 ---
 
-## 5. 数据流：一次自主任务
+## 5. Data flow: one autonomous task
 
 ```mermaid
 sequenceDiagram
@@ -156,60 +155,60 @@ sequenceDiagram
     E->>PL: decompose(objective)
     PL-->>E: [PlanStep, ...]
 
-    loop 每个步骤（受步数预算约束）
-        E->>E: think：标记步骤开始
-        alt 受保护动作
-            E->>E: confirm：等待用户批准
+    loop each step (bounded by the step budget)
+        E->>E: think — mark the step active
+        alt protected action
+            E->>E: confirm — wait for approval
         end
         E->>R: execute(tool, args)
-        alt 执行失败且预算未耗尽
+        alt failed and budget remains
             R-->>E: ToolError
-            E->>E: reflect：按 max_retries 重试
-        else 执行成功
+            E->>E: reflect — retry up to max_retries
+        else succeeded
             R-->>E: observation
         end
-        E->>E: observe / reflect：记录观察与结论
+        E->>E: observe / reflect — record observation and conclusion
     end
 
-    E-->>A: ExecutionResult（steps + trace）
+    E-->>A: ExecutionResult (steps + trace)
     A->>M: append("assistant", summary)
 ```
 
-终止条件只有三种：全部步骤完成、步数预算耗尽、用户拒绝某个受保护动作。三种情况都会写入 `ExecutionResult.status`，并通过 `/trace` 可复盘。
+A run can end in exactly three ways: every step completed, the step budget exhausted, or the user declined a protected action. All three are recorded in `ExecutionResult.status` and reviewable through `/trace`.
 
 ---
 
-## 6. 扩展点
+## 6. Extension points
 
-### 6.1 新增模型后端
+### 6.1 Add a provider
 
-1. 在 `dream_ai/providers/` 新建类，实现 `LLMProvider`。
-2. 实现 `name` 与 `generate()`。
-3. 在 `providers/__init__.py` 的 `build_provider()` 中注册。
+1. Create a class implementing `LLMProvider` in `dream_ai/providers/`.
+2. Implement `name` and `generate()`.
+3. Register it in `build_provider()` inside `providers/__init__.py`.
 
-### 6.2 新增工具
+### 6.2 Add a tool
 
-1. 在 `dream_ai/tools/builtin/` 新建类，继承 `Tool`。
-2. 实现 `name`、`description`、`parameters`、`run(**kwargs)`。
-3. 声明 `risk` 与 `requires_confirmation`；只读工具保持 `safe`。
-4. 在 `tools/factory.py` 中挂到对应的权限开关后面。
+1. Create a class extending `Tool` in `dream_ai/tools/builtin/`.
+2. Implement `name`, `description`, `parameters`, and `run(**kwargs)`.
+3. Declare `risk` and `requires_confirmation`; read-only tools stay `safe`.
+4. Register it in `tools/factory.py` behind the matching permission switch.
 
-### 6.3 新增记忆后端
+### 6.3 Add a memory backend
 
-1. 实现 `Memory` 的四个方法：`append` / `messages` / `clear` / `set_system_prompt`。
-2. 保持「system 消息在首位」与「`messages()` 返回副本」两条约定。
-3. 注入 `Conversation` 与 `DreamAIAgent`，其余层无需改动。
+1. Implement the four `Memory` methods: `append`, `messages`, `clear`, `set_system_prompt`.
+2. Keep two rules: the system message comes first, and `messages()` returns a copy.
+3. Inject it into `Conversation` and `DreamAIAgent`; nothing else changes.
 
-### 6.4 新增规划器
+### 6.4 Add a planner
 
-1. 在 `dream_ai/autonomy/` 新建类，实现 `Planner.decompose(objective) -> list[PlanStep]`。
-2. 传给 `AutonomyEngine(..., planner=你的规划器)`；循环、预算、重试、确认逻辑保持复用。
+1. Create a class in `dream_ai/autonomy/` implementing `Planner.decompose(objective) -> list[PlanStep]`.
+2. Pass it to `AutonomyEngine(..., planner=your_planner)`; the loop, budget, retry, and confirmation logic are reused as-is.
 
 ---
 
-## 7. 现状与后续
+## 7. Current state and next steps
 
-1. v0.4 的规划器是确定性规则实现，只识别时间与计算意图；模型驱动的计划拆解与原生 function-calling 属于后续阶段，复用同一个引擎、轨迹、预算与确认机制。
-2. **Web 服务目前没有复用 `dream_ai` 的 agent 循环**：`web/app/llm.py` 直接与模型端点通信，以实现 SSE 流式输出与思考过程透传。两者共用配置约定（`DREAMAI_*`）与提示词思路，但代码路径独立；把它们收敛到同一套 agent API 是后续重构的候选方向。
-3. 桌面端加载 Web 界面，本身不实现对话逻辑，只通过 IPC 提供本地文件、文档生成与命令执行能力。
-4. 本地开源模型接入通过新增 provider 完成，不需要改动核心。
+1. The v0.4 planner is deterministic and only recognises time and calculation intents. Model-driven decomposition and native function calling belong to a later phase and reuse the same engine, trace, budget, and confirmation gate.
+2. **The web service does not reuse the `dream_ai` agent loop.** `web/app/llm.py` talks to the endpoint directly so it can stream SSE tokens and forward reasoning output. The two share the `DREAMAI_*` conventions and the prompt design, but the code paths are separate; converging them on one agent API is a candidate refactor.
+3. The desktop app loads the web interface and implements no chat logic itself: it only exposes local files, document generation, and command execution over IPC.
+4. Local open-source models are added as another provider; the core does not change.
