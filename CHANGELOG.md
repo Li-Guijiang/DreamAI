@@ -28,12 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   provider, both in a fresh session and after a restart.
 
 ### Changed
-- `README.md` opens with an animated hero: a transparent vector source
-  (`assets/brand/hero.svg`) and an 8-second looping GIF (`assets/brand/hero.gif`)
-  rendered from it. The GIF is referenced through an absolute
-  `raw.githubusercontent.com` URL because repo-relative raster images do not
-  render in README. The five animation layers and the measured reason for this
-  setup are documented in `assets/README.md`.
+- `README.md` opens with a transparent vector hero (`assets/brand/hero.svg`),
+  replacing the white-background lockup that showed as a white box on the dark
+  theme. The vector carries a five-layer, 8-second seamless animation
+  (CSS + SMIL); GitHub renders it statically, and `assets/brand/hero.gif` holds
+  the same motion as 24 raster frames for surfaces that play GIFs. The
+  measurements behind that split — including why README does not reference the
+  GIF — are recorded in `assets/README.md`.
 - `README.md` rebuilt as a landing page: centred brand lockup, grouped badges, a
   table of contents, a 2x2 screenshot gallery, a capability table keyed by phase,
   and a Mermaid architecture diagram. Commands and environment variables moved
