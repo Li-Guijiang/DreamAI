@@ -50,75 +50,17 @@ build_log.txt
 *.sqlite3
 *.db
 
-# Local diagnostics and transient files (never commit)
-runs.txt
-releases.txt
-jobs.txt
-diag.txt
-log_files.txt
-scopes.txt
-publish_error.txt
-verify.txt
-gitstate.txt
-final_check.txt
-relcheck.txt
-ci_latest.txt
-probe.txt
-check.txt
-wf.txt
-dispatch.txt
-poll.txt
-poll2.txt
-package.txt
-pkgcheck.txt
-arch.txt
-rel2.txt
-poll3.txt
-arch3.txt
-v2check.txt
-t.txt
-base.txt
-final2.txt
-match.txt
-final3.txt
-final4.txt
-final5.txt
-final6.txt
-final7.txt
-final8.txt
-final9.txt
-check9.txt
-v4check*.txt
-v4base.txt
-v4build.txt
-demo_out.txt
-rel4.txt
-poll4.txt
-final4.txt
-guidecheck.txt
-s.txt
-mem.txt
-repro.txt
-diag.txt
-scan.txt
-st.txt
-v.txt
-n.txt
-fix.txt
-commands.txt
-demo.txt
-demo2.txt
-demo_tool.txt
-demo_fs.txt
-v3check.txt
-rel3.txt
-poll4.txt
-_demo*.py
-cred_info.txt
-.git_cred_token.txt
-ghdocs.txt
-run_logs.zip
-run_logs/
+# Scratch output from local release and debug runs.
+# The file names used to be listed one by one (probe.txt, poll2.txt, final9.txt,
+# v4check.txt, ...), which grew without bound. They were all repository-root text
+# dumps produced by manual GitHub CLI sessions, so a single anchored pattern
+# covers them; tracked files such as requirements.txt are exempted explicitly.
+/*.txt
+!/requirements.txt
+!/requirements-dev.txt
+/run_logs/
+/run_logs.zip
+/_demo*.py
 
 # Model / cache files (large binaries)
 .cache/
