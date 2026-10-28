@@ -11,9 +11,12 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "start:local": "cross-env DREAMAI_URL=http://127.0.0.1:8787 electron .",
+    "start:local": "electron . --url=http://127.0.0.1:8787",
     "dist": "electron-builder --win nsis --x64",
-    "pack": "electron-builder --dir"
+    "pack": "electron-builder --dir",
+    "test": "node test/local-tools.test.js && node test/documents.test.js",
+    "test:tools": "node test/local-tools.test.js",
+    "test:docs": "node test/documents.test.js"
   },
   "devDependencies": {
     "electron": "45.0.0",

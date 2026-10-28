@@ -7,7 +7,14 @@ const tools = require("./local-tools");
 const documents = require("./documents");
 const agent = require("./agent");
 
-const APP_URL = process.env.DREAMAI_URL || "https://liguijiang.com";
+// The site to load. `--url=` wins over the DREAMAI_URL environment variable so
+// `pnpm start:local` works on every platform without a cross-env shim.
+const URL_ARG = "--url=";
+const urlArg = process.argv.find((arg) => arg.startsWith(URL_ARG));
+const APP_URL =
+  (urlArg && urlArg.slice(URL_ARG.length)) ||
+  process.env.DREAMAI_URL ||
+  "https://liguijiang.com";
 const PRODUCT = "Dream AI";
 
 let mainWindow = null;

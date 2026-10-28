@@ -3,9 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Distribution / packaging
-build/
-dist/
+# Distribution / packaging (Python build output at the repository root only;
+# the rules are anchored so they cannot hide desktop/build or web build assets)
+/build/
+/dist/
 *.egg-info/
 .eggs/
 *.egg
