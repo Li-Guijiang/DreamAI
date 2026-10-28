@@ -1,5 +1,7 @@
 # Code of Conduct
 
+<p align="center"><img src="../assets/brand/banner-docs.gif" alt="" width="720"></p>
+
 <sub>[Back to the documentation index](./README.md)</sub>
 
 ## Our Pledge

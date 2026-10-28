@@ -1,5 +1,7 @@
 # Dream AI — Command-line guide (v0.4.0)
 
+<p align="center"><img src="../assets/brand/banner-docs.gif" alt="" width="720"></p>
+
 <sub>[Back to the documentation index](./README.md)</sub>
 
 > This guide is written for someone opening the project for the first time. It answers four

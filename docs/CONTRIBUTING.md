@@ -1,5 +1,7 @@
 # Contributing to Dream AI
 
+<p align="center"><img src="../assets/brand/banner-docs.gif" alt="" width="720"></p>
+
 <sub>[Back to the documentation index](./README.md)</sub>
 
 Thank you for helping build Dream AI. Contributions of all kinds are welcome:

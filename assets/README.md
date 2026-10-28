@@ -1,5 +1,7 @@
 # Assets
 
+<p align="center"><img src="brand/banner-assets.gif" alt="" width="720"></p>
+
 Logos, banners, icons, and other visual materials for Dream AI.
 
 ## Directory Structure
@@ -9,7 +11,9 @@ assets/
 ├── brand/                 # Deliverables ready to be referenced directly
 │   ├── build_hero.py      # Generator for the README hero (run it, do not hand-edit)
 │   ├── hero.svg           # README hero: transparent vector mark with animation
-│   └── hero.gif           # Same hero as raster frames, for sites / slides
+│   ├── hero.gif           # Same hero as raster frames, for sites / slides
+│   ├── banner-*.gif       # Animated page banners (docs / web / desktop / assets)
+│   └── build_banners.py   # Generator for the banners
 └── logo/                  # DreamAI brand logo assets
     ├── 00_原始母版/        # Master design files (visual baseline)
     ├── 01_软件图标_圆角底板/  # App icons (rounded square, iOS style)
@@ -86,6 +90,28 @@ appears as a dark banner.
 2. For the GIF: pause the animations in an inlined copy of the SVG, step `currentTime` frame by
    frame through an 8-second loop, and encode 400×214 at 24 frames with `#0d1117` as the
    background.
+
+## `brand/banner-*.gif`
+
+Four animated strips, one per document family, placed directly under the page title:
+
+| File | Used by | Motion |
+|---|---|---|
+| `banner-docs.gif` | `docs/` and every page inside it | Flowing aurora bands, drifting stars, a comet, a sweeping bottom hairline |
+| `banner-web.gif` | `web/README.md`, `web/tools/README.md` | Concentric orbit rings with rotating highlights and travelling light points |
+| `banner-desktop.gif` | `desktop/README.md` | Pulsing dot grid with a soft light sweep |
+| `banner-assets.gif` | `assets/README.md` | Warm aurora bands with drifting stars |
+
+All four are 720×110, 24 frames over an 8-second loop at 4 fps, 64 colours, and share the same
+timing so the pages feel like one set. Regenerate with:
+
+```bash
+python assets/brand/build_banners.py          # all four
+python assets/brand/build_banners.py web      # just one
+```
+
+Each page loads a single banner (118–336 KB). If a lighter page matters more than motion, remove the
+`<img>` line under the title and the rest of the page is unaffected.
 
 ## Notes
 

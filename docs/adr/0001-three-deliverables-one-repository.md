@@ -1,5 +1,7 @@
 # 0001 — One repository, three deliverables, three version numbers
 
+<p align="center"><img src="../../assets/brand/banner-docs.gif" alt="" width="720"></p>
+
 <sub>[ADR index](./README.md) · [Documentation index](../README.md)</sub>
 
 - **Status:** Accepted

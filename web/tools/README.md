@@ -1,5 +1,7 @@
 # Web maintenance scripts
 
+<p align="center"><img src="../../assets/brand/banner-web.gif" alt="" width="720"></p>
+
 <sub>[Back to the repository home](../../README.md) · [Documentation index](../../docs/README.md)</sub>
 
 This directory holds **local maintenance scripts** for the web service. They are not part of the

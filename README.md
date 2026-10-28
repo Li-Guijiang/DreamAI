@@ -10,9 +10,9 @@
 </p>
 
 <p align="center">
-  <a href="https://liguijiang.com"><img src="https://img.shields.io/badge/Live_demo-liguijiang.com-5b8cff?style=flat-square" alt="Live demo"></a>
-  <a href="https://liguijiang.com/download.html"><img src="https://img.shields.io/badge/Desktop-Windows_1.2-7c9cff?style=flat-square" alt="Desktop"></a>
-  <a href="./docs/README.md"><img src="https://img.shields.io/badge/Docs-index-9d7cff?style=flat-square" alt="Docs"></a>
+  <a href="https://liguijiang.com"><img src="https://img.shields.io/badge/在线体验-liguijiang.com-5b8cff?style=flat-square" alt="Live demo"></a>
+  <a href="https://liguijiang.com/download.html"><img src="https://img.shields.io/badge/桌面版-Windows_1.2-7c9cff?style=flat-square" alt="Desktop"></a>
+  <a href="./docs/README.md"><img src="https://img.shields.io/badge/文档-索引-9d7cff?style=flat-square" alt="Docs"></a>
 </p>
 
 <p align="center">

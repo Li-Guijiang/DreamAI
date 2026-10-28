@@ -1,5 +1,7 @@
 # Security Policy
 
+<p align="center"><img src="../assets/brand/banner-docs.gif" alt="" width="720"></p>
+
 <sub>[Back to the documentation index](./README.md)</sub>
 
 ## Reporting a Vulnerability

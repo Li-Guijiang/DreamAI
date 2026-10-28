@@ -1,5 +1,7 @@
 # Getting help
 
+<p align="center"><img src="../assets/brand/banner-docs.gif" alt="" width="720"></p>
+
 <sub>[Back to the documentation index](./README.md)</sub>
 
 Work through the steps below in order — most problems are resolved by the first two. If you are still stuck, pick a channel in section 4.

@@ -1,5 +1,7 @@
 # Documentation index
 
+<p align="center"><img src="../assets/brand/banner-docs.gif" alt="" width="720"></p>
+
 <sub>[Back to the repository home](../README.md)</sub>
 
 All project documentation lives here. The repository ships three runnable forms — command line, web service, and Windows desktop app — so this page explains what each document answers, in what order to read them, and how the version numbers map to the code.

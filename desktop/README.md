@@ -1,5 +1,7 @@
 # Dream AI Desktop
 
+<p align="center"><img src="../assets/brand/banner-desktop.gif" alt="" width="720"></p>
+
 <sub>[Back to the repository home](../README.md) · [Documentation index](../docs/README.md)</sub>
 
 The Windows desktop edition of Dream AI: an Electron shell that loads the same interface as the

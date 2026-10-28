@@ -1,5 +1,7 @@
 # Architecture
 
+<p align="center"><img src="../assets/brand/banner-docs.gif" alt="" width="720"></p>
+
 <sub>[Back to the documentation index](./README.md)</sub>
 
 Dream AI has exactly one architectural constraint: **swapping a model, a storage backend, or a tool must never require changing the agent.** This page shows how that constraint maps onto the code, and what happens during a single chat turn and a single autonomous task.

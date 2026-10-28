@@ -1,5 +1,7 @@
 # Dream AI Roadmap
 
+<p align="center"><img src="../assets/brand/banner-docs.gif" alt="" width="720"></p>
+
 <sub>[Back to the documentation index](./README.md)</sub>
 
 This roadmap organizes Dream AI into small, shippable phases. Each version

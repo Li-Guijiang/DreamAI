@@ -1,5 +1,7 @@
 # Local Setup Guide
 
+<p align="center"><img src="../assets/brand/banner-docs.gif" alt="" width="720"></p>
+
 <sub>[Back to the documentation index](./README.md)</sub>
 
 A step-by-step guide to run Dream AI on your own machine. Windows steps are
