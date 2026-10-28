@@ -16,6 +16,7 @@
 | [ROADMAP.md](./ROADMAP.md) | 分阶段路线图、每阶段任务与验收标准 | 想了解进度与后续计划的人 |
 | [adr/](./adr/) | 架构决策记录（ADR）：决定了什么、为什么、否决了哪些方案 | 需要理解设计取舍的开发者 |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | 分支约定、提交信息格式、代码风格、PR 检查清单 | 贡献者 |
+| [SUPPORT.md](./SUPPORT.md) | 遇到问题时按什么顺序自查、该走哪个渠道 | 所有使用者 |
 | [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) | 社区行为准则 | 所有参与者 |
 | [SECURITY.md](./SECURITY.md) | 漏洞报告渠道与安全边界 | 安全研究者、部署者 |
 | [PRICING.md](./PRICING.md) | 未来可选托管方案的设想（当前均未提供） | 关注商业化方向的人 |
