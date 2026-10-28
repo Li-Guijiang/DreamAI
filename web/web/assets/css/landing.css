@@ -971,50 +971,6 @@
   }
 }
 
-.hero__meta {
-  margin-top: 25px;
-  animation: lm-fade-up 0.9s var(--motion-ease) 0.48s both;
-}
-
-.hero__meta span {
-  border-color: color-mix(in srgb, var(--line-2) 76%, transparent);
-  background: color-mix(in srgb, var(--surface) 26%, transparent);
-  backdrop-filter: blur(8px);
-  transition: border-color 0.22s, color 0.22s, transform 0.22s;
-}
-
-.hero__meta span:hover {
-  color: var(--text-2);
-  border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
-  transform: translateY(-2px);
-}
-
-.hero__meta i {
-  animation: lm-meta-led 3.4s ease-in-out infinite;
-}
-
-.hero__meta span:nth-child(2) i {
-  background: var(--accent);
-  animation-delay: 0.5s;
-}
-
-.hero__meta span:nth-child(3) i {
-  background: var(--violet);
-  animation-delay: 1s;
-}
-
-.hero__meta span:nth-child(4) i {
-  background: var(--gold);
-  animation-delay: 1.5s;
-}
-
-@keyframes lm-meta-led {
-  50% {
-    opacity: 0.2;
-    transform: scale(0.7);
-  }
-}
-
 /* --------------------------------------------------------------------------
    Composer: an orbital ring / light-well
    -------------------------------------------------------------------------- */
@@ -1382,7 +1338,6 @@
   .hero__eyebrow,
   .hero__sub,
   .hero__terminal,
-  .hero__meta,
   .card {
     animation: none;
   }

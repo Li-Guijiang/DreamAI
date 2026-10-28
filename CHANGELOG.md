@@ -49,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — documentation
 
+- Removed the four hero capability chips (“流式输出 / 深度思考 / 多轮记忆 / 隐私优先”) from the
+  landing page. They read as generic AI-product boilerplate and added noise after the capability
+  cards. The homepage preview used by the docs was refreshed.
 - `README.md`, `web/README.md`, `docs/README.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md` and
   `docs/GUIDE.md` now document the motion layer, the web 2.0 version, the new `/motion` command and
   the still-separate web request path.

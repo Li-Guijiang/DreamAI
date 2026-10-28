@@ -16,7 +16,7 @@ small FastAPI service. No front-end framework and no Node build step.
 - **Source:** <https://github.com/Li-Guijiang/DreamAI/tree/main/web>
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/8b840543-f6f1-40e3-9533-e9f6a320931c" alt="Dream AI home page with a cosmic hero, typing greeting and animated cards" width="100%">
+  <img src="https://github.com/user-attachments/assets/b377efc9-3f0f-4225-a92e-210b02aa980d" alt="Dream AI home page with a cosmic hero, typing greeting and animated cards" width="100%">
 </p>
 
 ## 1. A living interface

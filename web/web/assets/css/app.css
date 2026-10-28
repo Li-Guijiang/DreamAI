@@ -1233,33 +1233,6 @@ html[data-theme="light"] .model-badge.is-key {
   transform: translate(0, 0);
 }
 
-.hero__meta {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 7px;
-  margin-top: 30px;
-  animation: rise 0.9s var(--ease) 0.24s both;
-}
-
-.hero__meta span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  color: var(--text-3);
-  font-size: 11px;
-}
-
-.hero__meta i {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--teal);
-}
-
 /* ---------- Chat ---------- */
 .chat {
   width: 100%;
@@ -3975,10 +3948,6 @@ body.desktop-app .app {
     grid-template-columns: 1fr;
     gap: 8px;
     margin-top: 26px;
-  }
-
-  .hero__meta {
-    display: none;
   }
 
   .composer-dock {
