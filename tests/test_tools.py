@@ -168,10 +168,7 @@ def test_registry_rejects_duplicate_and_unknown_tools() -> None:
 
 
 def test_parser_extracts_tool_call() -> None:
-    text = (
-        'Before <<TOOL {"name": "calculator", '
-        '"arguments": {"expression": "1+1"}}>> after'
-    )
+    text = 'Before <<TOOL {"name": "calculator", "arguments": {"expression": "1+1"}}>> after'
 
     calls = parse_tool_calls(text)
 

@@ -17,9 +17,8 @@ from .storage import read_json, write_json_atomic
 
 def _is_demo_reply(message: dict[str, str]) -> bool:
     """True for an offline placeholder assistant reply that must not persist."""
-    return (
-        message.get("role") == "assistant"
-        and (message.get("content") or "").strip().startswith(DEMO_PREFIX)
+    return message.get("role") == "assistant" and (message.get("content") or "").strip().startswith(
+        DEMO_PREFIX
     )
 
 
@@ -58,11 +57,7 @@ class PersistentSessionMemory(Memory):
         for message in data.get("messages", []):
             role = message.get("role")
             content = (message.get("content") or "").strip()
-            if (
-                role in {"user", "assistant"}
-                and content
-                and not _is_demo_reply(message)
-            ):
+            if role in {"user", "assistant"} and content and not _is_demo_reply(message):
                 self._core.append(role, content)
 
     def _persist(self) -> None:

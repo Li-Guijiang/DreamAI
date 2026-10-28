@@ -82,8 +82,7 @@ def _print_memory_status(agent: DreamAIAgent, settings: Settings) -> None:
     print(f"Memory: {mode} ({location})")
     autonomy = "on" if settings.autonomy_enabled else "off"
     print(
-        f"Autonomy: {autonomy} "
-        f"(max steps: {settings.max_steps}, retries: {settings.max_retries})"
+        f"Autonomy: {autonomy} (max steps: {settings.max_steps}, retries: {settings.max_retries})"
     )
     print(f"Tools: {len(agent.tool_names)} registered\n")
 
@@ -167,10 +166,7 @@ def _run_autonomous(agent: DreamAIAgent, settings: Settings, objective: str) -> 
         print("⚠ Autonomous mode is disabled (DREAMAI_AUTONOMY_ENABLED=false).\n")
         return
     if not objective:
-        print(
-            "Usage: /run <objective>  e.g. "
-            "/run what time is it and calculate 12 * 7\n"
-        )
+        print("Usage: /run <objective>  e.g. /run what time is it and calculate 12 * 7\n")
         return
 
     on_event = _print_event if settings.autonomy_verbose else None

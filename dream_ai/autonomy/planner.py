@@ -42,9 +42,7 @@ _CALC_KEYWORDS = (
     "求和",
 )
 
-_EXPRESSION_PATTERN = re.compile(
-    r"[A-Za-z]*(?:[0-9]|\()[0-9A-Za-z+\-*/().%\s]*(?:[0-9)]|\()"
-)
+_EXPRESSION_PATTERN = re.compile(r"[A-Za-z]*(?:[0-9]|\()[0-9A-Za-z+\-*/().%\s]*(?:[0-9)]|\()")
 _QUOTED_EXPRESSION = re.compile(r'"([^"]*[0-9][^"]*)"')
 
 

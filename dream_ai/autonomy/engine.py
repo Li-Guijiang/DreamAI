@@ -52,9 +52,7 @@ class AutonomyEngine:
 
     # -- Public API ---------------------------------------------------------
 
-    def run(
-        self, objective: str, plan: list[PlanStep] | None = None
-    ) -> ExecutionResult:
+    def run(self, objective: str, plan: list[PlanStep] | None = None) -> ExecutionResult:
         """Execute ``objective`` and return an explainable :class:`ExecutionResult`."""
         self._trace = []
         steps = list(plan or self._planner.decompose(objective))
@@ -89,7 +87,9 @@ class AutonomyEngine:
                 continue
 
             schema = self._tool_schema(step.tool)
-            protected = bool(schema and schema.get("requires_confirmation")) or step.needs_confirmation
+            protected = (
+                bool(schema and schema.get("requires_confirmation")) or step.needs_confirmation
+            )
 
             if protected:
                 self._log(
@@ -129,9 +129,7 @@ class AutonomyEngine:
                 )
 
                 try:
-                    output = self._agent.execute_tool(
-                        step.tool, confirmed=True, **step.arguments
-                    )
+                    output = self._agent.execute_tool(step.tool, confirmed=True, **step.arguments)
                     step.observation = output
                     success = True
                     break

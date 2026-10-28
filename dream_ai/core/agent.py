@@ -125,9 +125,7 @@ class DreamAIAgent:
         """Parse structured tool-call blocks embedded in a model reply."""
         return parse_tool_calls(text)
 
-    def run_tool_calls(
-        self, text: str, confirmed: bool = False
-    ) -> list[tuple[ToolCall, str]]:
+    def run_tool_calls(self, text: str, confirmed: bool = False) -> list[tuple[ToolCall, str]]:
         """Parse and execute every tool call found in ``text``."""
         results: list[tuple[ToolCall, str]] = []
         for call in self.tool_calls_from_text(text):
@@ -191,9 +189,7 @@ class DreamAIAgent:
 
     def _sync_system_prompt(self) -> None:
         """Push the effective system prompt into the memory backend."""
-        self._memory.set_system_prompt(
-            self._compose_system_prompt(self._base_system_prompt)
-        )
+        self._memory.set_system_prompt(self._compose_system_prompt(self._base_system_prompt))
 
     def _compose_system_prompt(self, base: str | None) -> str:
         """Append remembered preferences to the base system prompt."""

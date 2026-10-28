@@ -61,9 +61,7 @@ class WebSearchTool(Tool):
             {"q": query, "format": "json", "no_html": "1", "t": "dreamai"}
         )
         url = f"{_ENDPOINT}?{params}"
-        request = urllib.request.Request(
-            url, headers={"User-Agent": f"DreamAI/{__version__}"}
-        )
+        request = urllib.request.Request(url, headers={"User-Agent": f"DreamAI/{__version__}"})
         try:
             with urllib.request.urlopen(request, timeout=_TIMEOUT) as response:
                 data = json.loads(response.read().decode("utf-8"))

@@ -230,9 +230,7 @@ def test_engine_stops_when_step_budget_exhausted(tmp_path: Path) -> None:
         PlanStep(title="Second clock.", tool="clock", arguments={}),
     ]
 
-    result = agent.autonomous_task(
-        "Two clock calls.", plan=plan, max_steps=1
-    )
+    result = agent.autonomous_task("Two clock calls.", plan=plan, max_steps=1)
 
     assert result.status is RunStatus.BUDGET_EXHAUSTED
     assert result.steps[0].status is StepStatus.SUCCEEDED
