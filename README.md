@@ -75,7 +75,7 @@ The three version numbers are independent by design, not by drift: see the [vers
 
 | Home | Chat |
 |---|---|
-| ![Home](https://github.com/user-attachments/assets/b377efc9-3f0f-4225-a92e-210b02aa980d) | ![Chat](https://github.com/user-attachments/assets/5ae723c7-dfa7-49d9-a5ca-61d496ba7bf7) |
+| ![Home](https://github.com/user-attachments/assets/c07d93e8-915c-4483-9ffc-8d1d67af874e) | ![Chat](https://github.com/user-attachments/assets/5ae723c7-dfa7-49d9-a5ca-61d496ba7bf7) |
 
 | Work mode | Desktop |
 |---|---|
