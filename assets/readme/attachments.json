@@ -5,9 +5,9 @@
   "note": "Images are GitHub user attachments because repository-relative image URLs depend on raw.githubusercontent.com, which is unreachable on some networks. Update this manifest and the Markdown references together.",
   "images": {
     "hero": {
-      "url": "https://github.com/user-attachments/assets/ee933985-63ed-4930-9e59-c5168d431c28",
-      "source": "assets/brand/hero.svg",
-      "processing": "24 frames over the original 8-second loop, rendered at 1000x340, transparent animated WebP q82"
+      "url": "https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@main/assets/brand/hero-900.webp",
+      "source": "assets/brand/hero-900.webp",
+      "processing": "900x306 animated WebP, 30 fps over the 8-second loop, exported from assets/brand/hero.mp4"
     },
     "preview_desktop": {
       "url": "https://github.com/user-attachments/assets/0f915957-509b-468f-b919-e2ea893e2446",

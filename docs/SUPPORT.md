@@ -51,5 +51,3 @@ With no API key Dream AI runs in **offline demo mode**: replies come from a plac
 4. what you already tried.
 
 **Never paste API keys, server addresses, or passwords.** When you need to show configuration, replace the values with `***`.
-
-<p align="center"><img src="https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@main/assets/brand/hero-900.webp" alt="" width="900"></p>

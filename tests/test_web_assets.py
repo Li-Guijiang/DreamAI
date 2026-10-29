@@ -15,6 +15,11 @@ ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web" / "web"
 ATTACHMENT_MANIFEST = ROOT / "assets" / "readme" / "attachments.json"
 
+# GitHub strips <video>, and repository-relative images need an attachment upload.
+# jsDelivr serves files straight from the repository, which keeps the 30 fps WebP
+# hero working without a manual upload, so it is the one allowed CDN.
+ALLOWED_CDN_PREFIX = "https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@"
+
 PAGES = [WEB / "index.html", WEB / "download.html", WEB / "docs.html"]
 HTML_REF_RE = re.compile(r"\b(?:src|href)=\"(/[^\"#?]+)")
 IMG_RE = re.compile(r"<img\b[^>]*\bsrc=\"([^\"]+)\"", re.IGNORECASE)
@@ -87,7 +92,9 @@ def test_attachment_manifest_points_at_existing_sources():
     attachments = _attachments()
     assert attachments, "the README attachment manifest is empty"
     for name, entry in attachments.items():
-        assert entry["url"].startswith("https://github.com/user-attachments/assets/"), name
+        assert entry["url"].startswith(
+            ("https://github.com/user-attachments/assets/", ALLOWED_CDN_PREFIX)
+        ), name
         assert (ROOT / entry["source"]).is_file(), f"{name}: missing {entry['source']}"
 
 
