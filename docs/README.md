@@ -8,8 +8,6 @@ All project documentation lives here. The repository ships three runnable forms 
 
 ---
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 1. Document map
 
 | Document | Contents | Audience |
@@ -32,8 +30,6 @@ All project documentation lives here. The repository ships three runnable forms 
 
 ---
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 2. Entry points for the three deliverables
 
 1. **Command line (Python package)** — `pip install -e .`, then `python -m dream_ai` or `dream-ai`.
@@ -47,8 +43,6 @@ All project documentation lives here. The repository ships three runnable forms 
 The three share the interface and the `DREAMAI_*` conventions, but **their version numbers are independent**. See the next section.
 
 ---
-
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 3. Version cross-reference
 
@@ -68,8 +62,6 @@ When bumping any of them, check the three companions:
 
 ---
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 4. Documentation rules
 
 1. New documents go in this directory and must be added to the table in section 1 — no orphan files.
@@ -78,5 +70,3 @@ When bumping any of them, check the three companions:
 4. Architecture decisions are recorded in `adr/` as `0001-<topic>.md`, numbered upward. Do not rewrite accepted records; supersede them.
 5. Document links stay relative. Images use GitHub user-attachment URLs registered in [`assets/readme/attachments.json`](../assets/readme/attachments.json): repository-relative images depend on `raw.githubusercontent.com`, which is unreachable on some networks. The manifest records the original local source and the optimization applied.
 6. Everything is written in English. Readers who prefer another language can use browser translation.
-
-<p align="center"><img src="../assets/brand/footer.gif" alt="" width="720"></p>

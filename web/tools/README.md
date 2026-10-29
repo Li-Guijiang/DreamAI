@@ -9,8 +9,6 @@ runtime, and deploying the server does not need them. Paths are resolved relativ
 the environment comes from `web/requirements.txt`, and some scripts additionally need `pillow`,
 `numpy`, `paramiko`, or `requests`.
 
-<p align="center"><img src="../../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 1. Scripts kept at the top level
 
 | Script | Purpose | When to use |
@@ -33,8 +31,6 @@ python tools/make_assets.py
 export DREAMAI_SSH_PASSWORD=...
 python tools/server_exec.py exec ./some-script.sh
 ```
-
-<p align="center"><img src="../../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 2. The `archive/` directory
 
@@ -60,5 +56,3 @@ Rules for new scripts:
 3. never hardcode a local absolute path — derive it with
    `ROOT = Path(__file__).resolve().parent.parent`;
 4. never put a secret in the source; read it from the environment.
-
-<p align="center"><img src="../../assets/brand/footer.gif" alt="" width="720"></p>

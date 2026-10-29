@@ -19,8 +19,6 @@
 
 ---
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 0. What Dream AI can do today
 
 The current version is **v0.4.0 (Autonomous Planning)**. It consists of four capability layers:
@@ -44,8 +42,6 @@ The current version is **v0.4.0 (Autonomous Planning)**. It consists of four cap
   the [roadmap](ROADMAP.md).
 
 ---
-
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 1. Environment setup (once)
 
@@ -108,8 +104,6 @@ project and activate the environment again.
 
 ---
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 2. First start
 
 ### 2.1 Copy the configuration file
@@ -159,8 +153,6 @@ Exit with `/quit` or `/exit`.
 
 ---
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 3. The two run modes
 
 ### 3.1 Offline demo mode (no key needed)
@@ -199,8 +191,6 @@ DREAMAI_MODEL=deepseek-chat
 > ```
 
 ---
-
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 4. Using the four capability layers
 
@@ -365,8 +355,6 @@ It prints the objective, the final status, each step's title/status/observation,
 
 ---
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 5. Command reference (v0.4.0, complete)
 
 | Command | Action |
@@ -386,8 +374,6 @@ It prints the objective, the final status, each step's title/status/observation,
 | Anything else | A normal chat turn |
 
 ---
-
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 6. Configuration reference (`.env`)
 
@@ -438,8 +424,6 @@ current session. The web surface has its own independent motion switch on every 
 
 ---
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 7. Run the bundled examples (no interactive shell needed)
 
 From the project root:
@@ -453,8 +437,6 @@ python examples/autonomy_demo.py   # run a two-step autonomous task and print pl
 None of them need an API key.
 
 ---
-
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 8. Run in a container (optional, Docker required)
 
@@ -477,8 +459,6 @@ The image is published for both `linux/amd64` and `linux/arm64`. See the
 [Packages page](https://github.com/Li-Guijiang/DreamAI/pkgs/container/dream-ai).
 
 ---
-
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 9. Troubleshooting
 
@@ -503,8 +483,6 @@ ruff check dream_ai tests examples web/app web/tools
 
 ---
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 10. Where the project goes next
 
 - **v0.5 / v0.6 …** — stronger model integration, better plans, and a wider capability surface.
@@ -514,5 +492,3 @@ ruff check dream_ai tests examples web/app web/tools
   and data that stays local by default.
 
 The full plan is in [ROADMAP.md](ROADMAP.md); version history is in [CHANGELOG.md](../CHANGELOG.md).
-
-<p align="center"><img src="../assets/brand/footer.gif" alt="" width="720"></p>

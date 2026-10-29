@@ -8,8 +8,6 @@ The Windows desktop edition of Dream AI: an Electron shell that loads the same i
 website and adds a **local file workbench** (organise, batch rename, export documents) through a
 narrow IPC bridge.
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## Development
 
 ```bash
@@ -29,8 +27,6 @@ ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
 ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/
 ```
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## Packaging
 
 ```bash
@@ -42,8 +38,6 @@ Packaging always reads `build/icon.ico` (16–256 px sizes), exported from the b
 `assets/logo/DreamAI-Logo/01_软件图标_圆角底板/DreamAI-icon-1024.png`. The output and resource
 directories are set by `build.directories` in `package.json`. Keep the file name stable when
 replacing the icon so the packaging config does not need to change.
-
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## Testing
 
@@ -71,8 +65,6 @@ Development-only flags and variables:
 | `DREAMAI_DEV_WORKSPACE` | Preselect the working folder and skip the system dialog |
 | `DREAMAI_DEV_AUTO_CONFIRM=1` | Auto-approve write confirmations; automated tests only |
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## Security model
 
 - `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`.
@@ -83,8 +75,6 @@ Development-only flags and variables:
 - Every move, rename, and write is previewed first, then confirmed through a native dialog owned by
   the main process.
 - Navigation away from the official domain is blocked; external links open in the system browser.
-
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## Local capabilities (MVP)
 
@@ -97,5 +87,3 @@ Development-only flags and variables:
 
 The same pattern extends naturally to Word/Excel/PPT generation, image compression, duplicate
 detection, and scheduled tidying.
-
-<p align="center"><img src="../assets/brand/footer.gif" alt="" width="720"></p>

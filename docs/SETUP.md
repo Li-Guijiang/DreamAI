@@ -7,8 +7,6 @@
 A step-by-step guide to run Dream AI on your own machine. Windows steps are
 primary; macOS and Linux notes are included where they differ.
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## Prerequisites
 
 - **Python 3.11 or newer** installed. Check in a terminal:
@@ -19,16 +17,12 @@ primary; macOS and Linux notes are included where they differ.
 
 - **Git** installed and logged in to GitHub.
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 1. Get the Code
 
 ```bash
 git clone https://github.com/Li-Guijiang/DreamAI.git
 cd DreamAI
 ```
-
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 2. Create a Virtual Environment
 
@@ -48,8 +42,6 @@ source .venv/bin/activate
 
 When activated, your terminal prompt shows `(.venv)`.
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 3. Install the Project
 
 ```bash
@@ -62,8 +54,6 @@ For development (tests, linting, and build tools):
 ```bash
 pip install -e ".[dev]"
 ```
-
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 4. Configure the Model
 
@@ -123,8 +113,6 @@ Open `.env` and fill in:
 - `DREAMAI_AUTONOMY_VERBOSE`: `false` (default). When `true`, every
   think/act/observe/reflect event is printed live while a task runs.
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 5. Run Dream AI
 
 ```bash
@@ -147,8 +135,6 @@ Type a message and press Enter. Commands inside the chat:
 | `/about` | Show provider, tools, autonomy, session info, and remembered preferences |
 | `/quit` or `/exit` | Exit |
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 6. Run the Examples
 
 ```bash
@@ -161,16 +147,12 @@ python examples/autonomy_demo.py
 clock tools without any API key. `autonomy_demo.py` runs a small autonomous
 task through the planner and loop and prints the plan, trace, and summary.
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## 7. Run Tests and Lint
 
 ```bash
 pytest
 ruff check dream_ai tests
 ```
-
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## Common Issues
 
@@ -194,5 +176,3 @@ provider, and that the key has not expired.
 
 ### Port or network blocked
 Check your proxy or firewall settings if a hosted endpoint cannot be reached.
-
-<p align="center"><img src="../assets/brand/footer.gif" alt="" width="720"></p>

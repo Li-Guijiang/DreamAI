@@ -4,8 +4,6 @@
 
 <sub>[Back to the documentation index](./README.md)</sub>
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## Our Pledge
 
 We as members, contributors, and maintainers pledge to make participation in
@@ -14,8 +12,6 @@ size, visible or invisible disability, ethnicity, sex characteristics, gender
 identity and expression, level of experience, education, socio-economic status,
 nationality, personal appearance, race, religion, or sexual identity and
 orientation.
-
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## Our Standards
 
@@ -32,8 +28,6 @@ Examples of unacceptable behavior:
 - Publishing others' private information without explicit permission.
 - Any conduct that would be considered inappropriate in a professional setting.
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
@@ -41,17 +35,11 @@ reported to the project maintainers. All reports will be reviewed and
 investigated promptly and fairly. Maintainers are expected to respect the
 privacy and safety of the reporter.
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## Scope
 
 This Code of Conduct applies within project spaces and in public spaces when an
 individual is representing the project or its community.
 
-<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
-
 ## Attribution
 
 This Code of Conduct adapts the Contributor Covenant, version 2.1.
-
-<p align="center"><img src="../assets/brand/footer.gif" alt="" width="720"></p>
