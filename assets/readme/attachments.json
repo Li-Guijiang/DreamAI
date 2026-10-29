@@ -15,9 +15,9 @@
       "processing": "1200px JPEG q82"
     },
     "banner_web": {
-      "url": "https://github.com/user-attachments/assets/5b9a894c-ffae-400c-bba1-3282a9107dfa",
-      "source": "assets/brand/banner-web.gif",
-      "processing": "animated GIF, unchanged"
+      "url": "https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@main/assets/brand/banner-web.webp",
+      "source": "assets/brand/banner-web.webp",
+      "processing": "animated WebP from the H.264 source, served via jsDelivr"
     },
     "preview_home": {
       "url": "https://github.com/user-attachments/assets/c07d93e8-915c-4483-9ffc-8d1d67af874e",
@@ -25,9 +25,9 @@
       "processing": "1400px JPEG q84"
     },
     "banner_desktop": {
-      "url": "https://github.com/user-attachments/assets/b985a5e6-9d3e-4ac0-bc8f-f0ee4c005245",
-      "source": "assets/brand/banner-desktop.gif",
-      "processing": "animated GIF, unchanged"
+      "url": "https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@main/assets/brand/banner-desktop.webp",
+      "source": "assets/brand/banner-desktop.webp",
+      "processing": "animated WebP from the H.264 source, served via jsDelivr"
     },
     "preview_work": {
       "url": "https://github.com/user-attachments/assets/19f8a9a5-5c2f-4df9-9baf-106059ef4aad",
@@ -50,14 +50,14 @@
       "processing": "1400px JPEG q84"
     },
     "banner_assets": {
-      "url": "https://github.com/user-attachments/assets/de9a940f-8d02-4cce-9da8-2b1cecd8d1d7",
-      "source": "assets/brand/banner-assets.gif",
-      "processing": "animated GIF, unchanged"
+      "url": "https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@main/assets/brand/banner-assets.webp",
+      "source": "assets/brand/banner-assets.webp",
+      "processing": "animated WebP from the H.264 source, served via jsDelivr"
     },
     "banner_docs": {
-      "url": "https://github.com/user-attachments/assets/9ec27a73-47d4-489f-b71e-106a84e1b70c",
-      "source": "assets/brand/banner-docs.gif",
-      "processing": "animated GIF, unchanged"
+      "url": "https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@main/assets/brand/banner-docs.webp",
+      "source": "assets/brand/banner-docs.webp",
+      "processing": "animated WebP from the H.264 source, served via jsDelivr"
     }
   }
 }

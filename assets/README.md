@@ -1,6 +1,6 @@
 # Assets
 
-<p align="center"><img src="https://github.com/user-attachments/assets/de9a940f-8d02-4cce-9da8-2b1cecd8d1d7" alt="Animated Dream AI brand banner" width="720"></p>
+<p align="center"><img src="https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@main/assets/brand/banner-assets.webp" alt="Animated Dream AI brand banner" width="720"></p>
 
 Logos, banners, icons, and other visual materials for Dream AI.
 

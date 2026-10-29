@@ -85,7 +85,7 @@ The three version numbers are independent by design, not by drift: see the [vers
 
 ### A site that moves
 
-<p align="center"><img src="https://github.com/user-attachments/assets/5b9a894c-ffae-400c-bba1-3282a9107dfa" alt="Animated Dream AI orrery banner" width="720"></p>
+<p align="center"><img src="https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@main/assets/brand/banner-web.webp" alt="Animated Dream AI orrery banner" width="720"></p>
 
 The web surface is now a living cosmic interface: a starfield that follows the
 pointer, a warp intro, a greeting that types and deletes itself, a terminal

@@ -1,6 +1,6 @@
 # Dream AI · Web
 
-<p align="center"><img src="https://github.com/user-attachments/assets/5b9a894c-ffae-400c-bba1-3282a9107dfa" alt="Animated Dream AI orrery banner" width="720"></p>
+<p align="center"><img src="https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@main/assets/brand/banner-web.webp" alt="Animated Dream AI orrery banner" width="720"></p>
 
 <sub>[Back to the repository home](../README.md) · [Documentation index](../docs/README.md)</sub>
 
