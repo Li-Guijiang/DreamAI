@@ -4,6 +4,9 @@
 
 <sub>[Back to the documentation index](./README.md)</sub>
 
+<p align="center"><img src="../assets/brand/test-banner.webp" alt="" width="760"></p>
+
+
 Work through the steps below in order — most problems are resolved by the first two. If you are still stuck, pick a channel in section 4.
 
 ## 1. Check the documentation first
