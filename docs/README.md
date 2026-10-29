@@ -52,7 +52,7 @@ The repository produces three artifacts that version separately. This is intenti
 |---|---|---|---|
 | CLI package `dream-ai` | `pyproject.toml` → `[project].version` | `0.4.0` | Follows the CLI roadmap; tagged releases publish sdist and wheel |
 | Web service | `web/app/config.py` → `VERSION` | `2.0.0` | Ships on its own cadence, exposed through `/api/config`; adds the motion system and `/docs.html` |
-| Windows desktop app | `desktop/package.json` → `version` | `1.3.0` | Embedded in the installer name `DreamAI-Setup-<version>.exe`; the site manifest enables in-app updates |
+| Windows desktop app | `desktop/package.json` → `version` | `1.4.0` | Embedded in the installer name `DreamAI-Setup-<version>.exe`; the site manifest enables in-app updates |
 
 When bumping any of them, check the three companions:
 

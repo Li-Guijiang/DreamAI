@@ -33,6 +33,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI now syntax-checks every shipped web JavaScript file.
 - Web version `2.0.0`, exposed through `/api/config`.
 
+### Added — full computer access (desktop 1.4.0)
+
+- Desktop **1.4.0** adds an explicit **完整电脑访问** mode. It is hidden in the
+  browser and appears only when the desktop preload exposes the `computer` bridge.
+- Selecting it opens a blocking consent dialog that lists the consequences (read,
+  write, move, delete arbitrary files; run PowerShell/cmd; operations may be
+  irreversible). The user must type **“我理解并授权”**; the consent is session-only.
+- The computer agent loops up to eight steps. The selected model returns one
+  concrete command at a time; every command opens a native Windows confirmation
+  dialog showing the exact command and working directory. A refusal stops the
+  task. Every command/output is recorded in the expandable execution trace.
+- The mode is powered by a narrow `computer:run` IPC handler; there is no silent
+  background execution. This is a deliberately gated capability, not an invisible
+  global permission.
+
+### Added — agent traces and multiple model providers
+
+- Coding mode now records a real, expandable **execution trace** inside the
+  message: requirement analysis, plan, files written (with line counts), commands
+  with exit codes and expandable stdout/stderr, error-driven repair, server start
+  and the final result. The existing raw log remains available as the detailed
+  fallback.
+- Bring-your-own-key is no longer DeepSeek-only. The settings now support
+  DeepSeek, OpenAI, 智谱 GLM, Moonshot/Kimi, 通义千问 and OpenRouter, with a
+  separate key per provider stored only in the browser. Model selection groups by
+  provider and asks for that provider's key when missing. The server only accepts
+  the curated provider IDs and their model IDs; it never accepts an arbitrary
+  upstream URL.
+- Tests cover the provider catalog, trace markup and the update/identity
+  contracts.
+
 ### Added — real-time greeting, starlight clock and desktop updates
 
 - The landing greeting now uses the visitor's local hour: early morning, morning,

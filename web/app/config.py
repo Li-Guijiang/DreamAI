@@ -123,6 +123,9 @@ class ModelOption:
     provider: str = "free"
     reasoning: bool = False
     hint: str = ""
+    provider_id: str = ""
+    provider_label: str = ""
+    key_url: str = ""
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -131,6 +134,35 @@ class ModelOption:
             "provider": self.provider,
             "reasoning": self.reasoning,
             "hint": self.hint,
+            "providerId": self.provider_id,
+            "providerLabel": self.provider_label,
+            "keyUrl": self.key_url,
+        }
+
+
+@dataclass(frozen=True)
+class ProviderOption:
+    """One bring-your-own-key upstream and its selectable models."""
+
+    id: str
+    label: str
+    base_url: str
+    key_url: str
+    models: tuple[ModelOption, ...]
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "id": self.id,
+            "label": self.label,
+            "keyUrl": self.key_url,
+            "models": [
+                {
+                    "id": model.id,
+                    "label": model.label,
+                    "reasoning": model.reasoning,
+                }
+                for model in self.models
+            ],
         }
 
 
@@ -143,11 +175,12 @@ class Settings:
     free_label: str = "GLM-4-Flash"
     free_key_url: str = "https://open.bigmodel.cn/usercenter/apikeys"
 
-    # Bring-your-own-key upstream
+    # Bring-your-own-key upstreams (the first one is the legacy DeepSeek slot)
     byok_base_url: str = "https://api.deepseek.com/v1"
     byok_models: tuple[ModelOption, ...] = ()
     byok_key_url: str = "https://platform.deepseek.com/api_keys"
     byok_label: str = "DeepSeek"
+    providers: tuple[ProviderOption, ...] = ()
 
     system_prompt: str = DEFAULT_SYSTEM_PROMPT
     temperature: float = 0.7
@@ -178,11 +211,18 @@ class Settings:
             reasoning=False,
             hint="免费 · 无需 Key",
         )
-        return (free, *self.byok_models)
+        return (
+            free,
+            *(model for provider in self.providers for model in provider.models),
+        )
 
     @property
     def byok_ids(self) -> tuple[str, ...]:
-        return tuple(model.id for model in self.byok_models)
+        return tuple(model.id for provider in self.providers for model in provider.models)
+
+    def provider(self, provider_id: str | None) -> ProviderOption | None:
+        target = (provider_id or "deepseek").strip()
+        return next((provider for provider in self.providers if provider.id == target), None)
 
     def public_config(self) -> dict[str, object]:
         """Everything the browser may know — never includes an API key."""
@@ -191,6 +231,7 @@ class Settings:
             "defaultModel": self.free_model,
             "defaultProvider": "free",
             "models": [model.as_dict() for model in self.models],
+            "providers": [provider.as_dict() for provider in self.providers],
             "free": {
                 "label": self.free_label,
                 "configured": self.free_configured,
@@ -246,11 +287,122 @@ def _parse_byok_models() -> tuple[ModelOption, ...]:
     return tuple(options)
 
 
+def _provider_models(
+    provider_id: str,
+    provider_label: str,
+    key_url: str,
+    models: list[tuple[str, str, bool]],
+) -> tuple[ModelOption, ...]:
+    return tuple(
+        ModelOption(
+            id=model_id,
+            label=label,
+            provider="byok",
+            reasoning=reasoning,
+            hint="推理模型 · 展开思考过程" if reasoning else "通用对话 · 快速响应",
+            provider_id=provider_id,
+            provider_label=provider_label,
+            key_url=key_url,
+        )
+        for model_id, label, reasoning in models
+    )
+
+
+def _build_providers(
+    deepseek_models: tuple[ModelOption, ...],
+    deepseek_base_url: str,
+    deepseek_key_url: str,
+    deepseek_label: str,
+) -> tuple[ProviderOption, ...]:
+    deepseek = ProviderOption(
+        id="deepseek",
+        label=deepseek_label,
+        base_url=deepseek_base_url,
+        key_url=deepseek_key_url,
+        models=_provider_models(
+            "deepseek",
+            deepseek_label,
+            deepseek_key_url,
+            [(model.id, model.label, model.reasoning) for model in deepseek_models],
+        ),
+    )
+    catalog = [
+        (
+            "openai",
+            "OpenAI",
+            "https://api.openai.com/v1",
+            "https://platform.openai.com/api-keys",
+            [
+                ("gpt-4o-mini", "GPT-4o mini", False),
+                ("gpt-4o", "GPT-4o", False),
+                ("o3-mini", "o3-mini", True),
+            ],
+        ),
+        (
+            "zhipu",
+            "智谱 GLM",
+            "https://open.bigmodel.cn/api/paas/v4",
+            "https://open.bigmodel.cn/usercenter/apikeys",
+            [("glm-4-plus", "GLM-4 Plus", False), ("glm-4-air", "GLM-4 Air", False)],
+        ),
+        (
+            "moonshot",
+            "Moonshot / Kimi",
+            "https://api.moonshot.cn/v1",
+            "https://platform.moonshot.cn/console/api-keys",
+            [
+                ("moonshot-v1-8k", "Moonshot 8K", False),
+                ("moonshot-v1-32k", "Moonshot 32K", False),
+                ("kimi-k2-0711-preview", "Kimi K2", False),
+            ],
+        ),
+        (
+            "qwen",
+            "通义千问",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "https://bailian.console.aliyun.com/?apiKey=1#/api-key",
+            [
+                ("qwen-plus", "Qwen Plus", False),
+                ("qwen-max", "Qwen Max", False),
+                ("qwen-turbo", "Qwen Turbo", False),
+            ],
+        ),
+        (
+            "openrouter",
+            "OpenRouter",
+            "https://openrouter.ai/api/v1",
+            "https://openrouter.ai/keys",
+            [
+                ("deepseek/deepseek-chat", "DeepSeek Chat", False),
+                ("openai/gpt-4o-mini", "GPT-4o mini", False),
+                ("anthropic/claude-3.5-sonnet", "Claude 3.5 Sonnet", False),
+            ],
+        ),
+    ]
+    providers = [deepseek]
+    for provider_id, label, base_url, key_url, models in catalog:
+        providers.append(
+            ProviderOption(
+                id=provider_id,
+                label=label,
+                base_url=base_url,
+                key_url=key_url,
+                models=_provider_models(provider_id, label, key_url, models),
+            )
+        )
+    return tuple(providers)
+
+
 def load_settings() -> Settings:
     _load_env_file()
     temperature = min(2.0, max(0.0, _env_float("DREAMAI_TEMPERATURE", 0.7)))
     base_prompt = _env("DREAMAI_SYSTEM_PROMPT", DEFAULT_SYSTEM_PROMPT) or DEFAULT_SYSTEM_PROMPT
     system_prompt = _compose_system_prompt(base_prompt, _env("DREAMAI_OWNER_PROFILE"))
+    byok_base_url = (_env("DREAMAI_BYOK_BASE_URL", "https://api.deepseek.com/v1") or "").rstrip("/")
+    byok_models = _parse_byok_models()
+    byok_key_url = _env("DREAMAI_BYOK_KEY_URL", "https://platform.deepseek.com/api_keys")
+    byok_label = _env("DREAMAI_BYOK_LABEL", "DeepSeek") or "DeepSeek"
+    providers = _build_providers(byok_models, byok_base_url, byok_key_url, byok_label)
 
     return Settings(
         free_api_key=_env("DREAMAI_FREE_API_KEY"),
@@ -260,12 +412,11 @@ def load_settings() -> Settings:
         free_model=_env("DREAMAI_FREE_MODEL", "glm-4-flash") or "glm-4-flash",
         free_label=_env("DREAMAI_FREE_LABEL", "GLM-4-Flash") or "GLM-4-Flash",
         free_key_url=_env("DREAMAI_FREE_KEY_URL", "https://open.bigmodel.cn/usercenter/apikeys"),
-        byok_base_url=(_env("DREAMAI_BYOK_BASE_URL", "https://api.deepseek.com/v1") or "").rstrip(
-            "/"
-        ),
-        byok_models=_parse_byok_models(),
-        byok_key_url=_env("DREAMAI_BYOK_KEY_URL", "https://platform.deepseek.com/api_keys"),
-        byok_label=_env("DREAMAI_BYOK_LABEL", "DeepSeek") or "DeepSeek",
+        byok_base_url=byok_base_url,
+        byok_models=byok_models,
+        byok_key_url=byok_key_url,
+        byok_label=byok_label,
+        providers=providers,
         system_prompt=system_prompt,
         temperature=temperature,
         max_tokens=_env_int("DREAMAI_MAX_TOKENS", 4096, 256),

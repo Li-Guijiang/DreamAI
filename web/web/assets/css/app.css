@@ -2891,6 +2891,60 @@ html[data-theme="light"] .btn--danger {
   border-color: var(--accent);
 }
 
+/* Full computer access consent */
+.modal__panel--computer {
+  max-width: 560px;
+  border-color: color-mix(in srgb, var(--danger, #ff7b86) 26%, var(--line-2));
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgba(255, 123, 134, 0.1), transparent 55%),
+    var(--surface);
+}
+
+.computer__eyebrow {
+  display: block;
+  color: var(--danger, #ff7b86);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+}
+
+.modal__panel--computer .panel__title {
+  margin-top: 8px;
+}
+
+.computer__lead {
+  margin: 12px 0;
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.75;
+}
+
+.computer__list {
+  margin: 0 0 14px;
+  padding: 12px 14px 12px 28px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 123, 134, 0.035);
+  color: var(--text-2);
+  font-size: 11.5px;
+  line-height: 1.8;
+}
+
+.computer__list li::marker {
+  color: var(--danger, #ff7b86);
+}
+
+.computer__declare {
+  margin: 0 0 4px;
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.computer__declare strong {
+  color: var(--text);
+}
+
 /* Own key */
 .modal__panel--key {
   max-width: 470px;
@@ -3233,6 +3287,266 @@ html[data-theme="light"] .btn--danger {
   color: var(--text-3);
   font-family: var(--mono);
   font-size: 10.5px;
+}
+
+/* Expandable agent trace: the real tool/edit/command timeline for coding tasks. */
+.agent-trace {
+  margin-top: 10px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+}
+
+.agent-trace__summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  color: var(--text-2);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.agent-trace__summary::-webkit-details-marker {
+  display: none;
+}
+
+.agent-trace__summary:hover {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.agent-trace__spark {
+  display: grid;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  place-items: center;
+  color: var(--teal);
+}
+
+.agent-trace__spark svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.agent-trace__label {
+  font-size: 11px;
+  font-weight: 540;
+}
+
+.agent-trace__count {
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: 9px;
+}
+
+.agent-trace__chev {
+  display: grid;
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  place-items: center;
+  color: var(--text-3);
+  transition: transform 0.2s;
+}
+
+.agent-trace__chev svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.agent-trace[open] .agent-trace__chev {
+  transform: rotate(90deg);
+}
+
+.agent-trace__list {
+  max-height: 330px;
+  margin: 0;
+  padding: 0 10px 9px;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.agent-trace__item {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  padding: 9px 0 2px 2px;
+}
+
+.agent-trace__item + .agent-trace__item {
+  border-top: 1px dashed color-mix(in srgb, var(--line) 65%, transparent);
+}
+
+.agent-trace__item::before {
+  content: "";
+  position: absolute;
+  top: 26px;
+  bottom: -4px;
+  left: 5px;
+  width: 1px;
+  background: var(--line);
+}
+
+.agent-trace__item:last-child::before {
+  display: none;
+}
+
+.agent-trace__dot {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--text-3);
+  box-shadow: 0 0 0 3px var(--bg);
+}
+
+.agent-trace__item.is-think .agent-trace__dot,
+.agent-trace__item.is-plan .agent-trace__dot {
+  background: var(--violet, #a78bfa);
+}
+
+.agent-trace__item.is-edit .agent-trace__dot {
+  background: var(--gold, #e7be74);
+}
+
+.agent-trace__item.is-command .agent-trace__dot,
+.agent-trace__item.is-tool .agent-trace__dot {
+  background: var(--accent);
+}
+
+.agent-trace__item.is-done .agent-trace__dot {
+  background: var(--teal);
+}
+
+.agent-trace__item.is-error .agent-trace__dot {
+  background: var(--danger);
+}
+
+.agent-trace__item.is-running .agent-trace__dot {
+  animation: tracePulse 1.2s ease-in-out infinite;
+}
+
+.agent-trace__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.agent-trace__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.agent-trace__kind {
+  flex: none;
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text-3);
+  font-size: 8.5px;
+  line-height: 1.5;
+}
+
+.agent-trace__head strong {
+  overflow: hidden;
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-trace__state {
+  color: var(--accent);
+  font-size: 8.5px;
+}
+
+.agent-trace__state.is-error {
+  color: var(--danger);
+}
+
+.agent-trace__head time {
+  margin-left: auto;
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: 8.5px;
+}
+
+.agent-trace__detail {
+  margin: 4px 0 0;
+  color: var(--text-3);
+  font-size: 10.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.agent-trace__files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.agent-trace__files span {
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: 8.5px;
+}
+
+.agent-trace__output {
+  margin-top: 5px;
+}
+
+.agent-trace__output summary {
+  color: var(--text-3);
+  font-size: 9.5px;
+  cursor: pointer;
+}
+
+.agent-trace__output pre {
+  max-height: 150px;
+  margin: 5px 0 4px;
+  padding: 7px 8px;
+  overflow: auto;
+  border-radius: 6px;
+  background: #05060a;
+  color: #a7b0c2;
+  font-family: var(--mono);
+  font-size: 9px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+@keyframes tracePulse {
+  50% {
+    opacity: 0.3;
+  }
 }
 
 .code-tree {

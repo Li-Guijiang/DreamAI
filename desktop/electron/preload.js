@@ -18,6 +18,11 @@ contextBridge.exposeInMainWorld("dreamDesktop", {
     },
   },
 
+  computer: {
+    home: () => invoke("computer:home"),
+    run: (command, cwd) => invoke("computer:run", { command, cwd }),
+  },
+
   pickFolder: () => invoke("local:pick-folder"),
   getWorkspace: () => invoke("local:workspace"),
   scan: () => invoke("local:scan"),

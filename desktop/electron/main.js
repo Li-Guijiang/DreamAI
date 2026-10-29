@@ -1,7 +1,7 @@
 "use strict";
 
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require("electron");
-const { spawn } = require("child_process");
+const { exec, spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const tools = require("./local-tools");
@@ -97,6 +97,56 @@ function wrap(handler) {
 
 function registerIpc() {
   ipcMain.handle("desktop:version", () => app.getVersion());
+
+  ipcMain.handle("computer:home", () => app.getPath("home"));
+
+  ipcMain.handle(
+    "computer:run",
+    wrap(async (_event, payload) => {
+      const command = String(payload?.command || "").trim();
+      if (!command || command.length > 8000) throw new Error("命令为空或过长");
+      const cwd = String(payload?.cwd || "").trim() || app.getPath("home");
+      const cwdPath = path.resolve(cwd);
+      if (!fs.existsSync(cwdPath) || !fs.statSync(cwdPath).isDirectory()) {
+        throw new Error("工作目录不存在");
+      }
+      if (process.env.DREAMAI_DEV_AUTO_CONFIRM !== "1") {
+        const { response } = await dialog.showMessageBox(mainWindow, {
+          type: "warning",
+          buttons: ["取消", "允许执行"],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true,
+          title: "Dream AI · 完整电脑访问",
+          message: "允许 Dream AI 在你的电脑上执行这条命令？",
+          detail: `目录：${cwdPath}\n\n${command}\n\n完整电脑访问可能修改任意文件或系统设置；请只允许你理解的命令。`,
+        });
+        if (response !== 1) return { blocked: true };
+      }
+      return await new Promise((resolve) => {
+        exec(
+          command,
+          {
+            cwd: cwdPath,
+            shell: true,
+            windowsHide: true,
+            timeout: 120000,
+            maxBuffer: 4 * 1024 * 1024,
+            env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1" },
+          },
+          (error, stdout, stderr) => {
+            const code = error && typeof error.code === "number" ? error.code : error ? 1 : 0;
+            resolve({
+              code,
+              killed: Boolean(error && (error.killed || error.signal)),
+              stdout: String(stdout || "").slice(-60000),
+              stderr: String(stderr || "").slice(-60000),
+            });
+          },
+        );
+      });
+    }),
+  );
 
   ipcMain.handle(
     "desktop:update-install",

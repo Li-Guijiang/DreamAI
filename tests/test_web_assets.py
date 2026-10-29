@@ -145,15 +145,27 @@ def test_realtime_greeting_and_starlight_clock():
     assert "initStarClock" in app
 
 
+def test_agent_trace_and_provider_catalog_are_wired():
+    app = (WEB / "assets" / "js" / "app.js").read_text(encoding="utf-8")
+    config = (ROOT / "web" / "app" / "config.py").read_text(encoding="utf-8")
+    for marker in ("agent-trace", "tracePush", "traceBlock", "运行命令"):
+        assert marker in app, marker
+    for provider in ("deepseek", "openai", "zhipu", "moonshot", "qwen", "openrouter"):
+        assert provider in config, provider
+    assert "providerId" in config
+
+
 def test_desktop_update_contract_is_shipped():
     manifest = json.loads((ROOT / "desktop" / "package.json").read_text(encoding="utf-8"))
-    assert manifest["version"] == "1.3.0"
+    assert manifest["version"] == "1.4.0"
     main = (ROOT / "desktop" / "electron" / "main.js").read_text(encoding="utf-8")
     preload = (ROOT / "desktop" / "electron" / "preload.js").read_text(encoding="utf-8")
     updater = (ROOT / "desktop" / "electron" / "update.js").read_text(encoding="utf-8")
     web_updater = (WEB / "assets" / "js" / "desktop-update.js").read_text(encoding="utf-8")
     assert "desktop:update-install" in main
     assert "desktop:update-progress" in preload
+    assert "computer:run" in main
+    assert "computer:home" in preload
     assert "DreamAI-Setup-" in updater
     assert "sha256" in updater
     assert "updateGate" in web_updater

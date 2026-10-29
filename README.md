@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://liguijiang.com"><img src="https://img.shields.io/badge/在线体验-liguijiang.com-5b8cff?style=flat-square" alt="Live demo"></a>
-  <a href="https://liguijiang.com/download.html"><img src="https://img.shields.io/badge/桌面版-Windows_1.3-7c9cff?style=flat-square" alt="Desktop"></a>
+  <a href="https://liguijiang.com/download.html"><img src="https://img.shields.io/badge/桌面版-Windows_1.4-7c9cff?style=flat-square" alt="Desktop"></a>
   <a href="./docs/README.md"><img src="https://img.shields.io/badge/文档-索引-9d7cff?style=flat-square" alt="Docs"></a>
 </p>
 
@@ -59,7 +59,7 @@ Three deliverables share one design language and one set of `DREAMAI_*` conventi
 |---|---|---|---|
 | Command-line package | `python -m dream_ai` · [`dream_ai/`](./dream_ai) | `0.4.0` | Local scripts, automation, extending the core |
 | Web service | <https://liguijiang.com> · [`web/`](./web) | `2.0.0` | Open and use, nothing to install; full cosmic motion system + animated docs at `/docs.html` |
-| Windows desktop app | [Download](https://liguijiang.com/download.html) · [`desktop/`](./desktop) | `1.3.0` | Local file workbench, document generation, coding mode, in-app update |
+| Windows desktop app | [Download](https://liguijiang.com/download.html) · [`desktop/`](./desktop) | `1.4.0` | Local file workbench, document generation, coding mode, full-access consent mode, in-app update |
 
 The three version numbers are independent by design, not by drift: see the [version cross-reference](./docs/README.md#3-version-cross-reference) and [ADR 0001](./docs/adr/0001-three-deliverables-one-repository.md).
 
@@ -105,6 +105,9 @@ live thinking spinner and `/motion` to turn it off mid-session.
 | Capability | What it does | Phase |
 |---|---|---|
 | **Replaceable backend** | Any OpenAI-compatible endpoint (OpenAI, DeepSeek, Zhipu, Ollama, LM Studio); the core never assumes a vendor | v0.1 |
+| **Multiple key vaults** | Web settings keep a separate key per provider for DeepSeek, OpenAI, 智谱 GLM, Moonshot/Kimi, 通义千问 and OpenRouter; keys stay in the browser | web 2.0 |
+| **Agent trace** | Coding mode shows an expandable timeline of plans, files written, commands, exit codes, outputs and repair loops | desktop 1.3 |
+| **Full computer access** | Desktop 1.4 “电脑” mode: explicit session consent plus a native confirmation for every command, with an expandable trace | desktop 1.4 |
 | **Session memory** | History persisted as JSON and restored on restart; offline placeholder replies are filtered out | v0.2 |
 | **Long-term preferences** | `/remember` writes into the system message, so it survives restarts | v0.2 |
 | **Tool layer** | Registry with JSON Schema, risk level, and a confirmation gate; calculator, clock, sandboxed file access, web search | v0.3 |

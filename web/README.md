@@ -169,8 +169,12 @@ All variables live in `.env` (full sample in [`.env.example`](.env.example)):
 | `DREAMAI_MAX_INPUT_CHARS` / `_HISTORY_*` | Input and context limits | 12,000 / 30 / 60,000 |
 
 The free key exists only in the server environment. `/api/config` exposes labels, availability and
-limits — never a secret. A BYOK key is kept in the visitor's browser and forwarded per request; the
-server does not store it or log it.
+limits — never a secret. BYOK keys are kept in the visitor's browser, one per provider, and
+forwarded per request; the server does not store or log them.
+
+The provider catalog is curated in `app/config.py`: DeepSeek, OpenAI, 智谱 GLM, Moonshot/Kimi,
+通义千问 and OpenRouter. A request may name only a catalog provider ID and one of its model IDs;
+the server derives the base URL, so the public chat cannot be used as an arbitrary outbound proxy.
 
 ## 6. API
 
@@ -240,6 +244,9 @@ The site key is read from `/www/wwwroot/<domain>/.env` (mode `600`). Never commi
   `DREAMAI_OWNER_PROFILE` is for non-sensitive preferences only; full contact details belong in a
   private file outside the repository and outside the served web root. The public chat has no
   identity authentication, so it deliberately cannot reveal or mutate that private file.
+- Full computer access is **desktop-only** and never exposed by the web API. It requires the
+  preload bridge, a session consent declaration, and a native confirmation for every command. The
+  browser can chat with the same account/persona but cannot read files or run local commands.
 
 ## 9. Relationship to the DreamAI repository
 

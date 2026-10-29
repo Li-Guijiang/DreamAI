@@ -31,7 +31,7 @@ ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-
 
 ```bash
 pnpm dist
-# output: release/DreamAI-Setup-1.3.0.exe
+# output: release/DreamAI-Setup-1.4.0.exe
 ```
 
 ## In-app updates
@@ -49,6 +49,18 @@ Versions before 1.3.0 do not contain the installer bridge. They still load the
 site, detect their own version through `dreamDesktop.version()`, and offer the
 **download the new installer** path in the same blocking dialog. One silent
 in-app update is possible from 1.3.0 onward.
+
+## Full computer access
+
+The **电脑** mode is only shown when the preload exposes `computer.home()` and
+`computer.run()`. Selecting it requires an explicit declaration and typing
+“我理解并授权”. The consent is not persisted across app launches.
+
+The agent can propose one PowerShell/cmd command at a time. `computer:run` opens a
+native confirmation dialog with the exact command and working directory; refusing
+it returns `blocked` and the agent stops. There is no silent background execution,
+and the mode can be stopped like any other generation. Treat the consent as a
+high-risk operator permission, not a general-purpose default.
 
 Packaging always reads `build/icon.ico` (16–256 px sizes), exported from the brand asset
 `assets/logo/DreamAI-Logo/01_软件图标_圆角底板/DreamAI-icon-1024.png`. The output and resource

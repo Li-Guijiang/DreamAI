@@ -24,7 +24,7 @@
 <link rel="icon" type="image/svg+xml" href="/assets/img/mark.svg">
 <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/assets/css/app.css?v=2.0.2">
+<link rel="stylesheet" href="/assets/css/app.css?v=2.0.6">
 <link rel="stylesheet" href="/assets/css/motion.css?v=2.0.0">
 <link rel="stylesheet" href="/assets/css/landing.css?v=2.0.4">
 </head>
@@ -494,7 +494,7 @@
         <span class="pill-tag" id="freeTag">默认</span>
       </div>
       <div class="setting__row">
-        <div><strong>自己的 DeepSeek Key</strong><em id="keyStatus">未配置 · 使用免费模型</em></div>
+        <div><strong>自己的模型 Key</strong><em id="keyStatus">未配置 · 使用免费模型</em></div>
         <button class="btn btn--ghost" id="manageKeyBtn" type="button">管理</button>
       </div>
     </section>
@@ -515,7 +515,7 @@
       </div>
     </section>
 
-    <p class="panel__note">对话只保存在你的浏览器本地；模型请求经由本站服务器转发，API 密钥不会暴露给浏览器。</p>
+    <p class="panel__note">对话只保存在你的浏览器本地。免费模型的 Key 只存在服务器；你自己的模型 Key 只保存在本浏览器，并随每次请求临时转发，服务器不存储、不写日志。</p>
   </div>
 </div>
 
@@ -552,6 +552,32 @@
   </div>
 </div>
 
+<!-- ======================= Full computer access consent ======================= -->
+<div class="modal" id="computerModal" role="dialog" aria-modal="true" aria-labelledby="computerTitle" hidden>
+  <div class="modal__scrim"></div>
+  <div class="modal__panel modal__panel--computer">
+    <button class="modal__close" id="computerClose" type="button" aria-label="关闭">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <span class="computer__eyebrow">FULL COMPUTER ACCESS // CONSENT</span>
+    <h2 id="computerTitle" class="panel__title">完整电脑访问声明</h2>
+    <p class="computer__lead">这个模式不是普通聊天。授权后，Dream AI 可以向你的 Windows 电脑请求执行真实命令。</p>
+    <ul class="computer__list">
+      <li>可以读取、写入、移动或删除任意目录中的文件</li>
+      <li>可以运行 PowerShell / cmd 命令、安装依赖、修改程序</li>
+      <li>操作可能不可逆；请在执行前看清命令与目录</li>
+      <li>每一条命令都会再次弹出系统确认；拒绝即不会执行</li>
+      <li>关闭 Dream AI 或停止任务后，不会在后台继续运行</li>
+    </ul>
+    <p class="computer__declare">只有你本人可以授权。请在下方输入「<strong>我理解并授权</strong>」继续。</p>
+    <input class="text-input" id="computerPhrase" type="text" autocomplete="off" spellcheck="false" placeholder="我理解并授权">
+    <div class="modal__actions">
+      <button class="btn btn--ghost" id="computerCancel" type="button">我不授权</button>
+      <button class="btn btn--danger" id="computerAllow" type="button">授权完整访问</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======================= Own key ======================= -->
 <div class="modal" id="keyModal" role="dialog" aria-modal="true" aria-labelledby="keyTitle" hidden>
   <div class="modal__scrim" data-close></div>
@@ -559,18 +585,18 @@
     <button class="modal__close" type="button" data-close aria-label="关闭">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
     </button>
-    <h2 id="keyTitle" class="panel__title">使用自己的 DeepSeek Key</h2>
+    <h2 id="keyTitle" class="panel__title">连接模型</h2>
     <p class="key__lead">
-      免费模型适合日常对话。想用 DeepSeek V3 / R1，把自己的 Key 填进来即可，
-      <strong>消耗的是你自己的额度</strong>，与站长无关。
+      <strong id="keyProviderName">DeepSeek</strong> · 使用你自己的额度。Key 只保存在本浏览器，
+      每次请求临时经由本站转发，服务器不存储、不写日志。
     </p>
     <ol class="key__steps">
-      <li>打开 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com</a>，注册并登录</li>
-      <li>左侧「API Keys」→「创建 API Key」</li>
-      <li>复制 <code>sk-</code> 开头的 Key，粘贴到下面</li>
+      <li>打开 <a id="keyLink" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">服务商密钥页面</a>，注册并登录</li>
+      <li>创建一个 API Key，并确认该账号有对应模型的额度</li>
+      <li>把 Key 粘贴到下面；之后可以随时在本机更新或清除</li>
     </ol>
     <input class="text-input" id="keyInput" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
-    <p class="key__warn">Key 只保存在你的浏览器，每次请求临时转发，服务器不存储、不写日志。</p>
+    <p class="key__warn">不同服务商的 Key 互不通用。更换模型时，会检查对应来源是否已配置。</p>
     <div class="modal__actions">
       <button class="btn btn--ghost" type="button" data-close>取消</button>
       <button class="btn btn--primary" id="keySave" type="button">保存并使用</button>
@@ -627,7 +653,7 @@
 <script src="/assets/vendor/marked.min.js?v=1.2.0" defer></script>
 <script src="/assets/vendor/purify.min.js?v=1.2.0" defer></script>
 <script src="/assets/vendor/prism.bundle.js?v=1.2.0" defer></script>
-<script src="/assets/js/app.js?v=2.0.3" defer></script>
+<script src="/assets/js/app.js?v=2.0.6" defer></script>
 <script src="/assets/js/motion.js?v=2.0.0" defer></script>
 <script src="/assets/js/landing.js?v=2.0.3" defer></script>
 <script src="/assets/js/desktop-update.js?v=2.0.4" defer></script>

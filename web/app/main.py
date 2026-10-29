@@ -188,6 +188,7 @@ class ChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1, max_length=40)
     model: str | None = None
     provider: Literal["free", "byok"] = "free"
+    providerId: str | None = Field(default=None, max_length=40)
     apiKey: str | None = Field(default=None, max_length=200)
     temperature: float | None = None
     maxTokens: int | None = Field(default=None, ge=128, le=8192)
@@ -234,7 +235,9 @@ def sse(event: str, payload: dict) -> bytes:
 
 def prepare_messages(messages: list[ChatMessage], system_prompt: str) -> list[dict[str, str]]:
     """Trim history (newest-last) by count and size, then prepend the persona."""
-    chat = [{"role": m.role, "content": m.content} for m in messages][-settings.max_history_messages :]
+    chat = [{"role": m.role, "content": m.content} for m in messages][
+        -settings.max_history_messages :
+    ]
 
     total = 0
     kept: list[dict[str, str]] = []
@@ -262,8 +265,12 @@ def resolve_upstream(payload: ChatRequest) -> Upstream:
                 "byok_missing",
                 401,
             )
-        model = payload.model if payload.model in settings.byok_ids else settings.byok_models[0].id
-        return Upstream(settings.byok_base_url, key, model, "byok")
+        provider = settings.provider(payload.providerId)
+        if provider is None or not provider.models:
+            raise UpstreamError("这个模型来源不可用，请重新选择。", "byok_provider", 400)
+        model_ids = {model.id for model in provider.models}
+        model = payload.model if payload.model in model_ids else provider.models[0].id
+        return Upstream(provider.base_url, key, model, "byok")
 
     if not settings.free_configured:
         raise UpstreamError(
@@ -437,12 +444,7 @@ async def manifest() -> FileResponse:
 
 @app.get("/robots.txt")
 async def robots() -> Response:
-    body = (
-        "User-agent: *\n"
-        "Allow: /\n"
-        "Disallow: /api/\n"
-        "Sitemap: https://liguijiang.com/sitemap.xml\n"
-    )
+    body = "User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: https://liguijiang.com/sitemap.xml\n"
     return Response(body, media_type="text/plain")
 
 
@@ -462,7 +464,9 @@ app.mount("/assets", StaticFiles(directory=str(WEB_DIR / "assets")), name="asset
 async def not_found(request: Request, exc):  # noqa: ANN001
     if request.url.path.startswith("/api/"):
         return JSONResponse({"error": "接口不存在"}, status_code=404)
-    return FileResponse(WEB_DIR / "index.html", status_code=404, headers={"Cache-Control": "no-cache"})
+    return FileResponse(
+        WEB_DIR / "index.html", status_code=404, headers={"Cache-Control": "no-cache"}
+    )
 
 
 if __name__ == "__main__":
