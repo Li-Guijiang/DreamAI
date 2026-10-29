@@ -26,7 +26,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/assets/css/app.css?v=2.0.2">
 <link rel="stylesheet" href="/assets/css/motion.css?v=2.0.0">
-<link rel="stylesheet" href="/assets/css/landing.css?v=2.0.3">
+<link rel="stylesheet" href="/assets/css/landing.css?v=2.0.4">
 </head>
 <body>
 <div class="ambient" aria-hidden="true">
@@ -592,22 +592,31 @@
   </div>
 </div>
 
-<aside class="update-toast" id="updateToast" role="status" aria-live="polite" hidden>
-  <span class="update-toast__orbit" aria-hidden="true"><i></i><b></b></span>
-  <div class="update-toast__body">
-    <strong>新的星光版本 <em id="updateVersion">v1.3.0</em></strong>
-    <p id="updateNotes">更流畅的体验与若干细节修复，建议更新到最新版本。</p>
-    <div class="update-toast__progress" id="updateProgress" hidden>
+<div class="update-gate" id="updateGate" role="dialog" aria-modal="true" aria-labelledby="updateTitle" hidden>
+  <div class="update-gate__scrim" aria-hidden="true"></div>
+  <section class="update-gate__panel">
+    <div class="update-gate__visual" aria-hidden="true">
+      <span class="update-gate__ring"></span>
+      <span class="update-gate__core"></span>
+      <i class="update-gate__star update-gate__star--a"></i>
+      <i class="update-gate__star update-gate__star--b"></i>
+      <i class="update-gate__star update-gate__star--c"></i>
+    </div>
+    <span class="update-gate__eyebrow">UPDATE CHANNEL // STARLIGHT</span>
+    <h2 id="updateTitle">检测到新版本 <em id="updateVersion">v1.3.0</em></h2>
+    <p class="update-gate__current">当前 <b id="updateCurrent">v1.2.0</b> · 本地文件与设置会保留</p>
+    <p class="update-gate__notes" id="updateNotes">更流畅的体验与若干细节修复，建议更新到最新版本。</p>
+    <div class="update-gate__progress" id="updateProgress" hidden>
       <span><i id="updateBar"></i></span>
       <em id="updatePercent">0%</em>
     </div>
-  </div>
-  <div class="update-toast__foot">
-    <span>当前 <b id="updateCurrent">v1.2.0</b> · 保留本地文件与设置</span>
-    <button class="update-toast__later" id="updateLater" type="button">稍后</button>
-    <button class="update-toast__install" id="updateInstall" type="button">立即更新</button>
-  </div>
-</aside>
+    <div class="update-gate__actions">
+      <button class="update-gate__later" id="updateLater" type="button">暂不更新</button>
+      <button class="update-gate__install" id="updateInstall" type="button">立即更新</button>
+    </div>
+    <p class="update-gate__hint" id="updateHint">下次进入若仍未更新，会再次提醒。</p>
+  </section>
+</div>
 
 <div class="toasts" id="toasts" aria-live="assertive"></div>
 
@@ -621,6 +630,6 @@
 <script src="/assets/js/app.js?v=2.0.3" defer></script>
 <script src="/assets/js/motion.js?v=2.0.0" defer></script>
 <script src="/assets/js/landing.js?v=2.0.3" defer></script>
-<script src="/assets/js/desktop-update.js?v=2.0.3" defer></script>
+<script src="/assets/js/desktop-update.js?v=2.0.4" defer></script>
 </body>
 </html>

@@ -38,14 +38,17 @@ pnpm dist
 
 Every desktop build loads the live site, so the site is also the update feed.
 `/downloads/latest.json` names the current version, installer, SHA-256 and size.
-A new client shows a compact update card and can download, verify and launch the
-installer without leaving the app. The download URL and filename are derived from
-the manifest and checked by the main process; only `liguijiang.com` is allowed.
+On entry, a client whose version is behind opens a blocking update dialog with
+“暂不更新” and “立即更新”. Dismissal is not persisted: every fresh entry prompts
+again until the installation is current. A 1.3.0+ client downloads, verifies and
+launches the installer without leaving the app. The download URL and filename are
+derived from the manifest and checked by the main process; only `liguijiang.com`
+is allowed.
 
 Versions before 1.3.0 do not contain the installer bridge. They still load the
-site, detect their own version through `dreamDesktop.version()`, and show the
-card with a **download the new installer** fallback. One silent in-app update is
-possible from 1.3.0 onward.
+site, detect their own version through `dreamDesktop.version()`, and offer the
+**download the new installer** path in the same blocking dialog. One silent
+in-app update is possible from 1.3.0 onward.
 
 Packaging always reads `build/icon.ico` (16–256 px sizes), exported from the brand asset
 `assets/logo/DreamAI-Logo/01_软件图标_圆角底板/DreamAI-icon-1024.png`. The output and resource

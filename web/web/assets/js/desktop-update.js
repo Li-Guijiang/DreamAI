@@ -1,8 +1,11 @@
 /* ==========================================================================
-   Dream AI — desktop update channel
-   The site is the update feed because every installed desktop app loads it,
-   including versions released before this file existed. New clients get the
-   one-click silent update; old clients get a browser fallback to the installer.
+   Dream AI — desktop update gate
+   Every installed desktop app loads this live site, including releases that
+   predate the native updater. A version mismatch opens a blocking update dialog
+   on entry. "暂不更新" only dismisses the current view; every fresh entry
+   checks again until the app is actually updated. Clients from 1.3.0 onward
+   can install silently; older clients
+   download the signed-manifest installer in the browser and install it once.
    ========================================================================== */
 (() => {
   "use strict";
@@ -10,21 +13,24 @@
   const desktop = window.dreamDesktop;
   if (!desktop?.isDesktop) return;
 
-  const toast = document.querySelector("#updateToast");
+  const gate = document.querySelector("#updateGate");
   const versionNode = document.querySelector("#updateVersion");
   const currentNode = document.querySelector("#updateCurrent");
   const notesNode = document.querySelector("#updateNotes");
+  const hintNode = document.querySelector("#updateHint");
   const installButton = document.querySelector("#updateInstall");
   const laterButton = document.querySelector("#updateLater");
   const progress = document.querySelector("#updateProgress");
   const progressBar = document.querySelector("#updateBar");
   const progressText = document.querySelector("#updatePercent");
-  if (!toast || !versionNode || !installButton) return;
+  if (!gate || !versionNode || !installButton) return;
 
   let manifest = null;
   let currentVersion = "";
   let unlisten = null;
   let busy = false;
+  let lastFocused = null;
+  let focusTrap = null;
 
   const parts = (value) => {
     const clean = String(value || "").trim().replace(/^v/i, "");
@@ -41,18 +47,29 @@
     return false;
   };
 
-  const dismissKey = (version) => `dreamai.update.dismissed.${version}`;
-
   function reveal() {
-    toast.hidden = false;
-    requestAnimationFrame(() => toast.classList.add("is-visible"));
+    lastFocused = document.activeElement;
+    gate.hidden = false;
+    document.body.classList.add("update-gate-open");
+    focusTrap = (event) => {
+      if (!gate.contains(event.target)) installButton.focus({ preventScroll: true });
+    };
+    document.addEventListener("focusin", focusTrap);
+    requestAnimationFrame(() => {
+      gate.classList.add("is-visible");
+      window.setTimeout(() => installButton.focus({ preventScroll: true }), 120);
+    });
   }
 
   function hide() {
-    toast.classList.remove("is-visible");
+    gate.classList.remove("is-visible");
+    document.body.classList.remove("update-gate-open");
+    if (focusTrap) document.removeEventListener("focusin", focusTrap);
+    focusTrap = null;
     window.setTimeout(() => {
-      toast.hidden = true;
-    }, 260);
+      gate.hidden = true;
+      lastFocused?.focus?.({ preventScroll: true });
+    }, 280);
   }
 
   function setProgress(value, label) {
@@ -65,11 +82,13 @@
   function fail(message) {
     busy = false;
     installButton.disabled = false;
+    laterButton.disabled = false;
     installButton.textContent = "重试更新";
     progress.hidden = false;
     progressBar.style.width = "100%";
     progressBar.classList.add("is-error");
     progressText.textContent = message || "更新失败，请稍后重试";
+    hintNode.textContent = "更新失败。你可以稍后再试，或前往官网下载最新安装包。";
   }
 
   async function install() {
@@ -78,27 +97,43 @@
     installButton.disabled = true;
 
     if (!desktop.update?.install) {
-      // 1.2.x and older: no local installer bridge exists. Open the official
-      // download page in the user's browser; the next release can update in place.
-      const url = `${location.origin}/download.html?update=${encodeURIComponent(manifest.version)}`;
-      if (desktop.code?.openUrl) await desktop.code.openUrl(url);
-      else window.open(url, "_blank", "noopener");
-      installButton.textContent = "已在浏览器打开";
-      busy = false;
+      // Older clients have no native installer bridge. Hand the verified
+      // installer URL to the browser; the user runs it once. The next launch
+      // of an outdated build will show this gate again.
+      try {
+        const url = new URL(
+          `/downloads/${encodeURIComponent(manifest.file)}`,
+          location.origin,
+        ).href;
+        laterButton.disabled = true;
+        if (desktop.code?.openUrl) await desktop.code.openUrl(url);
+        else window.open(url, "_blank", "noopener");
+        installButton.textContent = "下载已开始";
+        hintNode.textContent =
+          "浏览器已开始下载安装包。运行安装包完成更新；下次进入若仍未更新，会再次提醒。";
+        window.setTimeout(hide, 2000);
+      } catch (error) {
+        fail(error?.message || "无法打开下载页面");
+      }
       return;
     }
 
     installButton.textContent = "正在更新…";
+    laterButton.disabled = true;
     progress.hidden = false;
     progressBar.style.width = "0%";
     progressText.textContent = "连接更新通道…";
+    hintNode.textContent = "下载完成前请保持应用打开。";
     unlisten?.();
     unlisten = desktop.update.onProgress((payload) => {
       if (!payload) return;
       if (payload.phase === "installing") {
         setProgress(100, "正在安装，应用即将重启");
+        installButton.textContent = "正在重启…";
+        hintNode.textContent = "安装器已启动，Dream AI 将自动重启。";
       } else {
         setProgress(payload.percent, `下载中 ${payload.percent || 0}%`);
+        hintNode.textContent = `下载更新包 ${payload.percent || 0}% · 请保持应用打开`;
       }
     });
 
@@ -109,6 +144,7 @@
         sha256: manifest.sha256,
         size: manifest.size,
       });
+      hintNode.textContent = "安装器已启动，应用即将重启。";
     } catch (error) {
       fail(error?.message || "更新失败，请稍后重试");
     }
@@ -122,34 +158,49 @@
       if (!response.ok) return;
       const data = await response.json();
       if (!newer(data.version, currentVersion)) return;
+
+      const version = String(data.version || "");
+      const file = String(data.file || "");
+      const sha256 = String(data.sha256 || "");
+      const size = Number(data.size) || 0;
+      if (!parts(version)) return;
+      if (file !== `DreamAI-Setup-${version}.exe`) return;
+      if (!/^[a-f0-9]{64}$/i.test(sha256) || size <= 0) return;
+
       manifest = {
-        version: String(data.version || ""),
-        file: String(data.file || ""),
-        sha256: String(data.sha256 || ""),
-        size: Number(data.size) || 0,
+        version,
+        file,
+        sha256,
+        size,
         notes: String(data.notes || "").trim(),
       };
-      if (!parts(manifest.version) || !manifest.file) return;
-      if (sessionStorage.getItem(dismissKey(manifest.version))) return;
-
-      versionNode.textContent = `v${manifest.version}`;
+      versionNode.textContent = `v${version}`;
       currentNode.textContent = `v${currentVersion}`;
+      notesNode.textContent =
+        manifest.notes || "更流畅的体验与若干细节修复，建议更新到最新版本。";
+
       const fallback = !desktop.update?.install;
-      notesNode.textContent = `${manifest.notes || "更流畅的体验与若干细节修复，建议更新到最新版本。"}${
-        fallback ? " 当前旧版需下载安装一次，之后的版本即可一键更新。" : ""
-      }`;
-      installButton.textContent = fallback ? "下载新版" : "立即更新";
+      installButton.textContent = fallback ? "下载更新包" : "立即更新";
+      hintNode.textContent = fallback
+        ? "当前旧版需要手动运行一次安装包；安装 1.3.0 后，后续版本即可一键更新。暂不更新的话，下次进入仍会提醒。"
+        : "更新包会校验 SHA-256 后静默安装，应用会自动重启。暂不更新的话，下次进入仍会提醒。";
       reveal();
     } catch {
-      /* update checks must never disturb the chat */
+      /* the update check must never block the chat */
     }
   }
 
   laterButton?.addEventListener("click", () => {
-    if (manifest) sessionStorage.setItem(dismissKey(manifest.version), "1");
+    // Deliberately no persistence: every fresh entry into an outdated client
+    // must show this gate again until the app is actually updated.
     hide();
   });
   installButton.addEventListener("click", install);
 
-  window.setTimeout(check, 1600);
+  document.addEventListener("keydown", (event) => {
+    if (gate.hidden || event.key !== "Escape") return;
+    laterButton?.click();
+  });
+
+  window.setTimeout(check, 650);
 })();

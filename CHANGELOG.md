@@ -43,10 +43,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   date, with a tiny orbit/star animation. It uses tabular digits, updates every
   second and drops the date line at narrow widths.
 - Desktop **1.3.0** adds a site-driven update channel. The web app reads
-  `/downloads/latest.json`, compares versions and shows an orbital update card.
-  New clients call a sandboxed IPC bridge that downloads the installer, verifies
-  its size and SHA-256, then runs it silently and relaunches. Clients before
-  1.3.0 fall back to opening the official download page in the browser.
+  `/downloads/latest.json`, compares versions and opens a blocking orbital update
+  dialog on entry. “暂不更新” closes it for that view only; every fresh entry
+  shows it again until the client is updated. New clients call a sandboxed IPC
+  bridge that downloads the installer, verifies its size and SHA-256, then runs it
+  silently and relaunches. Clients before 1.3.0 download the installer in the
+  browser and install it once.
 - The download page now shows the latest release announcement from the manifest
   and keeps its version, installer link, size, date and checksum in sync.
 

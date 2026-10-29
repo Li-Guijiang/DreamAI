@@ -131,7 +131,14 @@ def test_realtime_greeting_and_starlight_clock():
         assert greeting in app, greeting
     assert "timeGreeting" in landing
     assert "watchDaypart" in landing
-    for marker in ("starClock", "starClockTime", "starClockDate", "updateToast", "releaseNote"):
+    for marker in (
+        "starClock",
+        "starClockTime",
+        "starClockDate",
+        "updateGate",
+        "updateHint",
+        "releaseNote",
+    ):
         assert marker in index or marker in (WEB / "download.html").read_text(encoding="utf-8"), (
             marker
         )
@@ -144,10 +151,15 @@ def test_desktop_update_contract_is_shipped():
     main = (ROOT / "desktop" / "electron" / "main.js").read_text(encoding="utf-8")
     preload = (ROOT / "desktop" / "electron" / "preload.js").read_text(encoding="utf-8")
     updater = (ROOT / "desktop" / "electron" / "update.js").read_text(encoding="utf-8")
+    web_updater = (WEB / "assets" / "js" / "desktop-update.js").read_text(encoding="utf-8")
     assert "desktop:update-install" in main
     assert "desktop:update-progress" in preload
     assert "DreamAI-Setup-" in updater
     assert "sha256" in updater
+    assert "updateGate" in web_updater
+    assert "暂不更新" in web_updater
+    # The prompt must recur on every fresh entry, so dismissal is not persisted.
+    assert "sessionStorage" not in web_updater
     assert (ROOT / "desktop" / "test" / "update.test.js").is_file()
 
 
