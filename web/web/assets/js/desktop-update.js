@@ -182,7 +182,7 @@
       const fallback = !desktop.update?.install;
       installButton.textContent = fallback ? "下载更新包" : "立即更新";
       hintNode.textContent = fallback
-        ? "当前旧版需要手动运行一次安装包；安装 1.3.0 后，后续版本即可一键更新。暂不更新的话，下次进入仍会提醒。"
+        ? "当前旧版需要手动运行一次安装包；安装最新版后，后续版本即可一键更新。暂不更新的话，下次进入仍会提醒。"
         : "更新包会校验 SHA-256 后静默安装，应用会自动重启。暂不更新的话，下次进入仍会提醒。";
       reveal();
     } catch {
