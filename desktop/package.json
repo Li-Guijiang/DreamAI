@@ -5,8 +5,8 @@
   "description": "Dream AI desktop - local file workbench",
   "main": "electron/main.js",
   "author": {
-    "name": "Dream AI Team",
-    "email": "599575094@qq.com"
+    "name": "Li Guijiang",
+    "url": "https://github.com/Li-Guijiang"
   },
   "license": "MIT",
   "scripts": {
@@ -25,7 +25,7 @@
   "build": {
     "appId": "com.dreamai.desktop",
     "productName": "Dream AI",
-    "copyright": "Copyright © 2026 Dream AI Team",
+    "copyright": "Copyright © 2026 Li Guijiang",
     "directories": {
       "output": "release",
       "buildResources": "build"

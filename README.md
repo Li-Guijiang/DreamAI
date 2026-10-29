@@ -322,6 +322,6 @@ for file in web/web/assets/js/*.js; do node --check "$file"; done
 ---
 
 <p align="center">
-  <sub>MIT License · Copyright (c) 2026 Li Guijiang · Built and maintained by Li Guijiang and the Dream AI team</sub><br>
+  <sub>MIT License · Copyright (c) 2026 Li Guijiang · Designed, built and maintained by Li Guijiang</sub><br>
   <sub><i>From a shared dream to a world that understands itself — one step at a time.</i></sub>
 </p>

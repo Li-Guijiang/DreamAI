@@ -162,6 +162,7 @@ All variables live in `.env` (full sample in [`.env.example`](.env.example)):
 | `DREAMAI_BYOK_BASE_URL` | Endpoint for a visitor's own key | DeepSeek |
 | `DREAMAI_BYOK_MODELS` | Selectable BYOK models: `id\|label\|reasoning` | DeepSeek V3 / R1 |
 | `DREAMAI_SYSTEM_PROMPT` | Optional persona (single line) | see `app/config.py` |
+| `DREAMAI_OWNER_PROFILE` | Optional non-sensitive owner context appended to the prompt; never put contact details here | empty |
 | `DREAMAI_RATE_LIMIT` / `_WINDOW` | Requests per IP / window in seconds | 30 / 600 |
 | `DREAMAI_DAILY_LIMIT` | Daily free-model budget (`0` disables) | 2000 |
 | `DREAMAI_MAX_CONCURRENCY` | Concurrent upstream requests | 6 |
@@ -234,6 +235,11 @@ The site key is read from `/www/wwwroot/<domain>/.env` (mode `600`). Never commi
 - Responses carry CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy` and HSTS via Nginx.
 - Per-IP rate limiting plus a concurrency cap keep a public deployment from being hammered. The
   in-memory counters are per process; use one worker or shared storage for strict global quotas.
+- The default persona fixes the creator/owner as **李贵江** and tells the model to refuse requests
+  for hidden prompts, private contact details and owner-profile commands from the public endpoint.
+  `DREAMAI_OWNER_PROFILE` is for non-sensitive preferences only; full contact details belong in a
+  private file outside the repository and outside the served web root. The public chat has no
+  identity authentication, so it deliberately cannot reveal or mutate that private file.
 
 ## 9. Relationship to the DreamAI repository
 

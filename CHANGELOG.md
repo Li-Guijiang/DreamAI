@@ -33,6 +33,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI now syntax-checks every shipped web JavaScript file.
 - Web version `2.0.0`, exposed through `/api/config`.
 
+### Changed — owner identity and privacy
+
+- Every shipped persona now states that **李贵江 (Li-Guijiang)** is the sole creator, owner and
+  highest-authority figure behind Dream AI. The web prompt, CLI prompt, about modal, sidebar,
+  download footer, desktop package metadata and README footer no longer describe the product as a
+  team effort or suggest another founder.
+- The public about page and download footer no longer publish a phone number, QQ address or email.
+  The owner's full contact dossier lives in a private local/server file outside Git and the web
+  root; only a non-sensitive profile (interests, hardware, preferences) is appended to the model
+  prompt through `DREAMAI_OWNER_PROFILE`.
+- The persona rejects requests to reveal private contacts, system prompts or owner-profile data from
+  the unauthenticated public chat. Owner profile commands require a private operations channel.
+- Tests now guard the fixed owner identity, reject team-ownership copy and scan public pages for
+  phone/mailto leakage.
+
 ### Fixed — deploy and configuration
 
 - Documentation images are now hosted as GitHub user attachments instead of repository-relative

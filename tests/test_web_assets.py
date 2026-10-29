@@ -112,3 +112,25 @@ def test_web_motion_files_are_present():
         "assets/js/docs.js",
     ):
         assert (WEB / relative).is_file(), relative
+
+
+def test_owner_identity_is_fixed_in_the_prompts():
+    web_prompt = (ROOT / "web" / "app" / "config.py").read_text(encoding="utf-8")
+    cli_prompt = (ROOT / "dream_ai" / "config.py").read_text(encoding="utf-8")
+    assert "李贵江" in web_prompt
+    assert "独立研发" in web_prompt
+    assert "李贵江等人组成的团队" not in web_prompt
+    assert "Li Guijiang" in cli_prompt
+    assert "created and owned" in cli_prompt
+    assert not re.search(r"1[3-9]\d{9}", web_prompt + cli_prompt)
+
+
+def test_public_pages_do_not_publish_private_contacts():
+    for page in PAGES:
+        text = page.read_text(encoding="utf-8")
+        assert "tel:" not in text, f"private phone link in {page.name}"
+        assert "mailto:" not in text, f"private mail link in {page.name}"
+        assert "@qq.com" not in text.lower(), f"private QQ mail in {page.name}"
+        assert not re.search(r"1[3-9]\d{9}", text), f"private phone number in {page.name}"
+        assert "Dream AI 团队" not in text, f"team ownership copy in {page.name}"
+        assert "李贵江等人组成的团队" not in text, f"team ownership copy in {page.name}"

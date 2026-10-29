@@ -2641,6 +2641,13 @@ html[data-theme="light"] .modal__scrim {
   white-space: nowrap;
 }
 
+.about__privacy {
+  margin: 0 0 4px;
+  color: var(--text-3);
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
 .about__stack {
   display: flex;
   flex-wrap: wrap;
