@@ -22,10 +22,11 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 OUT_DIR = Path(__file__).resolve().parent
-W, H = 760, 132
+W, H = 760, 132          # logical size; output is scaled by UPSCALE
 LOOP = 8.0          # seconds per loop
-FPS = 4             # frames per second (GIF timing)
-COLORS = 64         # palette size; keeps the files small
+FPS = 10            # frames per second
+COLORS = 96         # palette size
+UPSCALE = 1         # 1:1 with the display width: GIF detail above this costs 10x size
 
 VARIANTS = {
     # name: (accent, second accent, motion mode)
@@ -60,36 +61,36 @@ STARS = _stars()
 
 
 def _aurora_frame(accent: tuple[int, int, int], accent2: tuple[int, int, int], phase: float) -> Image.Image:
-    base = _background((10, 12, 20), (16, 20, 34))
-    yy = np.arange(H)[:, None]
-    xx = np.arange(W)[None, :]
-    overlay = np.zeros((H, W, 3))
-    weight = np.zeros((H, W))
+    """Three glowing ribbons on a flat field: crisp edges, and far lighter than a full gradient."""
+    img = Image.new("RGBA", (W, H), (10, 12, 20, 255))
+    draw = ImageDraw.Draw(img, "RGBA")
 
-    for i, (color, amp, length, speed, y0) in enumerate(
-        [
-            (accent, 38, 560, 1.0, 0.44),
-            (accent2, 26, 380, -1.5, 0.64),
-            (accent, 18, 260, 2.2, 0.22),
-        ]
-    ):
-        wave = y0 * H + amp * np.sin(2 * np.pi * (xx / length + phase * speed + i * 0.31))
-        band = np.exp(-((yy - wave) ** 2) / (2 * (13 + 6 * i) ** 2))
-        overlay += band[..., None] * (np.array(color) / 255.0) * (0.55 - 0.12 * i)
-        weight += band
+    soft = tuple(int(c * 0.72 + 255 * 0.28) for c in accent)
+    soft2 = tuple(int(c * 0.72 + 255 * 0.28) for c in accent2)
+    ribbons = (
+        (0.34, 21, 470, 1.0, soft, 1),
+        (0.56, 15, 350, -1.35, soft2, 1),
+        (0.75, 10, 260, 1.8, soft, 1),
+    )
+    for ci, (y0, amp, length, speed, color, width) in enumerate(ribbons):
+        prev = None
+        for x in range(0, W + 4, 4):
+            y = y0 * H + amp * math.sin(2 * math.pi * (x / length + phase * speed + ci * 0.3))
+            if prev:
+                taper = 0.25 + 0.75 * math.sin(math.pi * x / W) ** 1.5
+                for grow, mul in ((7, 0.05), (4, 0.12), (2, 0.30), (0, 0.80)):
+                    draw.line([prev, (x, y)], fill=(*color, int(150 * taper * mul)), width=width + grow)
+            prev = (x, y)
 
-    weight = np.clip(weight, 0, 1)[..., None]
-    img = base * (1 - weight * 0.85) + overlay * 0.85
-    out = Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8), "RGB").convert("RGBA")
-    draw = ImageDraw.Draw(out, "RGBA")
-
-    for x, y, r, ph in STARS:
-        tw = 0.35 + 0.65 * (0.5 + 0.5 * math.sin(2 * math.pi * (phase + ph)))
-        draw.ellipse((x - r, y - r, x + r, y + r), fill=(220, 232, 255, int(200 * tw)))
+    for i in range(90):
+        x = (i * 53 + phase * 260) % W
+        y = (i * 71) % H
+        r = 0.5 + 1.1 * abs(math.sin(2 * math.pi * (phase + i * 0.09)))
+        alpha = int(90 + 80 * abs(math.sin(phase * 6 + i)))
+        draw.ellipse((x - r, y - r, x + r, y + r), fill=(214, 228, 255, alpha))
 
     _comet(draw, phase)
-    _hairline(out, accent, phase)
-    return out.convert("RGB")
+    return img.convert("RGB")
 
 
 def _orbit_frame(accent: tuple[int, int, int], accent2: tuple[int, int, int], phase: float) -> Image.Image:
@@ -155,7 +156,7 @@ def _grid_frame(accent: tuple[int, int, int], accent2: tuple[int, int, int], pha
 
     # sweeping scan line
     sx = (phase * 1.35 % 1.0) * (W + 120) - 60
-    for off, width, alpha in ((0, 4, 12), (4, 2, 26), (9, 1, 55)):
+    for off, width, alpha in ((0, 6, 8), (3, 3, 16), (6, 1, 34)):
         draw.line([(sx - off, 0), (sx - off - 14, H)], fill=(*accent2, alpha), width=width)
 
     _hairline(img, accent, phase)
@@ -170,11 +171,16 @@ def _comet(draw: ImageDraw.ImageDraw, phase: float) -> None:
     t = (phase - 0.12) / span
     x = -80 + t * (W + 160)
     y = H * 0.30 - t * 26
-    for i in range(26, 0, -1):
-        alpha = int(150 * (i / 26) ** 2)
-        draw.line([(x - i * 5, y + i * 1.6), (x - i * 5 + 4, y + i * 1.6 + 1.2)],
-                  fill=(200, 214, 255, alpha), width=1)
-    draw.ellipse((x - 2.2, y - 2.2, x + 2.2, y + 2.2), fill=(255, 255, 255, 235))
+    length, slope = 120, 0.32
+    for scale, alpha, half in ((1.0, 10, 2.6), (0.8, 22, 1.7), (0.55, 46, 1.0)):
+        tail = length * scale
+        draw.polygon(
+            [(x, y),
+             (x - tail, y + tail * slope - half),
+             (x - tail, y + tail * slope + half)],
+            fill=(198, 214, 255, alpha),
+        )
+    draw.ellipse((x - 2.4, y - 2.4, x + 2.4, y + 2.4), fill=(255, 255, 255, 240))
 
 
 def _hairline(img: Image.Image, accent: tuple[int, int, int], phase: float) -> None:
@@ -295,13 +301,18 @@ def build_asset(name: str, render, frames: int, colours: int, duration: int) -> 
     return out
 
 
+def _encode(img: Image.Image) -> Image.Image:
+    """Upscale then quantise: the browser downsamples, which hides GIF banding."""
+    size = (int(img.width * UPSCALE), int(img.height * UPSCALE))
+    return img.resize(size, Image.LANCZOS).convert("P", palette=Image.ADAPTIVE, colors=COLORS)
+
+
 def build(name: str, accent, accent2, mode: str) -> Path:
     frames = []
     total = int(round(LOOP * FPS))
     render = {"aurora": _aurora_frame, "orbit": _orbit_frame, "grid": _grid_frame}[mode]
     for i in range(total):
-        phase = i / total
-        frames.append(render(accent, accent2, phase).convert("P", palette=Image.ADAPTIVE, colors=COLORS))
+        frames.append(_encode(render(accent, accent2, i / total)))
 
     out = OUT_DIR / f"banner-{name}.gif"
     frames[0].save(

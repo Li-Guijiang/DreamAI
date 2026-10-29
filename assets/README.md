@@ -103,13 +103,13 @@ Four animated strips, one per document family, placed directly under the page ti
 
 | File | Used by | Motion |
 |---|---|---|
-| `banner-docs.gif` | `docs/` and every page inside it | Flowing aurora bands, drifting stars, a comet, a sweeping bottom hairline |
+| `banner-docs.gif` | `docs/` and every page inside it | Three glowing ribbons drifting on opposite phases, a starfield, a tapered comet |
 | `banner-web.gif` | `web/README.md`, `web/tools/README.md` | Concentric orbit rings with rotating highlights and travelling light points |
 | `banner-desktop.gif` | `desktop/README.md` | Pulsing dot grid with a soft light sweep |
-| `banner-assets.gif` | `assets/README.md` | Warm aurora bands with drifting stars |
+| `banner-assets.gif` | `assets/README.md` | The same ribbons and stars in the warm brand palette |
 
-All four are 720×110, 24 frames over an 8-second loop at 4 fps, 64 colours, and share the same
-timing so the pages feel like one set. Regenerate with:
+All four are 760×132, 80 frames over an 8-second loop at 10 fps with a 96-colour palette, so the
+motion reads as continuous rather than stepped. Sizes are 178–371 KB. Regenerate with:
 
 ```bash
 python assets/brand/build_banners.py          # all four
