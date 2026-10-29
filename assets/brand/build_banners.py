@@ -291,6 +291,39 @@ def flow_frame(accent, accent2, phase):
     return img.convert("RGB")
 
 
+
+VIDEO_FPS = 24
+VIDEO_SCALE = 2
+
+
+def build_video(name: str, accent, accent2, mode: str) -> Path:
+    """Encode the same loop as H.264: full colour, 24 fps, 2x resolution.
+
+    GIF is limited to 256 colours and 1x detail; a video keeps gradients smooth
+    and stays small because the background is flat.
+    """
+    import imageio_ffmpeg
+    import subprocess
+
+    render = {"aurora": _aurora_frame, "orbit": _orbit_frame, "grid": _grid_frame}[mode]
+    w, h = W * VIDEO_SCALE, H * VIDEO_SCALE
+    total = int(round(LOOP * VIDEO_FPS))
+    out = OUT_DIR / f"banner-{name}.mp4"
+
+    cmd = [
+        imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error",
+        "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{w}x{h}", "-r", str(VIDEO_FPS), "-i", "-",
+        "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
+        "-movflags", "+faststart", str(out),
+    ]
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    for i in range(total):
+        frame = render(accent, accent2, i / total).resize((w, h), Image.LANCZOS)
+        proc.stdin.write(frame.tobytes())
+    proc.stdin.close()
+    proc.wait()
+    return out
+
 def build_asset(name: str, render, frames: int, colours: int, duration: int) -> Path:
     out_frames = []
     for i in range(frames):
@@ -328,11 +361,18 @@ def build(name: str, accent, accent2, mode: str) -> Path:
 
 
 if __name__ == "__main__":
-    wanted = sys.argv[1:] or list(VARIANTS)
+    wanted = [a for a in sys.argv[1:] if not a.startswith("-")] or list(VARIANTS)
     for key in wanted:
         accent, accent2, mode = VARIANTS[key]
         path = build(key, accent, accent2, mode)
         print(f"{path.name}: {path.stat().st_size / 1024:.0f} KB ({mode})")
+
+    if "--video" in sys.argv:
+        for key in wanted:
+            accent, accent2, mode = VARIANTS[key]
+            path = build_video(key, accent, accent2, mode)
+            print(f"{path.name}: {path.stat().st_size / 1024:.0f} KB (mp4)")
+        raise SystemExit(0)
 
     if not sys.argv[1:]:
         accent, accent2 = VARIANTS["docs"][0], VARIANTS["docs"][1]
