@@ -8,6 +8,8 @@
 - **Date:** 2026-10-28
 - **Deciders:** Dream AI maintainers
 
+<p align="center"><img src="../../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Context
 
 The repository now ships three runnable deliverables from one tree:
@@ -27,6 +29,8 @@ The cost of three numbers is reader confusion. A visitor sees `0.4.0` in
 `pyproject.toml`, `1.4.0` from `/api/config`, and `DreamAI-Setup-1.2.0.exe` on
 the download page, and reasonably concludes that one of them is stale.
 
+<p align="center"><img src="../../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Decision
 
 1. Keep all three deliverables in one repository. They share brand assets,
@@ -40,6 +44,8 @@ the download page, and reasonably concludes that one of them is stale.
    **web image**; the desktop installer is built and attached through
    `desktop/` packaging and `web/downloads/latest.json`.
 
+<p align="center"><img src="../../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Consequences
 
 - Before touching any version, check three companions: `CHANGELOG.md`, the
@@ -49,6 +55,8 @@ the download page, and reasonably concludes that one of them is stale.
   versioned independently of the site; do not assume they match.
 - A reader who only knows "Dream AI v1.2" is referring to the desktop client,
   not to the Python package.
+
+<p align="center"><img src="../../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## Alternatives considered
 
@@ -61,3 +69,5 @@ the download page, and reasonably concludes that one of them is stale.
    access control or release permissions.
 3. **A generated `version.json` shared by all three.** Rejected: it adds a build
    step to a repository that deliberately has none for the web front end.
+
+<p align="center"><img src="../../assets/brand/footer.gif" alt="" width="720"></p>

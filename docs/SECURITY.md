@@ -4,6 +4,8 @@
 
 <sub>[Back to the documentation index](./README.md)</sub>
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in Dream AI, please report it
@@ -14,11 +16,15 @@ If you discover a security vulnerability in Dream AI, please report it
 - If that is unavailable, open a private issue or contact the maintainer
   directly. Do not post exploit details in a public issue.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## What to Include
 
 - A clear description of the vulnerability and its impact.
 - Steps to reproduce, if possible.
 - Suggested fix or mitigation, if you have one.
+
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## Scope
 
@@ -29,6 +35,8 @@ Out of scope: vulnerabilities in third-party providers, operating system
 issues unrelated to this project, or reports that only describe theoretical
 risks with no concrete impact.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Expectations
 
 - Reports are reviewed promptly.
@@ -36,8 +44,12 @@ risks with no concrete impact.
 - We do not guarantee a fixed response time, but we treat valid reports
   seriously.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Safe Development Reminders
 
 - Never commit API keys, `.env`, or personal data (see `.gitignore`).
 - Tools that touch the filesystem or network are added only behind explicit
   user consent and allowlists (planned in `v0.3`).
+
+<p align="center"><img src="../assets/brand/footer.gif" alt="" width="720"></p>

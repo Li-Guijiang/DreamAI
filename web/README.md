@@ -19,6 +19,8 @@ small FastAPI service. No front-end framework and no Node build step.
   <img src="https://github.com/user-attachments/assets/b377efc9-3f0f-4225-a92e-210b02aa980d" alt="Dream AI home page with a cosmic hero, typing greeting and animated cards" width="100%">
 </p>
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 1. A living interface
 
 The 2.0 release makes motion part of the product grammar, not a garnish:
@@ -54,6 +56,8 @@ Motion is always optional:
   <img src="https://github.com/user-attachments/assets/3ecce2df-f7e1-4967-a6d8-e31054745fdd" alt="Dream AI documentation page with orbital hero and animated architecture" width="100%">
 </p>
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 2. Features
 
 | | |
@@ -70,6 +74,8 @@ Motion is always optional:
 | **Security headers** | CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy` |
 | **Responsive** | Desktop, tablet and mobile; safe-area aware composer |
 | **Accessibility** | Semantic landmarks, focus rings, skip links, keyboard controls and a motion switch |
+
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 3. Layout
 
@@ -112,6 +118,8 @@ web/
 The asset query strings (`?v=2.0.0`) are intentional cache busters. Bump them when shipping CSS or
 JavaScript changes.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 4. Run locally
 
 Requires Python 3.10+.
@@ -150,6 +158,8 @@ The browser QA pass verifies the production Content-Security-Policy, the motion 
 scroll spy and responsive layouts. CI syntax-checks every shipped JavaScript file and validates
 local asset references.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 5. Configuration
 
 All variables live in `.env` (full sample in [`.env.example`](.env.example)):
@@ -171,6 +181,8 @@ The free key exists only in the server environment. `/api/config` exposes labels
 limits — never a secret. A BYOK key is kept in the visitor's browser and forwarded per request; the
 server does not store it or log it.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 6. API
 
 | Route | Description |
@@ -188,6 +200,8 @@ browser ──POST /api/chat──▶ nginx ──▶ FastAPI ──▶ OpenAI-c
 
 The browser sends the conversation; the server trims it to the configured count and character
 budget before appending the persona. Any provider that speaks `/chat/completions` works.
+
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 7. Deploy
 
@@ -226,6 +240,8 @@ nginx -t && nginx -s reload
 
 The site key is read from `/www/wwwroot/<domain>/.env` (mode `600`). Never commit it.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 8. Security and privacy
 
 - API keys live only in the server `.env` and never appear in front-end output.
@@ -235,6 +251,8 @@ The site key is read from `/www/wwwroot/<domain>/.env` (mode `600`). Never commi
 - Per-IP rate limiting plus a concurrency cap keep a public deployment from being hammered. The
   in-memory counters are per process; use one worker or shared storage for strict global quotas.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 9. Relationship to the DreamAI repository
 
 `dream_ai/` is the command-line agent core (provider, memory, tools, autonomy). The web edition
@@ -243,6 +261,10 @@ model endpoints through its own FastAPI streaming layer. Connecting the web tool
 the same Python agent API is planned, not finished. The desktop app loads this interface and adds
 local file capabilities via Electron IPC.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## License
 
 MIT — same as the rest of Dream AI.
+
+<p align="center"><img src="../assets/brand/footer.gif" alt="" width="720"></p>

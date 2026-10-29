@@ -10,6 +10,8 @@ Logos, banners, icons, and other visual materials for Dream AI.
 > regeneration notes live in [`readme/`](readme/README.md). Local originals
 > still live under `brand/` and `logo/`.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Directory Structure
 
 ```
@@ -32,6 +34,8 @@ assets/
     └── README-文件清单与使用指南.md  # Full file inventory and usage guide
 ```
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Quick Reference
 
 | Use Case | File Location |
@@ -44,6 +48,8 @@ assets/
 | SVG vector source | `logo/04_矢量源_SVG/` |
 | Favicon | `logo/06_favicon/` |
 | Full documentation | `logo/README-文件清单与使用指南.md` |
+
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## `brand/hero.svg` and `brand/hero.gif`
 
@@ -97,6 +103,8 @@ appears as a dark banner.
    frame through an 8-second loop, and encode 400×214 at 24 frames with `#0d1117` as the
    background.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## `brand/banner-*.gif`
 
 Four animated strips, one per document family, placed directly under the page title:
@@ -119,8 +127,12 @@ python assets/brand/build_banners.py web      # just one
 Each page loads a single banner (118–336 KB). If a lighter page matters more than motion, remove the
 `<img>` line under the title and the rest of the page is unaffected.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Notes
 
 - All logo assets are based on the approved master design in `00_原始母版/`.
 - PSD files are large design source files; they are kept here for brand asset management.
 - Copyright © 2026 Li Guijiang. All rights reserved. See `logo/07_版权与说明/` for full license.
+
+<p align="center"><img src="../assets/brand/footer.gif" alt="" width="720"></p>

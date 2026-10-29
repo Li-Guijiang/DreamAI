@@ -30,6 +30,8 @@
 
 ---
 
+<p align="center"><img src="./assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Contents
 
 1. [About](#1-about)
@@ -44,6 +46,8 @@
 10. [Contributing](#10-contributing)
 
 ---
+
+<p align="center"><img src="./assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 1. About
 
@@ -63,6 +67,8 @@ Three deliverables share one design language and one set of `DREAMAI_*` conventi
 
 The three version numbers are independent by design, not by drift: see the [version cross-reference](./docs/README.md#3-version-cross-reference) and [ADR 0001](./docs/adr/0001-three-deliverables-one-repository.md).
 
+<p align="center"><img src="./assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 2. Three deliverables
 
 | Mode | Behaviour | Best for |
@@ -70,6 +76,8 @@ The three version numbers are independent by design, not by drift: see the [vers
 | **Chat** | One question, one answer | Writing, Q&A, translation, code snippets |
 | **Work** | Drafts a 3–6 step plan, executes it, then summarises | Research, planning, multi-step tasks |
 | **Code** (desktop) | Scaffolds a project, writes files, installs dependencies, starts the server; every command asks for approval | Building a small project from zero |
+
+<p align="center"><img src="./assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 3. Screenshots
 
@@ -100,6 +108,8 @@ switched off in one click or via `prefers-reduced-motion`.
 The CLI has its own quieter motion layer: a launch wordmark, typed replies, a
 live thinking spinner and `/motion` to turn it off mid-session.
 
+<p align="center"><img src="./assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 4. Capabilities
 
 | Capability | What it does | Phase |
@@ -114,6 +124,8 @@ live thinking spinner and `/motion` to turn it off mid-session.
 | **Living interface** | Shared web motion engine with a persistent on/off switch, reduced-motion support and a dedicated animated docs page | web 2.0 |
 | **Terminal motion** | Launch sequence, typed replies, live spinner, coloured trace, `/motion`, and plain-text fallback for redirected output | v0.4 |
 | **Safe by default** | Tools and autonomous actions require explicit approval; file tools stay inside a sandbox directory | v0.3 |
+
+<p align="center"><img src="./assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 5. Architecture
 
@@ -167,6 +179,8 @@ flowchart TB
 
 The core depends on three narrow interfaces (`LLMProvider`, `Memory`, `Tool`), so swapping a model, a storage backend, or a tool never requires touching the agent. The web runtime currently has its own FastAPI streaming path (the dashed edge is planned work, not a shipped claim); the desktop app loads the web interface. Layer-by-layer detail and both data flows: [architecture](./docs/ARCHITECTURE.md).
 
+<p align="center"><img src="./assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 6. Quick start
 
 ### 6.1 Command line (three steps)
@@ -199,6 +213,8 @@ docker run -it --rm -e DREAMAI_API_KEY=your-key ghcr.io/li-guijiang/dream-ai:lat
 cd web && pip install -r requirements.txt && uvicorn app.main:app --port 8000   # Web
 cd desktop && pnpm install && pnpm start                                        # Desktop
 ```
+
+<p align="center"><img src="./assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 7. Commands and configuration
 
@@ -245,6 +261,8 @@ cd desktop && pnpm install && pnpm start                                        
 
 </details>
 
+<p align="center"><img src="./assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 8. Roadmap
 
 | Version | Milestone | Goal | Status |
@@ -258,6 +276,8 @@ cd desktop && pnpm install && pnpm start                                        
 | `Future` | Self-hosted | Fully local deployment on open-source models | Planned |
 
 Task lists and acceptance criteria per phase: [ROADMAP.md](./docs/ROADMAP.md).
+
+<p align="center"><img src="./assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 9. Repository layout
 
@@ -296,6 +316,8 @@ DreamAI/
 └── LICENSE                    # MIT
 ```
 
+<p align="center"><img src="./assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 10. Contributing
 
 Issues, suggestions, and pull requests are welcome. Read the [contributing guide](./docs/CONTRIBUTING.md) and the [code of conduct](./docs/CODE_OF_CONDUCT.md) first; for usage questions start with [SUPPORT.md](./docs/SUPPORT.md), and report vulnerabilities privately as described in [SECURITY.md](./docs/SECURITY.md).
@@ -325,3 +347,5 @@ for file in web/web/assets/js/*.js; do node --check "$file"; done
   <sub>MIT License · Copyright (c) 2026 Li Guijiang · Built and maintained by Li Guijiang and the Dream AI team</sub><br>
   <sub><i>From a shared dream to a world that understands itself — one step at a time.</i></sub>
 </p>
+
+<p align="center"><img src="./assets/brand/footer.gif" alt="" width="720"></p>

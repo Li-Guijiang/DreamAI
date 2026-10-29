@@ -7,6 +7,8 @@
 Thank you for helping build Dream AI. Contributions of all kinds are welcome:
 code, documentation, bug reports, ideas, and feedback.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Getting Started
 
 1. Fork the repository and clone your fork.
@@ -21,6 +23,8 @@ code, documentation, bug reports, ideas, and feedback.
 
 3. Copy `.env.example` to `.env` for local testing (leave the API key empty to
    use offline demo mode).
+
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## Development Workflow
 
@@ -38,6 +42,8 @@ code, documentation, bug reports, ideas, and feedback.
   `web/tools/archive/` is excluded from lint and format checks: those are
   one-off operational scripts kept for traceability (see `web/tools/README.md`).
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Commit Message Style
 
 Use short imperative messages, prefixed by a type:
@@ -48,12 +54,16 @@ Use short imperative messages, prefixed by a type:
 - `test: cover tool registry lookup errors`
 - `refactor: split provider factory from CLI`
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Code Style
 
 - Python 3.11+ type hints.
 - Follow the existing module layout under `dream_ai/`.
 - Keep the agent core free of provider-specific details.
 - Public interfaces should be documented with a short docstring.
+
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## Pull Request Checklist
 
@@ -64,12 +74,18 @@ Use short imperative messages, prefixed by a type:
 - [ ] Documentation is updated for user-facing changes.
 - [ ] No secrets, API keys, or personal data are committed.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Reporting Issues
 
 - Use the issue templates when available.
 - Include steps to reproduce, expected behavior, and actual behavior.
 - Attach logs or screenshots where helpful.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Code of Conduct
 
 By participating, you agree to uphold our [Code of Conduct](./CODE_OF_CONDUCT.md).
+
+<p align="center"><img src="../assets/brand/footer.gif" alt="" width="720"></p>

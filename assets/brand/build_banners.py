@@ -22,7 +22,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 OUT_DIR = Path(__file__).resolve().parent
-W, H = 720, 110
+W, H = 760, 132
 LOOP = 8.0          # seconds per loop
 FPS = 4             # frames per second (GIF timing)
 COLORS = 64         # palette size; keeps the files small
@@ -68,9 +68,9 @@ def _aurora_frame(accent: tuple[int, int, int], accent2: tuple[int, int, int], p
 
     for i, (color, amp, length, speed, y0) in enumerate(
         [
-            (accent, 26, 620, 1.0, 0.42),
-            (accent2, 18, 430, -1.4, 0.62),
-            (accent, 12, 300, 2.1, 0.24),
+            (accent, 38, 560, 1.0, 0.44),
+            (accent2, 26, 380, -1.5, 0.64),
+            (accent, 18, 260, 2.2, 0.22),
         ]
     ):
         wave = y0 * H + amp * np.sin(2 * np.pi * (xx / length + phase * speed + i * 0.31))
@@ -187,6 +187,114 @@ def _hairline(img: Image.Image, accent: tuple[int, int, int], phase: float) -> N
         draw.point((x, H - 1), fill=(*accent, max(0, alpha - 40)))
 
 
+# --- Extra motion assets -----------------------------------------------------
+
+DIV_W, DIV_H = 640, 34
+FOOT_W, FOOT_H = 760, 92
+FLOW_W, FLOW_H = 760, 210
+
+
+def divider_frame(accent, accent2, phase):
+    """A thin stream of particles with a bright pulse running left to right."""
+    img = Image.new("RGBA", (DIV_W, DIV_H), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img, "RGBA")
+
+    mid = DIV_H / 2
+    draw.line([(0, mid), (DIV_W, mid)], fill=(*accent, 34), width=1)
+
+    for i in range(46):
+        x = (i / 46 + phase * 0.9) % 1.0 * DIV_W
+        wave = math.sin(2 * math.pi * (i / 46 + phase)) * 6
+        fade = math.sin(math.pi * x / DIV_W)
+        r = 1.2 + 1.6 * abs(math.sin(2 * math.pi * (phase + i * 0.13)))
+        draw.ellipse((x - r, mid + wave - r, x + r, mid + wave + r),
+                     fill=(*accent2, int(150 * fade)))
+
+    px = phase * (DIV_W + 120) - 60
+    for off, alpha, width in ((0, 210, 3), (10, 90, 6), (24, 40, 12)):
+        draw.line([(px, mid), (px - off, mid)], fill=(255, 255, 255, alpha), width=width)
+    return img
+
+
+def footer_frame(accent, accent2, phase):
+    """A calm closing strip: three breathing arcs and a slow comet."""
+    base = _background((7, 9, 16), (11, 14, 24))
+    img = Image.fromarray((np.clip(base, 0, 1) * 255).astype(np.uint8), "RGB").convert("RGBA")
+    draw = ImageDraw.Draw(img, "RGBA")
+
+    for i, (color, rad) in enumerate(((accent, 180), (accent2, 128), (accent, 84))):
+        cy = FOOT_H + 26
+        breathe = 0.5 + 0.5 * math.sin(2 * math.pi * (phase + i * 0.22))
+        for k in range(3):
+            rr = rad - k * 8
+            alpha = int((16 + 44 * breathe) * (1 - k * 0.25))
+            draw.arc((FOOT_W / 2 - rr, cy - rr, FOOT_W / 2 + rr, cy + rr),
+                     start=200, end=340, fill=(*color, alpha), width=1 + k)
+
+    for x, y, r, ph in STARS[:60]:
+        if y > FOOT_H - 4:
+            continue
+        tw = 0.25 + 0.75 * (0.5 + 0.5 * math.sin(2 * math.pi * (phase + ph)))
+        draw.ellipse((x - r, y - r, x + r, y + r), fill=(220, 232, 255, int(150 * tw)))
+
+    _hairline(img, accent, phase)
+    return img.convert("RGB")
+
+
+def flow_frame(accent, accent2, phase):
+    """Animated data flow: CLI -> Agent -> Provider / Memory / Tools."""
+    base = _background((8, 10, 18), (12, 16, 28))
+    img = Image.fromarray((np.clip(base, 0, 1) * 255).astype(np.uint8), "RGB").convert("RGBA")
+    draw = ImageDraw.Draw(img, "RGBA")
+
+    nodes = {
+        "cli": (86, FLOW_H / 2),
+        "agent": (340, FLOW_H / 2),
+        "prov": (600, 54),
+        "mem": (600, FLOW_H / 2),
+        "tools": (600, FLOW_H - 54),
+    }
+    edges = [("cli", "agent", accent), ("agent", "prov", accent2), ("agent", "mem", accent2), ("agent", "tools", accent2)]
+
+    for a, b, color in edges:
+        ax, ay = nodes[a]
+        bx, by = nodes[b]
+        draw.line([(ax, ay), (bx, by)], fill=(*color, 46), width=1)
+
+        # packet travelling along the edge
+        for k in range(2):
+            tpar = (phase + 0.5 * k) % 1.0
+            px = ax + (bx - ax) * tpar
+            py = ay + (by - ay) * tpar
+            fade = math.sin(math.pi * tpar)
+            for rad, alpha in ((5, int(40 * fade)), (2.4, int(210 * fade))):
+                draw.ellipse((px - rad, py - rad, px + rad, py + rad), fill=(*color, alpha))
+
+    for key, (x, y) in nodes.items():
+        pulse = 0.5 + 0.5 * math.sin(2 * math.pi * (phase + (0.15 if key == "agent" else 0.0)))
+        radius = 13 + 2.5 * pulse
+        color = accent if key in ("cli", "agent") else accent2
+        draw.ellipse((x - radius - 6, y - radius - 6, x + radius + 6, y + radius + 6), fill=(*color, 18))
+        draw.ellipse((x - radius, y - radius, x + radius, y + radius), outline=(*color, 190), width=1)
+        draw.ellipse((x - 3, y - 3, x + 3, y + 3), fill=(*color, 230))
+
+    for x, y, r, ph in STARS[:70]:
+        tw = 0.2 + 0.8 * (0.5 + 0.5 * math.sin(2 * math.pi * (phase + ph)))
+        draw.ellipse((x - r, y - r, x + r, y + r), fill=(220, 232, 255, int(120 * tw)))
+
+    return img.convert("RGB")
+
+
+def build_asset(name: str, render, frames: int, colours: int, duration: int) -> Path:
+    out_frames = []
+    for i in range(frames):
+        out_frames.append(render(i / frames).convert("P", palette=Image.ADAPTIVE, colors=colours))
+    out = OUT_DIR / name
+    out_frames[0].save(out, save_all=True, append_images=out_frames[1:], duration=duration,
+                       loop=0, optimize=True, disposal=2)
+    return out
+
+
 def build(name: str, accent, accent2, mode: str) -> Path:
     frames = []
     total = int(round(LOOP * FPS))
@@ -214,3 +322,13 @@ if __name__ == "__main__":
         accent, accent2, mode = VARIANTS[key]
         path = build(key, accent, accent2, mode)
         print(f"{path.name}: {path.stat().st_size / 1024:.0f} KB ({mode})")
+
+    if not sys.argv[1:]:
+        accent, accent2 = VARIANTS["docs"][0], VARIANTS["docs"][1]
+        for name, render, frames, colours, dur in (
+            ("divider.gif", lambda p: divider_frame(accent, accent2, p), 24, 32, 250),
+            ("footer.gif", lambda p: footer_frame(accent, accent2, p), 20, 48, 400),
+            ("flow.gif", lambda p: flow_frame(accent, accent2, p), 24, 48, 333),
+        ):
+            path = build_asset(name, render, frames, colours, dur)
+            print(f"{path.name}: {path.stat().st_size / 1024:.0f} KB")

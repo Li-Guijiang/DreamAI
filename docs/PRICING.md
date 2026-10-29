@@ -8,6 +8,8 @@
 > today.** Dream AI is free and open-source under the MIT License. This
 > document records the intended direction so the community can give feedback.
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Principles
 
 1. **Open core, forever.** The open-source code stays free and permissively
@@ -20,6 +22,8 @@
    hidden fees or surprise lock-in.
 5. **Sustainable development.** Optional paid plans help fund maintenance,
    infrastructure, and ongoing development.
+
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## Plan Overview
 
@@ -38,6 +42,8 @@
 | Priority support | — | ✅ | ✅ | Dedicated |
 | SSO / advanced security | — | — | — | ✅ |
 | SLA and custom deployment | — | — | — | ✅ |
+
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## Plan Definitions
 
@@ -70,11 +76,15 @@
 - Dedicated support and service-level agreement
 - Private/on-premise deployment options
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## What Is Not Included
 
 - Selling the open-source code itself under a proprietary license.
 - Removing features from the open-source repository behind a paywall.
 - Collecting or selling user conversation data.
+
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## Status
 
@@ -84,3 +94,5 @@
   plan is considered.
 - **Feedback:** Open an issue in the repository to suggest plan features or
   fair pricing.
+
+<p align="center"><img src="../assets/brand/footer.gif" alt="" width="720"></p>

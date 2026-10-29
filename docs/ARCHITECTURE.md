@@ -8,6 +8,8 @@ Dream AI has exactly one architectural constraint: **swapping a model, a storage
 
 ---
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 1. Design principles
 
 1. **Interfaces over implementations.** The core depends on three narrow contracts — `LLMProvider`, `Memory`, `Tool` — and never on a concrete backend.
@@ -18,7 +20,13 @@ Dream AI has exactly one architectural constraint: **swapping a model, a storage
 
 ---
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 2. Module map
+
+<p align="center"><img src="../assets/brand/flow.gif" alt="Animated data flow from the CLI through the agent to provider, memory and tools" width="720"></p>
+
+The strip above animates one turn: input enters at the CLI, the agent fans it out to the provider, the memory and the tool registry, and each port answers along the same path.
 
 ```mermaid
 flowchart LR
@@ -75,6 +83,8 @@ Note that `AutonomyEngine` executes tools through `ToolRegistry`, not through th
 
 ---
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 3. Layers
 
 ### 3.1 Entry layer
@@ -112,6 +122,8 @@ Note that `AutonomyEngine` executes tools through `ToolRegistry`, not through th
 
 ---
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 4. Data flow: one chat turn
 
 ```mermaid
@@ -141,6 +153,8 @@ sequenceDiagram
 The provider always receives a snapshot of `Memory`, never an internal structure of the agent, which is why the memory backend can be replaced without touching the caller.
 
 ---
+
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## 5. Data flow: one autonomous task
 
@@ -181,6 +195,8 @@ A run can end in exactly three ways: every step completed, the step budget exhau
 
 ---
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 6. Extension points
 
 ### 6.1 Add a provider
@@ -209,9 +225,13 @@ A run can end in exactly three ways: every step completed, the step budget exhau
 
 ---
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## 7. Current state and next steps
 
 1. The v0.4 planner is deterministic and only recognises time and calculation intents. Model-driven decomposition and native function calling belong to a later phase and reuse the same engine, trace, budget, and confirmation gate.
 2. **The web service does not reuse the `dream_ai` agent loop.** `web/app/llm.py` talks to the endpoint directly so it can stream SSE tokens and forward reasoning output. The web client has its own motion and SSE layers. The two surfaces share the `DREAMAI_*` conventions and the prompt design, but the code paths are separate; converging them on one agent API is a candidate refactor.
 3. The desktop app loads the web interface and implements no chat logic itself: it only exposes local files, document generation, and command execution over IPC.
 4. Local open-source models are added as another provider; the core does not change.
+
+<p align="center"><img src="../assets/brand/footer.gif" alt="" width="720"></p>

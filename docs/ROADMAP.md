@@ -10,6 +10,8 @@ quality and a working deliverable matter more than deadlines.
 
 ---
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## `v0.1.0` — Conversation (released)
 
 **Goal:** A working conversational loop through a pluggable provider, runnable
@@ -36,6 +38,8 @@ locally with or without an API key.
 
 ---
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## `v0.2.0` — Memory (released)
 
 **Goal:** Remember beyond a single session and recall what matters.
@@ -54,6 +58,8 @@ locally with or without an API key.
 - [ ] Semantic retrieval over past conversations (deferred to a later phase).
 
 ---
+
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## `v0.3.0` — Tools (released)
 
@@ -75,6 +81,8 @@ locally with or without an API key.
 
 ---
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## `v0.4.0` — Autonomous Planning (current)
 
 **Goal:** Multi-step agent that decomposes goals and executes a plan.
@@ -92,6 +100,8 @@ locally with or without an API key.
 - [ ] Model-driven plan decomposition and native function-calling (deferred).
 
 ---
+
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
 
 ## `web 2.0.0` — Living Web Surface (released)
 
@@ -117,6 +127,8 @@ content depend on motion.
 
 ---
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## `v1.0.0` — Stable Assistant
 
 **Goal:** A reliable, polished general-purpose personal agent.
@@ -130,6 +142,8 @@ content depend on motion.
 
 ---
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## `Future` — Self-hosted & Owned
 
 **Goal:** Full independence from commercial vendors where desired.
@@ -141,9 +155,13 @@ content depend on motion.
 
 ---
 
+<p align="center"><img src="../assets/brand/divider.gif" alt="" width="640"></p>
+
 ## Long-term Vision
 
 Dream AI is a lifelong project built alongside continuous learning. The roadmap
 above covers the engineering phases; the broader ambition is to grow into a
 thoughtful, capable assistant that serves people everywhere, while keeping the
 code open and the ownership with its authors and contributors.
+
+<p align="center"><img src="../assets/brand/footer.gif" alt="" width="720"></p>
