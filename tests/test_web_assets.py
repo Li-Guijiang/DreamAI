@@ -117,8 +117,38 @@ def test_web_motion_files_are_present():
         "assets/js/motion.js",
         "assets/js/landing.js",
         "assets/js/docs.js",
+        "assets/js/desktop-update.js",
     ):
         assert (WEB / relative).is_file(), relative
+
+
+def test_realtime_greeting_and_starlight_clock():
+    landing = (WEB / "assets" / "js" / "landing.js").read_text(encoding="utf-8")
+    app = (WEB / "assets" / "js" / "app.js").read_text(encoding="utf-8")
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    for greeting in ("早上好", "上午好", "中午好", "下午好", "晚上好", "夜深了"):
+        assert greeting in landing, greeting
+        assert greeting in app, greeting
+    assert "timeGreeting" in landing
+    assert "watchDaypart" in landing
+    for marker in ("starClock", "starClockTime", "starClockDate", "updateToast", "releaseNote"):
+        assert marker in index or marker in (WEB / "download.html").read_text(encoding="utf-8"), (
+            marker
+        )
+    assert "initStarClock" in app
+
+
+def test_desktop_update_contract_is_shipped():
+    manifest = json.loads((ROOT / "desktop" / "package.json").read_text(encoding="utf-8"))
+    assert manifest["version"] == "1.3.0"
+    main = (ROOT / "desktop" / "electron" / "main.js").read_text(encoding="utf-8")
+    preload = (ROOT / "desktop" / "electron" / "preload.js").read_text(encoding="utf-8")
+    updater = (ROOT / "desktop" / "electron" / "update.js").read_text(encoding="utf-8")
+    assert "desktop:update-install" in main
+    assert "desktop:update-progress" in preload
+    assert "DreamAI-Setup-" in updater
+    assert "sha256" in updater
+    assert (ROOT / "desktop" / "test" / "update.test.js").is_file()
 
 
 def test_owner_identity_is_fixed_in_the_prompts():

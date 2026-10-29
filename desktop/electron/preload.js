@@ -9,6 +9,15 @@ contextBridge.exposeInMainWorld("dreamDesktop", {
   platform: process.platform,
   version: () => invoke("desktop:version"),
 
+  update: {
+    install: (manifest) => invoke("desktop:update-install", manifest),
+    onProgress: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("desktop:update-progress", listener);
+      return () => ipcRenderer.removeListener("desktop:update-progress", listener);
+    },
+  },
+
   pickFolder: () => invoke("local:pick-folder"),
   getWorkspace: () => invoke("local:workspace"),
   scan: () => invoke("local:scan"),

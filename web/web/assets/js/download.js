@@ -15,6 +15,13 @@
     if (data.size) byId("dlSize").textContent = formatSize(data.size);
     if (data.date) byId("dlDate").textContent = data.date;
     if (data.sha256) byId("dlSha").textContent = data.sha256;
+
+    const release = byId("releaseNote");
+    if (release && data.version && data.notes) {
+      byId("releaseTitle").textContent = `v${data.version} 更新公告`;
+      byId("releaseNotes").textContent = data.notes;
+      release.hidden = false;
+    }
   } catch {
     /* keep static fallbacks */
   }

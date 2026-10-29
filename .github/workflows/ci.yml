@@ -41,6 +41,10 @@ jobs:
           for file in web/web/assets/js/*.js; do
             node --check "$file"
           done
+          node --check desktop/electron/main.js
+          node --check desktop/electron/preload.js
+          node --check desktop/electron/update.js
+          node desktop/test/update.test.js
 
       - name: Run tests with pytest
         run: pytest

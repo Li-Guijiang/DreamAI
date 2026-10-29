@@ -31,8 +31,21 @@ ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-
 
 ```bash
 pnpm dist
-# output: release/DreamAI-Setup-1.2.0.exe
+# output: release/DreamAI-Setup-1.3.0.exe
 ```
+
+## In-app updates
+
+Every desktop build loads the live site, so the site is also the update feed.
+`/downloads/latest.json` names the current version, installer, SHA-256 and size.
+A new client shows a compact update card and can download, verify and launch the
+installer without leaving the app. The download URL and filename are derived from
+the manifest and checked by the main process; only `liguijiang.com` is allowed.
+
+Versions before 1.3.0 do not contain the installer bridge. They still load the
+site, detect their own version through `dreamDesktop.version()`, and show the
+card with a **download the new installer** fallback. One silent in-app update is
+possible from 1.3.0 onward.
 
 Packaging always reads `build/icon.ico` (16–256 px sizes), exported from the brand asset
 `assets/logo/DreamAI-Logo/01_软件图标_圆角底板/DreamAI-icon-1024.png`. The output and resource

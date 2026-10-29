@@ -547,6 +547,54 @@ main {
   line-height: 1.8;
 }
 
+.release-note {
+  position: relative;
+  max-width: 760px;
+  margin: 26px auto 0;
+  padding: 15px 18px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-radius: 14px;
+  background:
+    radial-gradient(90% 180% at 0% 0%, rgba(124, 156, 255, 0.12), transparent 60%),
+    rgba(255, 255, 255, 0.02);
+  text-align: left;
+}
+
+.release-note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, var(--accent), var(--teal), transparent);
+  opacity: 0.7;
+}
+
+.release-note__label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--teal);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+}
+
+.release-note strong {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 540;
+}
+
+.release-note p {
+  margin: 5px 0 0;
+  color: var(--text-3);
+  font-size: 11.5px;
+  line-height: 1.75;
+}
+
 .checksum {
   padding: 16px;
   border-radius: 12px;

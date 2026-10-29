@@ -53,6 +53,140 @@
   }
 }
 
+/* A compact local-time capsule: a tiny orbit, a travelling star and tabular digits. */
+.star-clock {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: 7px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0 10px 0 8px;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid color-mix(in srgb, var(--line-2) 68%, transparent);
+  border-radius: 999px;
+  background:
+    radial-gradient(130% 190% at 8% 0%, rgba(124, 156, 255, 0.15), transparent 56%),
+    color-mix(in srgb, var(--surface) 34%, transparent);
+  color: var(--text-2);
+  user-select: none;
+  backdrop-filter: blur(12px);
+}
+
+.star-clock::before {
+  content: "";
+  position: absolute;
+  top: -40%;
+  left: -25%;
+  width: 55%;
+  height: 180%;
+  z-index: -1;
+  background: linear-gradient(100deg, transparent 20%, rgba(94, 234, 212, 0.08) 50%, transparent 80%);
+  transform: rotate(12deg);
+  animation: lm-clock-sheen 9s ease-in-out infinite;
+}
+
+.star-clock__sky {
+  position: relative;
+  display: grid;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+}
+
+.star-clock__sky::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px dashed color-mix(in srgb, var(--teal) 36%, transparent);
+  border-radius: 50%;
+  animation: lm-clock-orbit 12s linear infinite;
+}
+
+.star-clock__sky::after {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 8px rgba(94, 234, 212, 0.72);
+  animation: lm-clock-pulse 3.2s ease-in-out infinite;
+}
+
+.star-clock__sky i {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 6px rgba(231, 190, 116, 0.7);
+}
+
+.star-clock__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1;
+}
+
+.star-clock__time {
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 520;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.055em;
+}
+
+.star-clock__date {
+  color: var(--text-3);
+  font-size: 8.5px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.topbar__actions {
+  margin-left: 5px;
+}
+
+@keyframes lm-clock-sheen {
+  0%,
+  100% {
+    transform: translateX(-35%) rotate(12deg);
+    opacity: 0;
+  }
+  28%,
+  58% {
+    opacity: 1;
+  }
+  70% {
+    transform: translateX(280%) rotate(12deg);
+    opacity: 0;
+  }
+}
+
+@keyframes lm-clock-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes lm-clock-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
 .model-dot {
   animation: lm-status-pulse 2.4s ease-in-out infinite;
 }
@@ -1197,6 +1331,15 @@
    -------------------------------------------------------------------------- */
 
 @media (max-width: 900px) {
+  .star-clock {
+    gap: 5px;
+    padding: 0 8px 0 7px;
+  }
+
+  .star-clock__date {
+    display: none;
+  }
+
   .topbar .model-pill {
     padding: 0 8px;
     white-space: nowrap;
@@ -1277,6 +1420,20 @@
 }
 
 @media (max-width: 620px) {
+  .star-clock {
+    height: 28px;
+    padding: 0 8px 0 6px;
+  }
+
+  .star-clock__sky {
+    width: 16px;
+    height: 16px;
+  }
+
+  .star-clock__time {
+    font-size: 11px;
+  }
+
   .topbar #shortcutsBtn {
     display: none;
   }
@@ -1293,6 +1450,28 @@
 
   .topbar__actions {
     gap: 0;
+  }
+}
+
+@media (max-width: 430px) {
+  .topbar .download-btn {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .topbar #aboutBtnTop {
+    display: none;
+  }
+}
+
+@media (max-width: 330px) {
+  .star-clock__sky {
+    display: none;
+  }
+
+  .star-clock {
+    padding: 0 8px;
   }
 }
 
@@ -1333,7 +1512,234 @@
   }
 }
 
+/* --------------------------------------------------------------------------
+   Desktop update prompt: a small orbital card, not a browser alert
+   -------------------------------------------------------------------------- */
+
+.update-toast {
+  position: fixed;
+  right: 22px;
+  bottom: 24px;
+  z-index: 150;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px 12px;
+  width: min(408px, calc(100vw - 32px));
+  padding: 15px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line-2));
+  border-radius: 17px;
+  background:
+    radial-gradient(120% 160% at 0% 0%, rgba(124, 156, 255, 0.18), transparent 52%),
+    radial-gradient(120% 160% at 100% 100%, rgba(94, 234, 212, 0.09), transparent 58%),
+    color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow:
+    0 24px 70px -26px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(255, 255, 255, 0.025) inset;
+  opacity: 0;
+  transform: translateY(12px) scale(0.985);
+  transition: opacity 0.3s var(--motion-ease), transform 0.3s var(--motion-ease);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+
+.update-toast[hidden] {
+  display: none;
+}
+
+.update-toast.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.update-toast__orbit {
+  position: relative;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px dashed color-mix(in srgb, var(--accent) 48%, transparent);
+  border-radius: 50%;
+  animation: lm-clock-orbit 14s linear infinite;
+}
+
+.update-toast__orbit::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, #9fb8ff, #5069d8 60%, #28336c);
+  box-shadow: 0 0 18px rgba(124, 156, 255, 0.6);
+}
+
+.update-toast__orbit i,
+.update-toast__orbit b {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 7px rgba(94, 234, 212, 0.8);
+}
+
+.update-toast__orbit i {
+  top: 2px;
+  left: 6px;
+}
+
+.update-toast__orbit b {
+  right: 1px;
+  bottom: 8px;
+  width: 2px;
+  height: 2px;
+  background: var(--gold);
+}
+
+.update-toast__body {
+  min-width: 0;
+}
+
+.update-toast__body strong {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 560;
+}
+
+.update-toast__body strong em {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-style: normal;
+  letter-spacing: 0.03em;
+}
+
+.update-toast__body p {
+  display: -webkit-box;
+  margin: 5px 0 0;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: 11.5px;
+  line-height: 1.65;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.update-toast__foot {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.update-toast__foot > span {
+  flex: 1;
+  color: var(--text-3);
+  font-size: 9.5px;
+  line-height: 1.5;
+}
+
+.update-toast__foot b {
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-weight: 500;
+}
+
+.update-toast__later,
+.update-toast__install {
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 8px;
+  font-size: 11px;
+  transition: color 0.18s, background 0.18s, transform 0.18s;
+}
+
+.update-toast__later {
+  color: var(--text-3);
+}
+
+.update-toast__later:hover {
+  color: var(--text-2);
+  background: var(--line);
+}
+
+.update-toast__install {
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: var(--text);
+}
+
+.update-toast__install:hover {
+  background: color-mix(in srgb, var(--accent) 24%, var(--surface));
+  transform: translateY(-1px);
+}
+
+.update-toast__install:disabled {
+  cursor: wait;
+  opacity: 0.65;
+  transform: none;
+}
+
+.update-toast__progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.update-toast__progress > span {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line-2);
+}
+
+.update-toast__progress i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--teal));
+  box-shadow: 0 0 10px rgba(94, 234, 212, 0.55);
+  transition: width 0.25s;
+}
+
+.update-toast__progress i.is-error {
+  background: var(--rose, #f87171);
+}
+
+.update-toast__progress em {
+  flex: none;
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-style: normal;
+}
+
+@media (max-width: 560px) {
+  .update-toast {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+    padding: 13px;
+  }
+
+  .update-toast__foot > span {
+    font-size: 9px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .update-toast__orbit {
+    animation: none;
+  }
+
   .hero__title,
   .hero__eyebrow,
   .hero__sub,

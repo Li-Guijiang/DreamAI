@@ -270,12 +270,43 @@
     });
   }
 
+  function greetingForHour(now = new Date()) {
+    const hour = now.getHours();
+    if (hour >= 5 && hour < 9) return "早上好";
+    if (hour < 12) return "上午好";
+    if (hour < 14) return "中午好";
+    if (hour < 18) return "下午好";
+    if (hour < 23) return "晚上好";
+    return "夜深了";
+  }
+
   function setGreeting() {
-    const hour = new Date().getHours();
-    const greeting =
-      hour < 6 ? "夜深了" : hour < 11 ? "早上好" : hour < 14 ? "中午好" : hour < 18 ? "下午好" : "晚上好";
+    const greeting = greetingForHour();
     const node = $("#greetingText");
-    if (node) node.textContent = greeting;
+    if (!node) return;
+    node.textContent = greeting;
+    node.closest(".hero__title")?.setAttribute("aria-label", `${greeting}，我是 Dream。`);
+  }
+
+  function initStarClock() {
+    const clock = $("#starClock");
+    const timeNode = $("#starClockTime");
+    const dateNode = $("#starClockDate");
+    if (!clock || !timeNode || !dateNode) return;
+    const pad = (value) => String(value).padStart(2, "0");
+    const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+    const render = () => {
+      const now = new Date();
+      const hhmm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      timeNode.textContent = hhmm;
+      timeNode.dateTime = now.toISOString();
+      dateNode.textContent = `${now.getMonth() + 1}月${now.getDate()}日 · 周${weekdays[now.getDay()]}`;
+      const full = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${weekdays[now.getDay()]} ${hhmm}`;
+      clock.title = full;
+      clock.setAttribute("aria-label", `当前时间 ${full}`);
+    };
+    render();
+    window.setInterval(render, 1000);
   }
 
   // ---------------------------------------------------------------------
@@ -3474,6 +3505,7 @@ ${task}`;
     loadStorage();
     initTheme();
     setGreeting();
+    initStarClock();
     initEvents();
     initVoice();
     initDesktop();

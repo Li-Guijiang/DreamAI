@@ -1,6 +1,6 @@
 {
   "name": "dream-ai-desktop",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "description": "Dream AI desktop - local file workbench",
   "main": "electron/main.js",
@@ -14,9 +14,10 @@
     "start:local": "electron . --url=http://127.0.0.1:8787",
     "dist": "electron-builder --win nsis --x64",
     "pack": "electron-builder --dir",
-    "test": "node test/local-tools.test.js && node test/documents.test.js",
+    "test": "node test/local-tools.test.js && node test/documents.test.js && node test/update.test.js",
     "test:tools": "node test/local-tools.test.js",
-    "test:docs": "node test/documents.test.js"
+    "test:docs": "node test/documents.test.js",
+    "test:update": "node test/update.test.js"
   },
   "devDependencies": {
     "electron": "45.0.0",

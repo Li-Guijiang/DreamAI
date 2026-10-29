@@ -12,7 +12,27 @@
 
   if (!dream) return;
 
-  const greetings = ["晚上好", "你好呀", "欢迎回来", "夜深了", "一起造梦吧"];
+  const genericGreetings = ["你好呀", "欢迎回来", "一起造梦吧"];
+
+  function timeGreeting(now = new Date()) {
+    const hour = now.getHours();
+    if (hour >= 5 && hour < 9) return "早上好";
+    if (hour < 12) return "上午好";
+    if (hour < 14) return "中午好";
+    if (hour < 18) return "下午好";
+    if (hour < 23) return "晚上好";
+    return "夜深了";
+  }
+
+  function greetingWords() {
+    return [timeGreeting(), ...genericGreetings];
+  }
+
+  function syncGreetingLabel() {
+    const title = greetingNode?.closest(".hero__title");
+    if (title) title.setAttribute("aria-label", `${timeGreeting()}，我是 Dream。`);
+  }
+
   const prompts = [
     "把今晚的灵感，写成一个世界。",
     "帮我设计一个会呼吸的个人主页。",
@@ -32,22 +52,41 @@
   let terminalWriter = null;
   let activePrompt = prompts[0];
   let heroVisible = !hero?.hidden;
+  let lastDaypart = timeGreeting();
 
   function startGreeting() {
     if (!greetingNode) return;
     greetingWriter?.stop();
+    syncGreetingLabel();
     if (!dream.enabled) {
-      greetingNode.textContent = "晚上好";
+      greetingNode.textContent = timeGreeting();
       return;
     }
     greetingWriter = dream.typewriter(greetingNode, {
-      words: greetings,
+      words: greetingWords(),
       initial: "",
       typeSpeed: 135,
       eraseSpeed: 70,
       hold: 3600,
       startDelay: document.querySelector(".dream-intro") ? 1050 : 260,
       loop: true,
+    });
+  }
+
+  function watchDaypart() {
+    const refresh = () => {
+      const next = timeGreeting();
+      if (next === lastDaypart) return;
+      lastDaypart = next;
+      if (heroVisible) startGreeting();
+      else if (greetingNode) {
+        greetingNode.textContent = next;
+        syncGreetingLabel();
+      }
+    };
+    window.setInterval(refresh, 30000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) refresh();
     });
   }
 
@@ -143,6 +182,7 @@
     observeHero();
     decorateSessions();
     addCardOrnaments();
+    watchDaypart();
 
     if (heroVisible) {
       startGreeting();
@@ -158,7 +198,8 @@
       } else {
         greetingWriter?.stop();
         terminalWriter?.stop();
-        if (greetingNode) greetingNode.textContent = "晚上好";
+        if (greetingNode) greetingNode.textContent = timeGreeting();
+        syncGreetingLabel();
         if (terminalNode) terminalNode.textContent = activePrompt;
       }
     });

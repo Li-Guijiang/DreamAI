@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://liguijiang.com"><img src="https://img.shields.io/badge/在线体验-liguijiang.com-5b8cff?style=flat-square" alt="Live demo"></a>
-  <a href="https://liguijiang.com/download.html"><img src="https://img.shields.io/badge/桌面版-Windows_1.2-7c9cff?style=flat-square" alt="Desktop"></a>
+  <a href="https://liguijiang.com/download.html"><img src="https://img.shields.io/badge/桌面版-Windows_1.3-7c9cff?style=flat-square" alt="Desktop"></a>
   <a href="./docs/README.md"><img src="https://img.shields.io/badge/文档-索引-9d7cff?style=flat-square" alt="Docs"></a>
 </p>
 
@@ -59,7 +59,7 @@ Three deliverables share one design language and one set of `DREAMAI_*` conventi
 |---|---|---|---|
 | Command-line package | `python -m dream_ai` · [`dream_ai/`](./dream_ai) | `0.4.0` | Local scripts, automation, extending the core |
 | Web service | <https://liguijiang.com> · [`web/`](./web) | `2.0.0` | Open and use, nothing to install; full cosmic motion system + animated docs at `/docs.html` |
-| Windows desktop app | [Download](https://liguijiang.com/download.html) · [`desktop/`](./desktop) | `1.2.0` | Local file workbench, document generation, coding mode |
+| Windows desktop app | [Download](https://liguijiang.com/download.html) · [`desktop/`](./desktop) | `1.3.0` | Local file workbench, document generation, coding mode, in-app update |
 
 The three version numbers are independent by design, not by drift: see the [version cross-reference](./docs/README.md#3-version-cross-reference) and [ADR 0001](./docs/adr/0001-three-deliverables-one-repository.md).
 

@@ -1,11 +1,13 @@
 "use strict";
 
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require("electron");
+const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const tools = require("./local-tools");
 const documents = require("./documents");
 const agent = require("./agent");
+const updater = require("./update");
 
 // The site to load. `--url=` wins over the DREAMAI_URL environment variable so
 // `pnpm start:local` works on every platform without a cross-env shim.
@@ -95,6 +97,38 @@ function wrap(handler) {
 
 function registerIpc() {
   ipcMain.handle("desktop:version", () => app.getVersion());
+
+  ipcMain.handle(
+    "desktop:update-install",
+    wrap(async (event, rawManifest) => {
+      if (process.platform !== "win32") throw new Error("当前仅支持 Windows 自动更新");
+      const manifest = updater.parseManifest(rawManifest);
+      if (updater.compareVersions(manifest.version, app.getVersion()) <= 0) {
+        throw new Error("当前已经是最新版本");
+      }
+
+      const send = (payload) => {
+        if (!event.sender.isDestroyed()) event.sender.send("desktop:update-progress", payload);
+      };
+      const dir = await fs.promises.mkdtemp(path.join(app.getPath("temp"), "dreamai-update-"));
+      const destination = path.join(dir, manifest.file);
+      send({ phase: "download", received: 0, total: manifest.size, percent: 0 });
+      const installer = await updater.downloadInstaller(manifest, {
+        destination,
+        onProgress: send,
+      });
+
+      send({ phase: "installing", percent: 100 });
+      const child = spawn(installer, ["/S"], {
+        detached: true,
+        stdio: "ignore",
+        windowsHide: true,
+      });
+      child.unref();
+      setTimeout(() => app.quit(), 1200);
+      return { ok: true, version: manifest.version };
+    }),
+  );
 
   ipcMain.handle(
     "local:pick-folder",
