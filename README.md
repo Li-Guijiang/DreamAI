@@ -196,6 +196,9 @@ docker pull ghcr.io/li-guijiang/dream-ai:latest
 docker run -it --rm -e DREAMAI_API_KEY=your-key ghcr.io/li-guijiang/dream-ai:latest
 ```
 
+`latest` follows `main`; release tags carry the version. Tags, triggers, and how to
+confirm an image matches a commit: [docs/CONTAINER.md](./docs/CONTAINER.md).
+
 ### 6.3 Web and desktop
 
 ```bash
@@ -318,6 +321,7 @@ for file in web/web/assets/js/*.js; do node --check "$file"; done
 | [docs/GUIDE.md](./docs/GUIDE.md) | Guided walkthrough: setup, every command, common errors |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Layers, module responsibilities, data flow |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Phase tasks and acceptance criteria |
+| [docs/CONTAINER.md](./docs/CONTAINER.md) | Container image, tag scheme, build triggers |
 | [docs/SUPPORT.md](./docs/SUPPORT.md) | Self-check order and where to ask for help |
 | [web/README.md](./web/README.md) | Web features, API, deployment |
 | [desktop/README.md](./desktop/README.md) | Desktop development, packaging, security model |

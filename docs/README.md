@@ -17,6 +17,7 @@ All project documentation lives here. The repository ships three runnable forms 
 | [SETUP.md](./SETUP.md) | Local installation (Windows first, macOS / Linux notes) | Users running it locally |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Layers, module responsibilities, both data flows | Developers reading or extending the code |
 | [ROADMAP.md](./ROADMAP.md) | Phase plan, task lists, acceptance criteria | Anyone tracking progress |
+| [CONTAINER.md](./CONTAINER.md) | Image path, tag scheme, triggers, and how to verify an image is current | Anyone pulling the container |
 | [adr/](./adr/) | Architecture Decision Records: what was decided, why, what was rejected | Developers who need the trade-offs |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Branch conventions, commit format, code style, PR checklist | Contributors |
 | [SUPPORT.md](./SUPPORT.md) | Self-check order and which channel to use | All users |

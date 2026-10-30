@@ -455,7 +455,8 @@ docker run -it --rm \
   ghcr.io/li-guijiang/dream-ai:latest
 ```
 
-The image is published for both `linux/amd64` and `linux/arm64`. See the
+`latest` tracks `main`; `edge` is the same build under an explicit name, and release tags carry the
+version. The image is published for both `linux/amd64` and `linux/arm64`. See the
 [Packages page](https://github.com/Li-Guijiang/DreamAI/pkgs/container/dream-ai).
 
 ---
