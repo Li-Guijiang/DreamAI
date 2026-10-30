@@ -152,6 +152,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   orrery for `web/`, a teal dot grid for `desktop/`, warm aurora for `assets/`.
 
 ### Changed
+- Container publishing: `Publish Container` now rebuilds on every push to `main`
+  (`latest`, `edge`, `sha-<short>`) instead of release tags only, `latest` follows
+  `main`, the image path lives in a single workflow variable, and
+  `docs/CONTAINER.md` documents tags, triggers, verification, and the legacy
+  package that still appears in the repository sidebar.
 - `README.md` opens with a transparent vector hero (`assets/brand/hero.svg`),
   replacing the white-background lockup that rendered as a white box on the dark
   theme. The vector declares a five-layer, 8-second seamless animation
