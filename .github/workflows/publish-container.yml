@@ -4,8 +4,8 @@ name: Publish Container
 # (ghcr.io), which appears under the repository's Packages section.
 #
 # Triggers:
-#   1. push to main -> tags `edge` and `sha-<short>`, so the image tracks the
-#      branch instead of ageing until the next release;
+#   1. push to main -> tags `latest`, `edge` and `sha-<short>`, so `docker pull
+#      ...:latest` describes main rather than the last release tag;
 #   2. push of a `v*` tag -> semver tags plus `latest`;
 #   3. manual dispatch -> `latest` and an optional extra tag.
 #
@@ -71,7 +71,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=edge,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,prefix=sha-,format=short,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
             type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
           labels: |
             org.opencontainers.image.title=Dream AI
