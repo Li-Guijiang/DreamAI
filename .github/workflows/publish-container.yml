@@ -79,7 +79,6 @@ jobs:
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.source=https://github.com/Li-Guijiang/DreamAI
             org.opencontainers.image.url=https://github.com/Li-Guijiang/DreamAI
-            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
 
       - name: Show image reference
         run: echo "publishing ${IMAGE}:${GITHUB_REF_NAME}"
