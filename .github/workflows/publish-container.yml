@@ -32,6 +32,13 @@ permissions:
   contents: read
   packages: write   # push the image to ghcr.io
 
+env:
+  # Single source for the image path. It must stay in sync with the pull
+  # commands in README.md and docs/CONTAINER.md, and with the badge link; a
+  # mismatched name is how the repository ended up advertising one package while
+  # the sidebar showed a different, older one.
+  IMAGE: ghcr.io/${{ github.repository_owner }}/dream-ai
+
 jobs:
   container:
     name: Build and push multi-arch image
@@ -58,7 +65,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/li-guijiang/dream-ai
+          images: ${{ env.IMAGE }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -73,6 +80,9 @@ jobs:
             org.opencontainers.image.source=https://github.com/Li-Guijiang/DreamAI
             org.opencontainers.image.url=https://github.com/Li-Guijiang/DreamAI
             org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+
+      - name: Show image reference
+        run: echo "publishing ${IMAGE}:${GITHUB_REF_NAME}"
 
       - name: Build and push image
         uses: docker/build-push-action@v6
