@@ -1,11 +1,20 @@
 name: Publish Container
 
 # Builds the Dream AI image and pushes it to the GitHub Container Registry
-# (ghcr.io), which appears under the repository's Packages section. Runs on
-# every version tag and can be started manually from the Actions tab.
+# (ghcr.io), which appears under the repository's Packages section.
+#
+# Triggers:
+#   1. push to main -> tags `edge` and `sha-<short>`, so the image tracks the
+#      branch instead of ageing until the next release;
+#   2. push of a `v*` tag -> semver tags plus `latest`;
+#   3. manual dispatch -> `latest` and an optional extra tag.
+#
+# Before this ran on release tags only, so every merge between two releases left
+# the published package describing older code than the repository.
 
 on:
   push:
+    branches: [main]
     tags:
       - "v*"
   workflow_dispatch:
@@ -14,6 +23,10 @@ on:
         description: "Extra image tag to publish on manual dispatch"
         default: "latest"
         required: false
+
+concurrency:
+  group: container-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -49,7 +62,9 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=raw,value=edge,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=sha-,format=short,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
             type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
           labels: |
             org.opencontainers.image.title=Dream AI
@@ -57,6 +72,7 @@ jobs:
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.source=https://github.com/Li-Guijiang/DreamAI
             org.opencontainers.image.url=https://github.com/Li-Guijiang/DreamAI
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
 
       - name: Build and push image
         uses: docker/build-push-action@v6
