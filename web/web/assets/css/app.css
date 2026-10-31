@@ -3228,6 +3228,130 @@ body.desktop-app .canvas-panel {
   border: 0;
   background: #fff;
 }
+/* ---------- Prompt library / slash commands ---------- */
+.composer-dock {
+  position: relative;
+}
+
+.slash-menu {
+  position: absolute;
+  left: 14px;
+  bottom: calc(100% + 8px);
+  z-index: 130;
+  width: min(420px, calc(100% - 28px));
+  max-height: 260px;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.9);
+  scrollbar-width: thin;
+}
+
+.slash-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.slash-item:hover {
+  background: var(--line-2);
+}
+
+.slash-item strong {
+  font-size: 11.5px;
+  font-weight: 550;
+}
+
+.slash-item em {
+  overflow: hidden;
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: 9.5px;
+  font-style: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.prompt-list {
+  max-height: 300px;
+  margin: 14px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.prompt-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.prompt-item__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.prompt-item__body strong {
+  display: block;
+  overflow: hidden;
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.prompt-item__body em {
+  display: block;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: 9.5px;
+  font-style: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.prompt-item__use {
+  flex: none;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  color: var(--text-2);
+  font-size: 10.5px;
+}
+
+.prompt-item__use:hover {
+  background: var(--line-2);
+  color: var(--text);
+}
+
+.prompt-item__remove {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  color: var(--text-3);
+}
+
+.prompt-item__remove:hover {
+  background: var(--line-2);
+  color: var(--text);
+}
+
+.prompt-item__remove svg {
+  width: 11px;
+  height: 11px;
+}
 /* ---------- Knowledge base ---------- */
 .kb-actions {
   display: flex;

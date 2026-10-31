@@ -216,6 +216,7 @@
     <!-- ======================= Composer ======================= -->
     <div class="composer-dock">
       <div class="attach-list" id="attachList" hidden></div>
+      <div class="slash-menu" id="slashMenu" hidden></div>
       <div class="link-chip" id="linkChip" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg>
         <span id="linkChipTitle">网页</span>
@@ -236,6 +237,9 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
               <span id="docTemplateLabel">自动</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
+            </button>
+            <button class="tool" id="promptBtn" type="button" aria-label="提示词库" title="提示词库与快捷指令">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h7"/><path d="M17 5l1.5 3L22 9l-3.5 1L17 13l-1.5-3L12 9l3.5-1Z"/></svg>
             </button>
             <button class="tool" id="kbBtn" type="button" aria-label="知识库" title="本地知识库">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21Z"/><path d="M8 7h8M8 11h6"/></svg>
@@ -380,6 +384,24 @@
   </div>
   <iframe id="canvasFrame" title="预览" sandbox="allow-scripts allow-forms allow-modals" referrerpolicy="no-referrer"></iframe>
 </aside>
+<!-- ======================= Prompt library ======================= -->
+<div class="modal" id="promptModal" role="dialog" aria-modal="true" aria-labelledby="promptTitle" hidden>
+  <div class="modal__scrim" data-close></div>
+  <div class="modal__panel modal__panel--prompt">
+    <button class="modal__close" type="button" data-close aria-label="关闭">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <h2 id="promptTitle" class="panel__title">提示词库</h2>
+    <p class="key__lead">选择一条模板填入输入框；也可以把常用的要求保存成自己的提示词。</p>
+    <form class="link-form" id="promptForm">
+      <input class="text-input" id="promptInput" maxlength="200" placeholder="新增提示词，例如：用三点总结这篇文章" autocomplete="off">
+      <button class="btn btn--primary" type="submit">保存</button>
+    </form>
+    <ul class="prompt-list" id="promptList"></ul>
+    <p class="panel__note">输入 / 可以快速呼出快捷指令。</p>
+  </div>
+</div>
+
 <!-- ======================= Knowledge base ======================= -->
 <div class="modal" id="kbModal" role="dialog" aria-modal="true" aria-labelledby="kbTitle" hidden>
   <div class="modal__scrim" data-close></div>

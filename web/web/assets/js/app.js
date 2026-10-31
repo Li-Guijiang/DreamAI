@@ -9,6 +9,7 @@
   const STORE_SETTINGS = "dreamai.settings.v1";
 const STORE_MEMORY = "dreamai.memory.v1";
 const STORE_KNOWLEDGE = "dreamai.knowledge.v1";
+const STORE_PROMPTS = "dreamai.prompts.v1";
   const STORE_USER_KEY = "dreamai.userkey.v1";
   const MAX_INPUT = 12000;
   const MAX_FILES = 3;
@@ -21,6 +22,19 @@ const STORE_KNOWLEDGE = "dreamai.knowledge.v1";
     { id: "doc", label: "文档", desc: "生成 Word / Excel / PPT / PDF / Markdown" },
     { id: "code", label: "编程", desc: "直接在电脑上写代码、装依赖、把项目跑起来" },
   ];
+
+  const PROMPT_PRESETS = [
+    { id: "summarize", label: "总结要点", desc: "要点 + 行动建议", template: "请用要点总结下面的内容，并给出 3 条行动建议：\n\n" },
+    { id: "translate", label: "翻译成英文", desc: "保留原意与格式", template: "把下面的内容翻译成英文，保留原意、语气和格式：\n\n" },
+    { id: "polish", label: "润色文字", desc: "更清晰自然", template: "润色下面的文字，让它更清晰、自然，保持原意：\n\n" },
+    { id: "review", label: "代码审查", desc: "Bug / 边界 / 改进", template: "请审查下面的代码，指出 bug、边界问题和改进建议，并给出修改后的关键代码：\n\n" },
+    { id: "weekly", label: "写周报", desc: "完成 / 问题 / 计划", template: "根据下面的工作记录，写一份简洁的周报（本周完成 / 问题与风险 / 下周计划）：\n\n" },
+    { id: "explain", label: "通俗解释", desc: "概念 + 例子", template: "用通俗的语言解释这个概念，并给一个生活中的例子：\n\n" },
+    { id: "meeting", label: "整理会议纪要", desc: "结论 / 待办 / 负责人", template: "把下面的会议记录整理成纪要（结论 / 待办 / 负责人 / 时间）：\n\n" },
+    { id: "titles", label: "起标题", desc: "10 个备选标题", template: "为下面的内容起 10 个吸引人的标题，风格各不相同：\n\n" },
+  ];
+
+  let slashItems = [];
 
   const DOC_TEMPLATES = [
     { id: "auto", label: "自动", prompt: "" },
@@ -148,6 +162,7 @@ const STORE_KNOWLEDGE = "dreamai.knowledge.v1";
       useKnowledge: true,
     },
     memory: [],
+    prompts: [],
     knowledge: { docs: [] },
     kbContextForSend: null,
     userKey: "",
@@ -178,6 +193,13 @@ const STORE_KNOWLEDGE = "dreamai.knowledge.v1";
       state.memory = Array.isArray(data) ? data.filter((item) => item && item.text) : [];
     } catch {
       state.memory = [];
+    }
+    try {
+      const raw = localStorage.getItem(STORE_PROMPTS);
+      const data = raw ? JSON.parse(raw) : [];
+      state.prompts = Array.isArray(data) ? data.filter((item) => item && item.template) : [];
+    } catch {
+      state.prompts = [];
     }
     try {
       const raw = localStorage.getItem(STORE_KNOWLEDGE);
@@ -777,6 +799,112 @@ const STORE_KNOWLEDGE = "dreamai.knowledge.v1";
         submit.textContent = "读取";
       }
     }
+  }
+
+  function persistPrompts() {
+    try {
+      localStorage.setItem(STORE_PROMPTS, JSON.stringify(state.prompts.slice(0, 50)));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function allPrompts() {
+    return PROMPT_PRESETS.concat(state.prompts);
+  }
+
+  function hideSlash() {
+    const menu = $("#slashMenu");
+    if (menu) menu.hidden = true;
+    slashItems = [];
+  }
+
+  function fillPrompt(template) {
+    const input = $("#input");
+    input.value = template;
+    input.focus();
+    autoGrow();
+    updateCounter();
+    hideSlash();
+  }
+
+  function renderSlash(value) {
+    const menu = $("#slashMenu");
+    if (!menu) return;
+    if (!String(value || "").startsWith("/") || String(value).includes("\n")) {
+      hideSlash();
+      return;
+    }
+    const query = String(value).replace(/^\//, "").trim().toLowerCase();
+    const items = allPrompts().filter(
+      (item) =>
+        !query ||
+        item.label.toLowerCase().includes(query) ||
+        String(item.desc || "").toLowerCase().includes(query) ||
+        item.template.toLowerCase().includes(query),
+    );
+    if (!items.length) {
+      hideSlash();
+      return;
+    }
+    slashItems = items.slice(0, 8);
+    menu.textContent = "";
+    slashItems.forEach((item) => {
+      const button = el("button", { class: "slash-item", type: "button" }, [
+        el("strong", { text: item.label }),
+        el("em", { text: item.desc || "自定义" }),
+      ]);
+      button.addEventListener("click", () => fillPrompt(item.template));
+      menu.appendChild(button);
+    });
+    menu.hidden = false;
+  }
+
+  function renderPrompts() {
+    const list = $("#promptList");
+    if (!list) return;
+    list.textContent = "";
+    allPrompts().forEach((item) => {
+      const row = el("li", { class: "prompt-item" }, [
+        el("div", { class: "prompt-item__body" }, [
+          el("strong", { text: item.label }),
+          el("em", { text: item.desc || item.template }),
+        ]),
+      ]);
+      const use = el("button", { class: "prompt-item__use", type: "button", text: "使用" });
+      use.addEventListener("click", () => {
+        fillPrompt(item.template);
+        closeModal($("#promptModal"));
+      });
+      row.appendChild(use);
+      if (String(item.id).startsWith("p-")) {
+        const remove = el("button", { class: "prompt-item__remove", type: "button", "aria-label": "删除" }, [
+          el("span", { html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>' }),
+        ]);
+        remove.addEventListener("click", () => {
+          state.prompts = state.prompts.filter((prompt) => prompt.id !== item.id);
+          persistPrompts();
+          renderPrompts();
+        });
+        row.appendChild(remove);
+      }
+      list.appendChild(row);
+    });
+  }
+
+  function addCustomPrompt(text) {
+    const clean = String(text || "").trim();
+    if (!clean) return;
+    state.prompts.unshift({
+      id: `p-${Date.now()}`,
+      label: clean.slice(0, 24),
+      desc: clean.slice(0, 60),
+      template: clean,
+    });
+    state.prompts = state.prompts.slice(0, 50);
+    persistPrompts();
+    renderPrompts();
+    toast("已保存提示词");
   }
 
   function persistMemory() {
@@ -3173,6 +3301,15 @@ ${task}`;
       syncKnowledgeUI();
       openModal("kbModal");
     });
+    $("#promptBtn").addEventListener("click", () => {
+      renderPrompts();
+      openModal("promptModal");
+    });
+    $("#promptForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      addCustomPrompt($("#promptInput").value);
+      $("#promptInput").value = "";
+    });
     $("#kbUpload").addEventListener("click", () => $("#kbFileInput").click());
     $("#kbFileInput").addEventListener("change", (event) => {
       addKnowledgeFiles(event.target.files);
@@ -3667,8 +3804,15 @@ ${task}`;
     input.addEventListener("input", () => {
       autoGrow();
       updateCounter();
+      renderSlash(input.value);
     });
     input.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") hideSlash();
+      if (event.key === "Enter" && !event.shiftKey && !$("#slashMenu").hidden) {
+        event.preventDefault();
+        if (slashItems[0]) fillPrompt(slashItems[0].template);
+        return;
+      }
       if (event.key !== "Enter" || event.shiftKey) return;
       if (event.isComposing || event.keyCode === 229) return;
       if (isMobile()) return;
