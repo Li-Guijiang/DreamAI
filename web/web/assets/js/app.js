@@ -7,6 +7,7 @@
 
   const STORE_SESSIONS = "dreamai.sessions.v1";
   const STORE_SETTINGS = "dreamai.settings.v1";
+const STORE_MEMORY = "dreamai.memory.v1";
   const STORE_USER_KEY = "dreamai.userkey.v1";
   const MAX_INPUT = 12000;
   const MAX_FILES = 3;
@@ -99,6 +100,7 @@
     download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
     file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/>',
     open: '<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+    memory: '<path d="M6 4h9a2 2 0 0 1 2 2v14l-5.5-3.5L6 20Z"/>',
     folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
   };
 
@@ -141,7 +143,9 @@
       style: "default",
       mode: "chat",
       docTemplate: "auto",
+      useMemory: true,
     },
+    memory: [],
     userKey: "",
     attachments: [],
     search: "",
@@ -163,6 +167,13 @@
       if (raw) Object.assign(state.settings, JSON.parse(raw));
     } catch {
       /* ignore */
+    }
+    try {
+      const raw = localStorage.getItem(STORE_MEMORY);
+      const data = raw ? JSON.parse(raw) : [];
+      state.memory = Array.isArray(data) ? data.filter((item) => item && item.text) : [];
+    } catch {
+      state.memory = [];
     }
     try {
       state.userKey = localStorage.getItem(STORE_USER_KEY) || "";
@@ -546,6 +557,68 @@
     }
   }
 
+  function persistMemory() {
+    try {
+      localStorage.setItem(STORE_MEMORY, JSON.stringify(state.memory.slice(0, 50)));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function renderMemory() {
+    const list = $("#memoryList");
+    const count = $("#memoryCount");
+    if (count) count.textContent = `${state.memory.length} 条记忆`;
+    if (!list) return;
+    list.textContent = "";
+    if (!state.memory.length) {
+      list.appendChild(
+        el("li", {
+          class: "memory-list__empty",
+          text: "还没有记忆。直接说「记住：我喜欢用 TypeScript」，或在上面添加一条。",
+        }),
+      );
+      return;
+    }
+    state.memory.forEach((item) => {
+      const row = el("li", { class: "memory-item" }, [
+        el("span", { text: item.text }),
+      ]);
+      const remove = el("button", { type: "button", class: "memory-item__remove", "aria-label": "删除" }, [
+        el("span", { html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>' }),
+      ]);
+      remove.addEventListener("click", () => removeMemory(item.id));
+      row.appendChild(remove);
+      list.appendChild(row);
+    });
+  }
+
+  function syncMemoryUI() {
+    const toggle = $("#memoryToggle");
+    if (toggle) toggle.checked = Boolean(state.settings.useMemory);
+    renderMemory();
+  }
+
+  function addMemory(text) {
+    const clean = String(text || "").replace(/\s+/g, " ").trim().slice(0, 200);
+    if (!clean) return;
+    if (state.memory.some((item) => item.text === clean)) {
+      toast("这条已经在记忆里了");
+      return;
+    }
+    state.memory.unshift({ id: `m-${Date.now()}`, text: clean, ts: Date.now() });
+    state.memory = state.memory.slice(0, 50);
+    persistMemory();
+    renderMemory();
+    toast("已记住");
+  }
+
+  function removeMemory(id) {
+    state.memory = state.memory.filter((item) => item.id !== id);
+    persistMemory();
+    renderMemory();
+  }
+
   function composeUserContent(message) {
     let content = message.content || "";
     if (message.attachments && message.attachments.length) {
@@ -614,6 +687,7 @@
     main.appendChild(body);
     main.appendChild(
       el("div", { class: "msg__actions" }, [
+        actionBtn("memory", "记住", () => addMemory(message.content.slice(0, 160))),
         actionBtn("copy", "复制", async () => {
           await copyText(message.content);
           toast("已复制");
@@ -959,6 +1033,10 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
         apiKey: provider === "byok" ? state.userKey : undefined,
         temperature: temperature ?? Number(state.settings.temperature),
         maxTokens,
+        memory:
+          state.settings.useMemory && state.memory.length
+            ? state.memory.map((item) => item.text).slice(0, 20)
+            : undefined,
         thinking: false,
         style: state.settings.style,
       }),
@@ -1994,6 +2072,8 @@ ${task}`;
 
   async function sendMessage(text) {
     const typed = (text ?? $("#input").value).trim();
+    const memoryMatch = /^(?:记住|请记住|以后请记住|以后都)[：:，,\s]+([\s\S]+)$/.exec(typed);
+    if (memoryMatch) addMemory(memoryMatch[1]);
     const attachments = state.attachments.slice();
     if ((!typed && !attachments.length) || state.streaming) return;
     if (typed.length > MAX_INPUT) {
@@ -2844,6 +2924,21 @@ ${task}`;
     });
 
     $("#manageKeyBtn").addEventListener("click", () => openKeyModal());
+    $("#memoryManage").addEventListener("click", () => {
+      closeModal($("#settingsModal"));
+      openModal("memoryModal");
+    });
+    $("#memoryForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const input = $("#memoryInput");
+      addMemory(input.value);
+      input.value = "";
+    });
+    $("#memoryToggle").addEventListener("change", (event) => {
+      state.settings.useMemory = event.target.checked;
+      persistSettings();
+      toast(event.target.checked ? "已开启长期记忆" : "已关闭长期记忆");
+    });
     $("#keySave").addEventListener("click", saveUserKey);
     $("#keyClear").addEventListener("click", clearUserKey);
     $("#keyInput").addEventListener("keydown", (event) => {
@@ -3565,6 +3660,7 @@ ${task}`;
 
   function init() {
     loadStorage();
+    syncMemoryUI();
     initTheme();
     setGreeting();
     initEvents();

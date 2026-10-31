@@ -365,6 +365,24 @@
   </div>
 </div>
 
+<!-- ======================= Memory ======================= -->
+<div class="modal" id="memoryModal" role="dialog" aria-modal="true" aria-labelledby="memoryTitle" hidden>
+  <div class="modal__scrim" data-close></div>
+  <div class="modal__panel modal__panel--memory">
+    <button class="modal__close" type="button" data-close aria-label="关闭">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <h2 id="memoryTitle" class="panel__title">长期记忆</h2>
+    <p class="key__lead">Dream 会记住这些信息，并在之后的对话里自然使用。你也可以直接说「记住：……」。</p>
+    <form class="link-form" id="memoryForm">
+      <input class="text-input" id="memoryInput" maxlength="200" placeholder="例如：我是一名前端工程师，喜欢简洁的回答" autocomplete="off">
+      <button class="btn btn--primary" type="submit">添加</button>
+    </form>
+    <ul class="memory-list" id="memoryList"></ul>
+    <p class="panel__note">记忆只保存在这台设备的浏览器里；发送消息时会随请求带给模型。</p>
+  </div>
+</div>
+
 <!-- ======================= Link reader ======================= -->
 <div class="modal" id="linkModal" role="dialog" aria-modal="true" aria-labelledby="linkTitle" hidden>
   <div class="modal__scrim" data-close></div>
@@ -487,6 +505,17 @@
       </div>
     </section>
 
+    <section class="setting">
+      <h3>长期记忆</h3>
+      <div class="setting__row">
+        <div><strong>启用记忆</strong><em>偏好会随请求带给模型，不存入服务器。</em></div>
+        <label class="switch"><input type="checkbox" id="memoryToggle" checked><span class="switch__track"></span></label>
+      </div>
+      <div class="setting__row">
+        <div><strong id="memoryCount">0 条记忆</strong><em>例如：称呼、写作偏好、常用技术栈。</em></div>
+        <button class="btn btn--ghost" id="memoryManage" type="button">管理</button>
+      </div>
+    </section>
     <section class="setting">
       <h3>数据</h3>
       <div class="setting__row">
