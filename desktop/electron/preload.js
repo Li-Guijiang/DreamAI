@@ -9,20 +9,6 @@ contextBridge.exposeInMainWorld("dreamDesktop", {
   platform: process.platform,
   version: () => invoke("desktop:version"),
 
-  update: {
-    install: (manifest) => invoke("desktop:update-install", manifest),
-    onProgress: (callback) => {
-      const listener = (_event, payload) => callback(payload);
-      ipcRenderer.on("desktop:update-progress", listener);
-      return () => ipcRenderer.removeListener("desktop:update-progress", listener);
-    },
-  },
-
-  computer: {
-    home: () => invoke("computer:home"),
-    run: (command, cwd) => invoke("computer:run", { command, cwd }),
-  },
-
   pickFolder: () => invoke("local:pick-folder"),
   getWorkspace: () => invoke("local:workspace"),
   scan: () => invoke("local:scan"),
@@ -38,6 +24,8 @@ contextBridge.exposeInMainWorld("dreamDesktop", {
 
   code: {
     createProject: (name) => invoke("code:create-project", name),
+    listProjects: () => invoke("code:list-projects"),
+    stopAll: () => invoke("code:stop-all"),
     writeFiles: (root, files) => invoke("code:write-files", { root, files }),
     runCommand: (root, cmd, options) => invoke("code:run-command", { root, cmd, ...(options || {}) }),
     startServer: (root, cmd) => invoke("code:start-server", { root, cmd }),

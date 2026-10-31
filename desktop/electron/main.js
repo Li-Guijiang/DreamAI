@@ -1,22 +1,13 @@
 "use strict";
 
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require("electron");
-const { exec, spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const tools = require("./local-tools");
 const documents = require("./documents");
 const agent = require("./agent");
-const updater = require("./update");
 
-// The site to load. `--url=` wins over the DREAMAI_URL environment variable so
-// `pnpm start:local` works on every platform without a cross-env shim.
-const URL_ARG = "--url=";
-const urlArg = process.argv.find((arg) => arg.startsWith(URL_ARG));
-const APP_URL =
-  (urlArg && urlArg.slice(URL_ARG.length)) ||
-  process.env.DREAMAI_URL ||
-  "https://liguijiang.com";
+const APP_URL = process.env.DREAMAI_URL || "https://liguijiang.com";
 const PRODUCT = "Dream AI";
 
 let mainWindow = null;
@@ -97,88 +88,6 @@ function wrap(handler) {
 
 function registerIpc() {
   ipcMain.handle("desktop:version", () => app.getVersion());
-
-  ipcMain.handle("computer:home", () => app.getPath("home"));
-
-  ipcMain.handle(
-    "computer:run",
-    wrap(async (_event, payload) => {
-      const command = String(payload?.command || "").trim();
-      if (!command || command.length > 8000) throw new Error("命令为空或过长");
-      const cwd = String(payload?.cwd || "").trim() || app.getPath("home");
-      const cwdPath = path.resolve(cwd);
-      if (!fs.existsSync(cwdPath) || !fs.statSync(cwdPath).isDirectory()) {
-        throw new Error("工作目录不存在");
-      }
-      if (process.env.DREAMAI_DEV_AUTO_CONFIRM !== "1") {
-        const { response } = await dialog.showMessageBox(mainWindow, {
-          type: "warning",
-          buttons: ["取消", "允许执行"],
-          defaultId: 0,
-          cancelId: 0,
-          noLink: true,
-          title: "Dream AI · 完整电脑访问",
-          message: "允许 Dream AI 在你的电脑上执行这条命令？",
-          detail: `目录：${cwdPath}\n\n${command}\n\n完整电脑访问可能修改任意文件或系统设置；请只允许你理解的命令。`,
-        });
-        if (response !== 1) return { blocked: true };
-      }
-      return await new Promise((resolve) => {
-        exec(
-          command,
-          {
-            cwd: cwdPath,
-            shell: true,
-            windowsHide: true,
-            timeout: 120000,
-            maxBuffer: 4 * 1024 * 1024,
-            env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1" },
-          },
-          (error, stdout, stderr) => {
-            const code = error && typeof error.code === "number" ? error.code : error ? 1 : 0;
-            resolve({
-              code,
-              killed: Boolean(error && (error.killed || error.signal)),
-              stdout: String(stdout || "").slice(-60000),
-              stderr: String(stderr || "").slice(-60000),
-            });
-          },
-        );
-      });
-    }),
-  );
-
-  ipcMain.handle(
-    "desktop:update-install",
-    wrap(async (event, rawManifest) => {
-      if (process.platform !== "win32") throw new Error("当前仅支持 Windows 自动更新");
-      const manifest = updater.parseManifest(rawManifest);
-      if (updater.compareVersions(manifest.version, app.getVersion()) <= 0) {
-        throw new Error("当前已经是最新版本");
-      }
-
-      const send = (payload) => {
-        if (!event.sender.isDestroyed()) event.sender.send("desktop:update-progress", payload);
-      };
-      const dir = await fs.promises.mkdtemp(path.join(app.getPath("temp"), "dreamai-update-"));
-      const destination = path.join(dir, manifest.file);
-      send({ phase: "download", received: 0, total: manifest.size, percent: 0 });
-      const installer = await updater.downloadInstaller(manifest, {
-        destination,
-        onProgress: send,
-      });
-
-      send({ phase: "installing", percent: 100 });
-      const child = spawn(installer, ["/S"], {
-        detached: true,
-        stdio: "ignore",
-        windowsHide: true,
-      });
-      child.unref();
-      setTimeout(() => app.quit(), 1200);
-      return { ok: true, version: manifest.version };
-    }),
-  );
 
   ipcMain.handle(
     "local:pick-folder",
@@ -344,6 +253,15 @@ function registerExtraIpc() {
   });
   ipcMain.handle("win:is-maximized", () => Boolean(mainWindow?.isMaximized()));
 
+  ipcMain.handle(
+    "code:list-projects",
+    wrap(async () => {
+      const workspace = tools.getWorkspace();
+      if (!workspace) throw new Error("请先选择工作文件夹");
+      return agent.listProjects(workspace);
+    }),
+  );
+  ipcMain.handle("code:stop-all", wrap(async () => agent.stopAllServers()));
   ipcMain.handle(
     "code:create-project",
     wrap(async (_event, name) => {

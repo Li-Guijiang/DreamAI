@@ -3754,6 +3754,50 @@ body.desktop-app .canvas-panel {
   font-style: normal;
   opacity: 0.8;
 }
+/* ---------- Project manager ---------- */
+.project-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-3);
+  font-size: 10px;
+}
+
+.project-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.project-item__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.project-item__meta strong {
+  display: block;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.project-item__meta em {
+  color: var(--text-3);
+  font-size: 9px;
+  font-style: normal;
+}
+
+.project-item .btn {
+  flex: none;
+  height: 26px;
+  font-size: 10px;
+}
 /* ---------- Coding mode ---------- */
 .code-card {
   margin-top: 4px;

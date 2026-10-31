@@ -302,7 +302,67 @@ function scaffoldFiles(kind, port) {
   return [];
 }
 
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const index = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+  return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+}
+
+function listProjects(workspace) {
+  const base = projectsRoot(workspace);
+  const projects = [];
+  for (const entry of fs.readdirSync(base, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const root = path.join(base, entry.name);
+    let files = 0;
+    let size = 0;
+    const walk = (dir, depth) => {
+      if (depth > 4) return;
+      for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (item.name === "node_modules" || item.name === ".git") continue;
+        const full = path.join(dir, item.name);
+        try {
+          if (item.isDirectory()) walk(full, depth + 1);
+          else {
+            files += 1;
+            size += fs.statSync(full).size;
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+    try {
+      walk(root, 0);
+    } catch {
+      /* ignore */
+    }
+    const stat = fs.statSync(root);
+    projects.push({
+      name: entry.name,
+      path: root,
+      files,
+      size,
+      sizeLabel: formatBytes(size),
+      mtime: stat.mtimeMs,
+    });
+  }
+  return projects.sort((a, b) => b.mtime - a.mtime);
+}
+
+function stopAllServers() {
+  let stopped = 0;
+  for (const id of [...servers.keys()]) {
+    stopServer(id);
+    stopped += 1;
+  }
+  return { stopped };
+}
+
 module.exports = {
+  listProjects,
+  stopAllServers,
   scaffoldFiles,
   PROJECTS_DIR,
   assertProject,

@@ -2479,6 +2479,7 @@ ${task}`;
       session.updatedAt = now();
       persistSessions();
       agentLog("done", `项目 ${message.project.name} ${message.running ? "已运行" : "已生成"}`);
+      renderProjects();
       toast(message.running ? "项目已运行起来" : "项目已生成");
     } catch (error) {
       if (error.name === "AbortError" || controller.signal.aborted) {
@@ -3687,6 +3688,42 @@ ${task}`;
     }
   }
 
+  async function renderProjects() {
+    const host = $("#agentProjects");
+    if (!host || !desktop?.code?.listProjects) return;
+    host.textContent = "";
+    let list = [];
+    try {
+      list = await desktop.code.listProjects();
+    } catch (error) {
+      host.appendChild(el("div", { class: "agent-panel__empty", text: error.message }));
+      return;
+    }
+    if (!list.length) {
+      host.appendChild(el("div", { class: "agent-panel__empty", text: "还没有项目。在「编程」模式里描述一个项目试试。" }));
+      return;
+    }
+    const head = el("div", { class: "project-head" }, [el("span", { text: `${list.length} 个项目` })]);
+    const stopAll = el("button", { class: "link-btn", type: "button", text: "停止所有服务" });
+    stopAll.addEventListener("click", () => {
+      desktop.code.stopAll().then(() => toast("已停止所有服务")).catch((error) => toast(error.message, "err"));
+    });
+    head.appendChild(stopAll);
+    host.appendChild(head);
+    list.forEach((item) => {
+      const row = el("div", { class: "project-item" }, [
+        el("div", { class: "project-item__meta" }, [
+          el("strong", { text: item.name }),
+          el("em", { text: `${item.files} 个文件 · ${item.sizeLabel}` }),
+        ]),
+      ]);
+      const open = el("button", { class: "btn btn--ghost", type: "button", text: "打开" });
+      open.addEventListener("click", () => desktop.code.openFolder(item.path).catch((error) => toast(error.message, "err")));
+      row.appendChild(open);
+      host.appendChild(row);
+    });
+  }
+
   function updateAgentWorkspace(pathText) {
     const node = $("#agentWorkspacePath");
     if (node) node.textContent = pathText || "未选择工作文件夹";
@@ -3761,7 +3798,9 @@ ${task}`;
       $$("[data-agent-tab]").forEach((btn) => btn.classList.toggle("is-active", btn.dataset.agentTab === name));
       $("#agentActivity").hidden = name !== "activity";
       $("#agentArtifacts").hidden = name !== "artifacts";
+      $("#agentProjects").hidden = name !== "projects";
       if (name === "artifacts") refreshArtifacts();
+      if (name === "projects") renderProjects();
     };
     $$("[data-agent-tab]").forEach((btn) => {
       btn.addEventListener("click", () => showAgentTab(btn.dataset.agentTab));
