@@ -547,54 +547,6 @@ main {
   line-height: 1.8;
 }
 
-.release-note {
-  position: relative;
-  max-width: 760px;
-  margin: 26px auto 0;
-  padding: 15px 18px;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
-  border-radius: 14px;
-  background:
-    radial-gradient(90% 180% at 0% 0%, rgba(124, 156, 255, 0.12), transparent 60%),
-    rgba(255, 255, 255, 0.02);
-  text-align: left;
-}
-
-.release-note::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 2px;
-  background: linear-gradient(180deg, transparent, var(--accent), var(--teal), transparent);
-  opacity: 0.7;
-}
-
-.release-note__label {
-  display: block;
-  margin-bottom: 5px;
-  color: var(--teal);
-  font-family: var(--mono);
-  font-size: 8px;
-  letter-spacing: 0.18em;
-}
-
-.release-note strong {
-  display: block;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 540;
-}
-
-.release-note p {
-  margin: 5px 0 0;
-  color: var(--text-3);
-  font-size: 11.5px;
-  line-height: 1.75;
-}
-
 .checksum {
   padding: 16px;
   border-radius: 12px;
@@ -655,4 +607,66 @@ main {
   .foot {
     flex-direction: column;
   }
+}
+
+.timeline {
+  max-width: 820px;
+  margin: 10px auto 70px;
+}
+
+.release {
+  position: relative;
+  padding: 22px 24px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.022);
+}
+
+.release__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.release__head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.release__head span {
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
+
+.release p {
+  margin: 0 0 10px;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.release ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.9;
+}
+
+.release li {
+  margin: 3px 0;
+}
+
+.release li::marker {
+  color: var(--teal);
+}
+
+.release strong {
+  color: var(--text);
+  font-weight: 550;
 }

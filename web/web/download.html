@@ -7,21 +7,11 @@
 <meta name="description" content="下载 Dream AI Windows 桌面版：在本地整理文件、批量重命名、保存文档，与网页版共用同一个智能体。">
 <meta name="theme-color" content="#08090d">
 <meta name="color-scheme" content="dark">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Dream AI">
-<meta property="og:title" content="下载桌面版 · Dream AI">
-<meta property="og:description" content="把 Dream 装进电脑：文档生成、文件整理与编程工作台。">
-<meta property="og:url" content="https://liguijiang.com/download.html">
-<meta property="og:image" content="https://liguijiang.com/assets/img/og.png">
-<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/assets/img/favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="/assets/img/mark.svg">
-<link rel="stylesheet" href="/assets/css/download.css?v=2.0.3">
-<link rel="stylesheet" href="/assets/css/motion.css?v=2.0.0">
-<link rel="stylesheet" href="/assets/css/pages.css?v=2.0.0">
+<link rel="stylesheet" href="/assets/css/download.css?v=1.0.0">
 </head>
-<body class="page-download">
-<a class="skip-link" href="#main">跳到主要内容</a>
+<body>
 <div class="bg" aria-hidden="true">
   <span class="bg__glow bg__glow--a"></span>
   <span class="bg__glow bg__glow--b"></span>
@@ -30,135 +20,89 @@
 
 <header class="nav">
   <a class="brand" href="/">
-    <span class="brand__orbit" aria-hidden="true"></span>
     <img src="/assets/img/mark.svg" alt="" width="28" height="28">
     <span>Dream AI</span>
   </a>
   <nav class="nav__links">
     <a href="/">对话</a>
-    <a href="/docs.html">文档</a>
     <a href="/download.html" class="is-active">下载</a>
+    <a href="/changelog.html">更新日志</a>
     <a href="https://github.com/Li-Guijiang/DreamAI" target="_blank" rel="noopener">GitHub</a>
-    <button class="icon-btn motion-toggle--wide" data-motion-toggle type="button" aria-pressed="true" aria-label="暂停全站动效">
-      <svg class="motion-glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2.2"/><path d="M12 3.5c4.7 0 8.5 3.4 8.5 7.6S16.7 18.7 12 18.7 3.5 15.3 3.5 11.1 7.3 3.5 12 3.5Z"/><path d="M19 5.5 21 3.5M4.2 18.3l-1.8 1.8"/></svg>
-      <span data-motion-label>动态</span>
-    </button>
   </nav>
 </header>
 
-<main id="main">
+<main>
   <section class="hero">
-    <div class="hero__cosmos" aria-hidden="true">
-      <span class="hero__cosmos-ring hero__cosmos-ring--a"></span>
-      <span class="hero__cosmos-ring hero__cosmos-ring--b"></span>
-      <span class="hero__cosmos-dot hero__cosmos-dot--a"></span>
-      <span class="hero__cosmos-dot hero__cosmos-dot--b"></span>
-      <span class="hero__cosmos-star hero__cosmos-star--a">✦</span>
-      <span class="hero__cosmos-star hero__cosmos-star--b">✧</span>
-    </div>
-    <span class="badge"><i></i>Windows 桌面版 · <span id="dlVersion">v1.4.0</span><em>LIVE</em></span>
-    <h1>把 Dream<br><span class="grad" id="downloadTyped">装进电脑。</span><span class="type-caret" aria-hidden="true"></span></h1>
+    <span class="badge">Windows 桌面版 · <span id="dlVersion">v1.2.0</span></span>
+    <h1>把 Dream<br><span class="grad">装进电脑。</span></h1>
     <p class="hero__sub">
       同一个 Dream AI，现在能真正动手干活：生成 Word / Excel / PPT / PDF，<br>
       也能直接写代码、装依赖、把前后端项目跑起来，全部落在你选择的文件夹里。
     </p>
     <div class="hero__actions">
-      <a class="btn btn--primary" id="downloadBtn" href="/downloads/DreamAI-Setup-1.4.0.exe">
-        <span class="btn__ring" aria-hidden="true"></span>
+      <a class="btn btn--primary" id="downloadBtn" href="/downloads/DreamAI-Setup-1.2.0.exe">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10M7 9l5 5 5-5M5 19h14"/></svg>
-        <span class="download-label">下载 Windows 版</span>
+        下载 Windows 版
       </a>
       <a class="btn btn--ghost" href="/">直接使用网页版</a>
     </div>
     <p class="hero__meta">
-      Windows 10 / 11 · 64 位 · <span id="dlSize">约 123.5 MB</span> ·
-      <span id="dlDate">2026-10-29</span>
+      Windows 10 / 11 · 64 位 · <span id="dlSize">约 115 MB</span> ·
+      <span id="dlDate">2026-10-26</span>
     </p>
-    <div class="dl-stats" data-reveal>
-      <div><strong data-count="5">0</strong><span>文档格式</span></div>
-      <div><strong data-count="4">0</strong><span>工作模式</span></div>
-      <div><strong data-count="1">0</strong><span>本地工作台</span></div>
-      <div><strong class="dl-stats__infinity">∞</strong><span>灵感空间</span></div>
-    </div>
-
-    <aside class="release-note" id="releaseNote" data-reveal hidden>
-      <span class="release-note__label">LATEST RELEASE</span>
-      <strong id="releaseTitle">最新版本已发布</strong>
-      <p id="releaseNotes"></p>
-    </aside>
     <p class="hero__hint">
       macOS 与 Linux 版本在计划中。安装包未做代码签名，Windows 可能提示「未知发布者」，
       点「更多信息 → 仍要运行」即可。
     </p>
   </section>
 
-  <section class="shot" data-reveal="scale">
-    <div class="shot__aura" aria-hidden="true"></div>
-    <div class="window" data-tilt="4">
-      <span class="window__scan" aria-hidden="true"></span>
+  <section class="shot">
+    <div class="window">
       <div class="window__bar">
         <span class="dot dot--r"></span><span class="dot dot--y"></span><span class="dot dot--g"></span>
         <span class="window__title">Dream AI</span>
       </div>
       <img src="/assets/img/desktop-preview.png" alt="Dream AI 桌面版界面预览">
     </div>
-    <p class="shot__caption"><i></i>桌面版 = 对话 · 工作 · 文档 · 编程 四种模式</p>
+    <p class="shot__caption">桌面版 = 对话 · 工作 · 文档 · 编程 四种模式</p>
   </section>
 
-  <section class="formats" data-reveal>
-    <span class="section-kicker">OUTPUT / 01</span>
+  <section class="formats">
     <h2>一句话，直接拿到成品</h2>
     <p class="formats__lead">说清楚你要什么，Dream 会把结构、内容、表格和排版一起做完，保存到你的文件夹。</p>
-    <div class="format-marquee">
-      <div class="format-track">
-        <div class="format-row">
-          <span class="format format--docx"><b>DOCX</b>报告 / 会议纪要 / 方案</span>
-          <span class="format format--xlsx"><b>XLSX</b>排期 / 清单 / 数据表</span>
-          <span class="format format--pptx"><b>PPTX</b>演示大纲 / 汇报</span>
-          <span class="format format--pdf"><b>PDF</b>正式版 / 对外发送</span>
-          <span class="format format--md"><b>MD</b>笔记 / 可继续加工</span>
-        </div>
-        <div class="format-row" aria-hidden="true">
-          <span class="format format--docx"><b>DOCX</b>报告 / 会议纪要 / 方案</span>
-          <span class="format format--xlsx"><b>XLSX</b>排期 / 清单 / 数据表</span>
-          <span class="format format--pptx"><b>PPTX</b>演示大纲 / 汇报</span>
-          <span class="format format--pdf"><b>PDF</b>正式版 / 对外发送</span>
-          <span class="format format--md"><b>MD</b>笔记 / 可继续加工</span>
-        </div>
-      </div>
+    <div class="format-row">
+      <span class="format format--docx"><b>DOCX</b>报告 / 会议纪要 / 方案</span>
+      <span class="format format--xlsx"><b>XLSX</b>排期 / 清单 / 数据表</span>
+      <span class="format format--pptx"><b>PPTX</b>演示大纲 / 汇报</span>
+      <span class="format format--pdf"><b>PDF</b>正式版 / 对外发送</span>
+      <span class="format format--md"><b>MD</b>笔记 / 可继续加工</span>
     </div>
   </section>
-
-  <section class="features" data-reveal>
-    <span class="section-kicker">CAPABILITY / 02</span>
+  <section class="features">
     <h2>桌面版多了什么</h2>
     <div class="grid">
-      <article class="card" data-tilt="3" data-reveal data-reveal-delay="0">
-        <span class="card__glow" aria-hidden="true"></span>
+      <article class="card">
         <span class="card__icon card__icon--teal">
           <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
         </span>
         <h3>文档一键生成</h3>
         <p>Word、Excel、PPT、PDF、Markdown 五种格式，带标题、小节、表格和排版，直接可用。</p>
       </article>
-      <article class="card" data-tilt="3" data-reveal data-reveal-delay="70">
-        <span class="card__glow" aria-hidden="true"></span>
+      <article class="card">
         <span class="card__icon card__icon--blue">
           <svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h7"/><path d="M17 5v4M15 7h4"/></svg>
         </span>
         <h3>文件整理</h3>
         <p>按类型自动归类、统一前缀批量重命名，先预览再执行，只动你选中的文件夹。</p>
       </article>
-      <article class="card" data-tilt="3" data-reveal data-reveal-delay="140">
-        <span class="card__glow" aria-hidden="true"></span>
+      <article class="card">
         <span class="card__icon card__icon--violet">
           <svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H9l-4 3.5v-3.5H6.5A2.5 2.5 0 0 1 4 13.5Z"/></svg>
         </span>
         <h3>编程模式</h3>
         <p>说一句「做一个前后端待办清单」，它自己建项目、写代码、装依赖、把服务跑起来，报错还会自己修。</p>
       </article>
-      <article class="card" data-tilt="3" data-reveal data-reveal-delay="210">
-        <span class="card__glow" aria-hidden="true"></span>
+      <article class="card">
         <span class="card__icon card__icon--gold">
           <svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6Z"/><path d="m9 12 2 2 4-4"/></svg>
         </span>
@@ -168,29 +112,16 @@
     </div>
   </section>
 
-  <section class="code-banner" data-reveal>
-    <div class="code-banner__copy">
-      <span class="section-kicker">DESKTOP / 03</span>
-      <h2>想让 AI 直接帮你把程序写出来？</h2>
-      <p class="code-banner__lead">切到「编程」模式，描述你要的小程序，Dream 会在工作文件夹里新建项目、逐批生成代码、运行 npm 安装、启动服务并检查输出；报错了它会读日志、改代码、再跑一次，直到跑通。</p>
-      <ul class="code-banner__points">
-        <li>所有操作都发生在你选择的工作文件夹下的「Dream AI 项目」里</li>
-        <li>命令白名单 + 完整命令日志（dreamai-commands.log），危险命令会先问你再执行</li>
-        <li>服务随时可以在对话里一键停止</li>
-      </ul>
-    </div>
-    <div class="code-banner__terminal" aria-hidden="true">
-      <div class="code-banner__terminal-bar"><i></i><i></i><i></i><span>dream@local · workbench</span></div>
-      <pre><span class="c-dim">$</span> dream code <span class="c-str">"做一个待办清单"</span>
-<span class="c-dim">→</span> planning <span class="c-ok">done</span>
-<span class="c-dim">→</span> writing files <span class="c-ok">12</span>
-<span class="c-dim">→</span> npm install <span class="c-ok">done</span>
-<span class="c-dim">→</span> localhost:3000 <span class="c-ok">ready</span>
-<span class="c-dim">$</span> <i class="code-caret"></i></pre>
-    </div>
+  <section class="code-banner">
+    <h2>想让 AI 直接帮你把程序写出来？</h2>
+    <p class="code-banner__lead">切到「编程」模式，描述你要的小程序，Dream 会在工作文件夹里新建项目、逐批生成代码、运行 npm 安装、启动服务并检查输出；报错了它会读日志、改代码、再跑一次，直到跑通。</p>
+    <ul class="code-banner__points">
+      <li>所有操作都发生在你选择的工作文件夹下的「Dream AI 项目」里</li>
+      <li>命令白名单 + 完整命令日志（dreamai-commands.log），危险命令会先问你再执行</li>
+      <li>服务随时可以在对话里一键停止</li>
+    </ul>
   </section>
-  <section class="steps" data-reveal>
-    <span class="section-kicker">START / 04</span>
+  <section class="steps">
     <h2>三步开始</h2>
     <ol>
       <li><strong>下载并安装</strong><span>运行 DreamAI-Setup 安装包，按提示完成安装。</span></li>
@@ -199,8 +130,7 @@
     </ol>
   </section>
 
-  <section class="faq" data-reveal>
-    <span class="section-kicker">FAQ / 05</span>
+  <section class="faq">
     <h2>常见问题</h2>
     <details>
       <summary>编程模式需要什么环境？</summary>
@@ -236,24 +166,21 @@
     </details>
   </section>
 
-  <section class="checksum" data-reveal>
-    <p><i></i>文件校验（SHA-256）</p>
+  <section class="checksum">
+    <p>文件校验（SHA-256）</p>
     <code id="dlSha">构建后自动更新</code>
   </section>
 </main>
 
 <footer class="foot">
-  <span>Dream AI · 由李贵江独立研发</span>
+  <span>Dream AI · 由李贵江等人组成的团队开发</span>
   <span class="foot__links">
     <a href="/">对话</a>
-    <a href="/docs.html">文档</a>
     <a href="https://github.com/Li-Guijiang/DreamAI" target="_blank" rel="noopener">GitHub</a>
-    <a href="https://github.com/Li-Guijiang" target="_blank" rel="noopener">联系</a>
+    <a href="mailto:599575094@qq.com">联系</a>
   </span>
 </footer>
 
-<script src="/assets/js/motion.js?v=2.0.0" defer></script>
-<script src="/assets/js/download-motion.js?v=2.0.0" defer></script>
-<script src="/assets/js/download.js?v=2.0.3" defer></script>
+<script src="/assets/js/download.js?v=1.0.0" defer></script>
 </body>
 </html>
