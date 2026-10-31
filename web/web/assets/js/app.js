@@ -8,7 +8,6 @@
   const STORE_SESSIONS = "dreamai.sessions.v1";
   const STORE_SETTINGS = "dreamai.settings.v1";
   const STORE_USER_KEY = "dreamai.userkey.v1";
-  const STORE_USER_KEYS = "dreamai.userkeys.v1";
   const MAX_INPUT = 12000;
   const MAX_FILES = 3;
   const MAX_FILE_CHARS = 20000;
@@ -19,11 +18,6 @@
     { id: "work", label: "工作", desc: "拆解任务，逐步执行并汇总（更慢）" },
     { id: "doc", label: "文档", desc: "生成 Word / Excel / PPT / PDF / Markdown" },
     { id: "code", label: "编程", desc: "直接在电脑上写代码、装依赖、把项目跑起来" },
-    {
-      id: "computer",
-      label: "电脑",
-      desc: "完整电脑访问：在任意目录执行命令，每条命令都要你确认",
-    },
   ];
 
   const DOC_TEMPLATES = [
@@ -136,12 +130,12 @@
     config: null,
     sessions: [],
     activeId: null,
+    linkContext: null,
     settings: {
       theme: "dark",
       size: "md",
       model: null,
       provider: "free",
-      providerId: "deepseek",
       temperature: 0.7,
       thinking: false,
       style: "default",
@@ -149,8 +143,6 @@
       docTemplate: "auto",
     },
     userKey: "",
-    userKeys: {},
-    computerConsent: false,
     attachments: [],
     search: "",
     streaming: false,
@@ -172,32 +164,15 @@
     } catch {
       /* ignore */
     }
-    state.userKeys = {};
     try {
-      const raw = localStorage.getItem(STORE_USER_KEYS);
-      const saved = raw ? JSON.parse(raw) : null;
-      if (saved && typeof saved === "object" && !Array.isArray(saved)) {
-        for (const [providerId, key] of Object.entries(saved)) {
-          if (typeof key === "string" && key.trim()) {
-            state.userKeys[providerId] = key.trim();
-          }
-        }
-      }
-      const legacy = localStorage.getItem(STORE_USER_KEY) || "";
-      if (legacy && !state.userKeys.deepseek) state.userKeys.deepseek = legacy;
+      state.userKey = localStorage.getItem(STORE_USER_KEY) || "";
     } catch {
-      state.userKeys = {};
+      state.userKey = "";
     }
-    if (typeof state.settings.providerId !== "string" || !state.settings.providerId) {
-      state.settings.providerId = "deepseek";
-    }
-    state.userKey = state.userKeys[state.settings.providerId] || "";
     if (!["dark", "light", "system"].includes(state.settings.theme)) state.settings.theme = "dark";
     if (!["sm", "md", "lg"].includes(state.settings.size)) state.settings.size = "md";
     if (!["free", "byok"].includes(state.settings.provider)) state.settings.provider = "free";
-    if (!["chat", "work", "doc", "code", "computer"].includes(state.settings.mode)) {
-      state.settings.mode = "chat";
-    }
+    if (!["chat", "work", "doc"].includes(state.settings.mode)) state.settings.mode = "chat";
     if (!DOC_TEMPLATES.some((t) => t.id === state.settings.docTemplate)) state.settings.docTemplate = "auto";
     if (!STYLES.some((s) => s.id === state.settings.style)) state.settings.style = "default";
     state.sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
@@ -226,9 +201,6 @@
             error: m.error || undefined,
             model: m.model || "",
             provider: m.provider || undefined,
-            providerId: m.providerId || undefined,
-            trace: m.trace ? m.trace.slice(-40) : undefined,
-            traceOpen: m.traceOpen || undefined,
             document: m.document || undefined,
             project: m.project || undefined,
             files: m.files ? m.files.slice(0, 80) : undefined,
@@ -299,43 +271,12 @@
     });
   }
 
-  function greetingForHour(now = new Date()) {
-    const hour = now.getHours();
-    if (hour >= 5 && hour < 9) return "早上好";
-    if (hour < 12) return "上午好";
-    if (hour < 14) return "中午好";
-    if (hour < 18) return "下午好";
-    if (hour < 23) return "晚上好";
-    return "夜深了";
-  }
-
   function setGreeting() {
-    const greeting = greetingForHour();
+    const hour = new Date().getHours();
+    const greeting =
+      hour < 6 ? "夜深了" : hour < 11 ? "早上好" : hour < 14 ? "中午好" : hour < 18 ? "下午好" : "晚上好";
     const node = $("#greetingText");
-    if (!node) return;
-    node.textContent = greeting;
-    node.closest(".hero__title")?.setAttribute("aria-label", `${greeting}，我是 Dream。`);
-  }
-
-  function initStarClock() {
-    const clock = $("#starClock");
-    const timeNode = $("#starClockTime");
-    const dateNode = $("#starClockDate");
-    if (!clock || !timeNode || !dateNode) return;
-    const pad = (value) => String(value).padStart(2, "0");
-    const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
-    const render = () => {
-      const now = new Date();
-      const hhmm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-      timeNode.textContent = hhmm;
-      timeNode.dateTime = now.toISOString();
-      dateNode.textContent = `${now.getMonth() + 1}月${now.getDate()}日 · 周${weekdays[now.getDay()]}`;
-      const full = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${weekdays[now.getDay()]} ${hhmm}`;
-      clock.title = full;
-      clock.setAttribute("aria-label", `当前时间 ${full}`);
-    };
-    render();
-    window.setInterval(render, 1000);
+    if (node) node.textContent = greeting;
   }
 
   // ---------------------------------------------------------------------
@@ -535,6 +476,76 @@
     return row;
   }
 
+  function linkRow(link) {
+    let host = "";
+    try {
+      host = new URL(link.url).hostname;
+    } catch {
+      host = "";
+    }
+    return el("div", { class: "link-ref", title: link.url }, [
+      el("span", {
+        html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg>',
+      }),
+      el("span", { text: link.title || link.url }),
+      host ? el("em", { text: host }) : null,
+    ]);
+  }
+
+  function renderLinkChip() {
+    const chip = $("#linkChip");
+    if (!chip) return;
+    if (!state.linkContext) {
+      chip.hidden = true;
+      return;
+    }
+    chip.hidden = false;
+    chip.title = state.linkContext.url;
+    const title = $("#linkChipTitle");
+    if (title) title.textContent = state.linkContext.title || state.linkContext.url;
+  }
+
+  function clearLinkContext() {
+    state.linkContext = null;
+    renderLinkChip();
+  }
+
+  async function readLink(url) {
+    const errorBox = $("#linkError");
+    const submit = $("#linkSubmit");
+    if (errorBox) errorBox.hidden = true;
+    if (submit) {
+      submit.disabled = true;
+      submit.textContent = "读取中…";
+    }
+    try {
+      const response = await fetch(`/api/read?url=${encodeURIComponent(url)}`, {
+        headers: { Accept: "application/json" },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `读取失败（${response.status}）`);
+      state.linkContext = {
+        url: data.url,
+        title: data.title || data.url,
+        text: data.text || "",
+        chars: data.chars || 0,
+      };
+      renderLinkChip();
+      closeModal($("#linkModal"));
+      toast(`已读取：${state.linkContext.title}`);
+    } catch (error) {
+      if (errorBox) {
+        errorBox.textContent = error.message;
+        errorBox.hidden = false;
+      }
+    } finally {
+      if (submit) {
+        submit.disabled = false;
+        submit.textContent = "读取";
+      }
+    }
+  }
+
   function composeUserContent(message) {
     let content = message.content || "";
     if (message.attachments && message.attachments.length) {
@@ -542,6 +553,10 @@
         (file) => `【附件：${file.name}】\n${file.text}\n【附件结束】`,
       );
       content = (content ? content + "\n\n" : "") + blocks.join("\n\n");
+    }
+    if (message.link) {
+      const link = message.link;
+      content += `${content ? "\n\n" : ""}【网页：${link.title || link.url}】\n${link.url}\n${link.text || ""}`;
     }
     return content.trim();
   }
@@ -569,6 +584,7 @@
       const main = el("div", { class: "msg__main" });
       if (message.content) main.appendChild(el("div", { class: "msg__bubble", text: message.content }));
       if (message.attachments && message.attachments.length) main.appendChild(filesRow(message.attachments));
+      if (message.link) main.appendChild(linkRow(message.link));
 
       const actions = el("div", { class: "msg__actions" });
       if (message.content) actions.appendChild(actionBtn("edit", "编辑", () => startEdit(index)));
@@ -642,7 +658,7 @@
   function buildModeMenu() {
     const menu = $("#modeMenu");
     menu.textContent = "";
-    MODES.filter((mode) => mode.id !== "computer" || desktop?.computer).forEach((mode) => {
+    MODES.forEach((mode) => {
       const item = el("button", {
         class: `menu__item${state.settings.mode === mode.id ? " is-active" : ""}`,
         type: "button",
@@ -698,19 +714,6 @@
   }
 
   function setMode(id) {
-    if (id === "computer") {
-      if (!desktop?.computer) {
-        toast("完整电脑访问需要 Dream AI 桌面版 1.4.0 或更新版本", "err");
-        return;
-      }
-      if (!state.computerConsent) {
-        openComputerConsent().then((allowed) => {
-          if (allowed) setMode("computer");
-          else updateModeUI();
-        });
-        return;
-      }
-    }
     state.settings.mode = id;
     persistSettings();
     updateModeUI();
@@ -721,9 +724,7 @@
           ? "已切换到文档模式：可生成 Word / Excel / PPT / PDF"
           : id === "code"
             ? "已切换到编程模式：直接在你的电脑上写代码并运行"
-            : id === "computer"
-              ? "已授权完整电脑访问：每条命令都会再次确认"
-              : "已切换到对话模式",
+            : "已切换到对话模式",
     );
     if (!isMobile()) $("#input").focus({ preventScroll: true });
   }
@@ -733,38 +734,25 @@
     const work = mode === "work";
     const doc = mode === "doc";
     const code = mode === "code";
-    const computer = mode === "computer";
-    $("#modeLabel").textContent = work
-      ? "工作"
-      : doc
-        ? "文档"
-        : code
-          ? "编程"
-          : computer
-            ? "电脑"
-            : "对话";
-    $("#modeBtn").classList.toggle("is-work", work || doc || code || computer);
+    $("#modeLabel").textContent = work ? "工作" : doc ? "文档" : code ? "编程" : "对话";
+    $("#modeBtn").classList.toggle("is-work", work || doc || code);
     const template = DOC_TEMPLATES.find((item) => item.id === state.settings.docTemplate) || DOC_TEMPLATES[0];
     $("#input").placeholder = doc
       ? "描述要生成的文档，例如：产品发布会会议纪要……"
       : code
         ? "描述要开发的小程序，例如：做一个前后端分离的待办清单……"
-        : computer
-          ? "描述要在这台电脑上完成的任务，例如：整理下载目录并生成报告……"
-          : work
-            ? "描述一个任务，Dream 会拆解成步骤逐步完成……"
-            : "给 Dream AI 发送消息……";
+        : work
+          ? "描述一个任务，Dream 会拆解成步骤逐步完成……"
+          : "给 Dream AI 发送消息……";
     const hint = $(".hint");
     if (hint) {
       hint.textContent = doc
         ? `文档模式会生成文件到工作文件夹 · 当前模板：${template.label}`
         : code
           ? "编程模式会直接写代码、装依赖、启动服务，命令会记录到项目里的 dreamai-commands.log"
-          : computer
-            ? "完整电脑访问 · 每条命令都会请求确认 · 可随时停止"
-            : work
-              ? "工作模式会分多步执行，耗时更长 · Enter 发送"
-              : "Enter 发送 · Shift + Enter 换行 · 可拖入 txt / md 文件";
+          : work
+            ? "工作模式会分多步执行，耗时更长 · Enter 发送"
+            : "Enter 发送 · Shift + Enter 换行 · 可拖入 txt / md 文件";
     }
     const docBtn = $("#docTemplateBtn");
     if (docBtn) {
@@ -968,12 +956,7 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
         messages,
         model: state.settings.model || state.config?.defaultModel,
         provider,
-        providerId:
-          provider === "byok" ? state.settings.providerId || "deepseek" : undefined,
-        apiKey:
-          provider === "byok"
-            ? state.userKeys[state.settings.providerId || "deepseek"] || state.userKey
-            : undefined,
+        apiKey: provider === "byok" ? state.userKey : undefined,
         temperature: temperature ?? Number(state.settings.temperature),
         maxTokens,
         thinking: false,
@@ -1403,13 +1386,6 @@ ${task}`;
 
   function codeStatusLabel(message) {
     if (message.error) return message.error.slice(0, 60);
-    if (message.computer) {
-      if (message.status === "planning") return "正在分析任务…";
-      if (message.status === "running") return "正在执行命令…";
-      if (message.status === "done") return "已完成";
-      if (message.status === "stopped") return "已停止";
-      return "执行出错";
-    }
     return (CODE_STATUS[message.status] || CODE_STATUS.error).label;
   }
 
@@ -1420,99 +1396,11 @@ ${task}`;
     if (message.log.length > 80000) message.log = message.log.slice(-80000);
   }
 
-  const TRACE_LABELS = {
-    think: "思考",
-    plan: "规划",
-    edit: "编辑",
-    command: "运行命令",
-    observe: "观察",
-    tool: "工具",
-    info: "信息",
-    done: "完成",
-    error: "错误",
-  };
-
-  function tracePush(message, kind, title, detail = "", status = "done", extra = {}) {
-    if (!message.trace) message.trace = [];
-    const event = {
-      kind,
-      title,
-      detail: String(detail || "").slice(0, 6000),
-      status,
-      ts: Date.now(),
-      ...extra,
-    };
-    message.trace.push(event);
-    message.traceOpen = true;
-    return event;
-  }
-
-  function traceBlock(message) {
-    const details = el("details", { class: "agent-trace" });
-    details.open = message.traceOpen !== false;
-    details.addEventListener("toggle", () => {
-      message.traceOpen = details.open;
-    });
-    details.appendChild(
-      el("summary", { class: "agent-trace__summary" }, [
-        el("span", { class: "agent-trace__spark", html: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/></svg>' }),
-        el("span", { class: "agent-trace__label", text: "执行轨迹" }),
-        el("span", { class: "agent-trace__count", text: `${(message.trace || []).length} 步` }),
-        el("span", { class: "agent-trace__chev", html: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>' }),
-      ]),
-    );
-    const list = el("ol", { class: "agent-trace__list" });
-    (message.trace || []).forEach((event, eventIndex) => {
-      const item = el("li", {
-        class: `agent-trace__item is-${event.kind} is-${event.status || "done"}`,
-      });
-      item.appendChild(el("span", { class: "agent-trace__dot" }));
-      const body = el("div", { class: "agent-trace__body" });
-      const time = new Date(event.ts || Date.now()).toLocaleTimeString("zh-CN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-      body.appendChild(
-        el("div", { class: "agent-trace__head" }, [
-          el("span", { class: "agent-trace__kind", text: TRACE_LABELS[event.kind] || "动作" }),
-          el("strong", { text: event.title || "" }),
-          event.status === "running" ? el("span", { class: "agent-trace__state", text: "进行中" }) : null,
-          event.status === "error" ? el("span", { class: "agent-trace__state is-error", text: "失败" }) : null,
-          el("time", { text: time }),
-        ]),
-      );
-      if (event.detail) body.appendChild(el("p", { class: "agent-trace__detail", text: event.detail }));
-      if (event.files && event.files.length) {
-        const files = el("div", { class: "agent-trace__files" });
-        event.files.slice(0, 20).forEach((file) => {
-          files.appendChild(el("span", { text: file.path + (file.meta ? ` · ${file.meta}` : "") }));
-        });
-        body.appendChild(files);
-      }
-      if (event.output) {
-        const output = el("details", { class: "agent-trace__output" });
-        output.appendChild(el("summary", { text: `命令输出${event.exitCode != null ? ` · exit ${event.exitCode}` : ""}` }));
-        output.appendChild(el("pre", { text: String(event.output).slice(-5000) }));
-        body.appendChild(output);
-      }
-      item.appendChild(body);
-      list.appendChild(item);
-    });
-    details.appendChild(list);
-    return details;
-  }
-
   function codeMessageNode(message, index) {
-    const status = message.computer
-      ? {
-          label: codeStatusLabel(message),
-          busy: ["planning", "running"].includes(message.status),
-        }
-      : CODE_STATUS[message.status] || CODE_STATUS.error;
+    const status = CODE_STATUS[message.status] || CODE_STATUS.error;
     const head = el("div", { class: "msg__head" }, [
       el("strong", { text: "Dream AI" }),
-      el("span", { class: "tag", text: message.computer ? "全权模式" : "编程模式" }),
+      el("span", { class: "tag", text: "编程模式" }),
       message.model ? el("span", { class: "tag", text: modelLabel(message.model, message.provider) }) : null,
       el("span", { text: timeLabel(message.ts) }),
     ]);
@@ -1532,17 +1420,6 @@ ${task}`;
           el("span", { text: `· 端口 ${message.project.port || "—"}` }),
         ]),
       );
-    }
-
-    if (message.trace && message.trace.length) {
-      card.appendChild(traceBlock(message));
-    }
-
-    if (message.final && message.computer) {
-      const final = el("div", { class: "work__final md" });
-      final.innerHTML = markdown(message.final);
-      decorate(final);
-      card.appendChild(final);
     }
 
     if (message.files && message.files.length) {
@@ -1605,27 +1482,11 @@ ${task}`;
       });
       actions.appendChild(stop);
     }
-    if (message.project) {
-      const copy = actionBtn("copy", "复制路径", async () => {
-        await copyText(message.project.root || "");
-        toast("路径已复制");
-      });
-      actions.appendChild(copy);
-    }
-    if (message.computer) {
-      actions.appendChild(
-        actionBtn("copy", "复制执行轨迹", async () => {
-          const lines = (message.trace || []).map(
-            (event) =>
-              `[${TRACE_LABELS[event.kind] || event.kind}] ${event.title}${
-                event.detail ? `\n${event.detail}` : ""
-              }${event.output ? `\n${event.output}` : ""}`,
-          );
-          await copyText(lines.join("\n\n"));
-          toast("执行轨迹已复制");
-        }),
-      );
-    }
+    const copy = actionBtn("copy", "复制路径", async () => {
+      await copyText(message.project?.root || "");
+      toast("路径已复制");
+    });
+    actions.appendChild(copy);
     card.appendChild(actions);
 
     const main = el("div", { class: "msg__main" }, [head, card]);
@@ -1788,12 +1649,6 @@ ${task}`;
 
   async function codeFixLoop(message, task, plan, project, cmd, result, controller) {
     agentLog("tool", "读取报错，让模型修复");
-    tracePush(
-      message,
-      "think",
-      "读取报错并制定修复方案",
-      `命令：${cmd}\n退出码：${result.code}\n${String(result.stderr || result.stdout || "").slice(-1200)}`,
-    );
     appendCodeLog(message, "\n[报错] 让模型修复…\n");
     const raw = await callModel([{ role: "user", content: codeFixPrompt(task, plan, cmd, result) }], {
       signal: controller.signal,
@@ -1806,12 +1661,6 @@ ${task}`;
       const written = await desktop.code.writeFiles(project.root, files);
       appendCodeLog(message, `修复写入 ${written.written.length} 个文件\n`);
       message.files = [...new Set([...(message.files || []), ...written.written.map((w) => w.path)])];
-      tracePush(message, "edit", `修复写入 ${written.written.length} 个文件`, "根据错误输出修补项目文件。", "done", {
-        files: written.written.map((file) => ({
-          path: file.path,
-          meta: `${Math.max(1, String(files.find((item) => item.path === file.path)?.content || "").split("\n").length)} 行`,
-        })),
-      });
       agentLog("tool", `修复写入 ${written.written.length} 个文件`);
     } else {
       appendCodeLog(message, "模型认为无需改文件，直接重试\n");
@@ -1819,14 +1668,6 @@ ${task}`;
     appendCodeLog(message, `$ ${cmd}\n`);
     const retry = await desktop.code.runCommand(project.root, cmd, { auto: true, timeoutMs: 300000 });
     appendCodeLog(message, `${retry.stdout || ""}${retry.stderr || ""}\n[exit ${retry.code}]\n`);
-    tracePush(
-      message,
-      retry.code === 0 ? "command" : "error",
-      `修复后重试：${cmd}`,
-      project.root,
-      retry.code === 0 ? "done" : "error",
-      { output: `${retry.stdout || ""}${retry.stderr || ""}`, exitCode: retry.code },
-    );
     return retry;
   }
 
@@ -1852,7 +1693,6 @@ ${task}`;
       status: "planning",
       title: "正在规划项目…",
       files: [],
-      trace: [],
       buildLog: "",
       log: "",
       project: null,
@@ -1865,16 +1705,11 @@ ${task}`;
       node.replaceWith(fresh);
       node = fresh;
     };
-    const trace = (kind, title, detail = "", status = "done", extra = {}) => {
-      tracePush(message, kind, title, detail, status, extra);
-      repaint();
-    };
 
     setStreaming(true);
     state.follow = true;
     setAgentState("写代码中", true);
     agentLog("step", `开始开发：${task.slice(0, 42)}`);
-    trace("think", "分析开发目标", task, "done");
     scrollToBottom(true);
 
     const controller = new AbortController();
@@ -1895,36 +1730,16 @@ ${task}`;
       message.title = `${plan.name} · ${plan.description || ""}`;
       message.spec = plan;
       message.status = "writing";
-      trace(
-        "plan",
-        "生成实施计划",
-        [
-          plan.description || "生成可运行的最小项目",
-          `技术栈：${plan.stack || "Node.js"}`,
-          `文件：${plan.files.map((file) => file.path).join("、")}`,
-          `启动：${plan.run || "npm run dev"}`,
-        ].join("\n"),
-      );
+      repaint();
       agentLog("step", `规划完成：${plan.files.length} 个文件 · ${plan.stack || "Node.js"}`);
 
       // 2. create project
       const project = await desktop.code.createProject(plan.name);
       message.project = { root: project.root, name: project.name, port: Number(plan.port) || 3000 };
-      trace("tool", "创建项目目录", project.root);
       agentLog("tool", `创建项目：${project.name}`);
 
       const nodeProbe = await desktop.code.runCommand(project.root, "node -v", { auto: true, timeoutMs: 15000 });
       appendCodeLog(message, `Node: ${(nodeProbe.stdout || "").trim() || "未检测到"}\n`);
-      trace(
-        nodeProbe.code === 0 ? "command" : "error",
-        "检查 Node.js 环境",
-        project.root,
-        nodeProbe.code === 0 ? "done" : "error",
-        {
-          output: `${nodeProbe.stdout || ""}${nodeProbe.stderr || ""}`,
-          exitCode: nodeProbe.code,
-        },
-      );
       if (nodeProbe.code !== 0) {
         throw new Error("未检测到 Node.js，请先安装 Node.js 20+（https://nodejs.org）后重试");
       }
@@ -1970,13 +1785,8 @@ ${task}`;
         const result = await desktop.code.writeFiles(project.root, files);
         message.files = [...new Set([...(message.files || []), ...result.written.map((w) => w.path)])];
         appendCodeLog(message, `写入 ${result.written.length} 个文件：${result.written.map((w) => w.path).join(", ")}\n`);
-        trace("edit", `写入 ${result.written.length} 个文件`, "文件已写入项目目录；可在下方文件树查看。", "done", {
-          files: result.written.map((file) => ({
-            path: file.path,
-            meta: `${Math.max(1, String(files.find((item) => item.path === file.path)?.content || "").split("\n").length)} 行 · ${(file.size / 1024).toFixed(1)} KB`,
-          })),
-        });
         agentLog("tool", `写入 ${result.written.length} 个文件`);
+        repaint();
       }
 
       // 4. setup commands
@@ -2007,20 +1817,10 @@ ${task}`;
         let result = await desktop.code.runCommand(project.root, cmd, { auto: true, timeoutMs: 300000 });
         if (result.blocked) {
           appendCodeLog(message, "（命令未获批准，跳过）\n");
-          trace("command", cmd, "命令未获批准，已跳过。", "error", { output: "", exitCode: null });
           continue;
         }
         appendCodeLog(message, `${result.stdout || ""}${result.stderr || ""}\n[exit ${result.code}]\n`);
-        trace(
-          result.code === 0 ? "command" : "error",
-          cmd,
-          project.root,
-          result.code === 0 ? "done" : "error",
-          {
-            output: `${result.stdout || ""}${result.stderr || ""}`,
-            exitCode: result.code,
-          },
-        );
+        repaint();
         if (result.code !== 0) {
           message.status = "fixing";
           repaint();
@@ -2035,7 +1835,6 @@ ${task}`;
       message.status = "running";
       repaint();
       const runCmd = plan.run || "npm run dev";
-      trace("tool", "启动本地服务", `${runCmd}\n${project.root}`, "running");
       const started = await desktop.code.startServer(project.root, runCmd);
       if (started.blocked) {
         message.status = "paused";
@@ -2087,11 +1886,7 @@ ${task}`;
       }
 
       message.status = message.running ? "done" : message.status === "paused" ? "paused" : "done";
-      trace(
-        "done",
-        message.running ? "项目已运行" : "项目已生成",
-        message.running && message.url ? `打开 ${message.url}\n目录：${message.project.root}` : `目录：${message.project.root}`,
-      );
+      repaint();
       session.messages.push(message);
       session.updatedAt = now();
       persistSessions();
@@ -2106,7 +1901,6 @@ ${task}`;
       } else {
         message.status = "error";
         message.error = error.message || "开发失败，请重试";
-        trace("error", "任务中止", message.error, "error");
         agentLog("error", message.error);
         toast(message.error, "err");
       }
@@ -2121,179 +1915,6 @@ ${task}`;
       scrollToBottom();
     }
   }
-  function computerPrompt(task, observations, home) {
-    const history = observations
-      .slice(-5)
-      .map(
-        (item, index) =>
-          `第 ${index + 1} 步\n命令：${item.command}\n目录：${item.cwd}\n退出码：${item.code}\n输出：\n${String(item.output || "").slice(-4000)}`,
-      )
-      .join("\n\n");
-    return `你是 Dream AI 的完整电脑控制智能体，运行在用户的 Windows 电脑上。你可以在任意目录执行真实命令。
-每一轮只做一个动作，只输出严格 JSON，不要 Markdown 代码块，不要额外解释：
-{"thought":"这一步要做什么，一句话","command":"要执行的完整命令，可以为空","cwd":"执行目录，例如 C:\\\\Users\\\\...","final":"任务完成时给用户的最终答复，否则为空"}
-
-规则：
-- 一次只做一件事，先观察上一步输出再决定下一步；不要重复执行已经失败且没有变化的命令。
-- 命令会由用户在系统弹窗中逐条确认，你可以被拒绝；被拒绝后立即停止并说明。
-- 修改文件前先读取并确认目标；不要执行 format、diskpart、清除磁盘、关闭系统等破坏性命令，除非用户明确要求并且命令已经具体到可审查。
-- 命令默认使用 PowerShell；复杂脚本写成单行可执行命令。
-- 不要要求用户自己复制命令，能执行就自己提出执行。
-- 当前用户主目录：${home}
-- 最多执行 8 步；任务完成或无法继续时用 final 结束。
-
-用户任务：
-${task}
-
-已执行记录：
-${history || "（还没有执行任何命令）"}`;
-  }
-
-  async function runComputerTask(session, userMessage) {
-    if (!desktop?.computer) {
-      toast("完整电脑访问需要桌面版 1.4.0 或更新版本", "err");
-      return;
-    }
-    const task = composeUserContent(userMessage);
-    const home = await desktop.computer.home();
-    const message = {
-      role: "assistant",
-      kind: "code",
-      computer: true,
-      ts: now(),
-      model: state.settings.model,
-      provider: state.settings.provider,
-      providerId: state.settings.providerId,
-      status: "planning",
-      title: `电脑任务 · ${task.slice(0, 36)}`,
-      trace: [],
-      final: "",
-      buildLog: "",
-      log: "",
-      project: null,
-    };
-    let node = codeMessageNode(message, session.messages.length);
-    $("#chat").appendChild(node);
-    const repaint = () => {
-      const fresh = codeMessageNode(message, session.messages.length);
-      node.replaceWith(fresh);
-      node = fresh;
-    };
-    const trace = (kind, title, detail = "", status = "done", extra = {}) => {
-      const event = tracePush(message, kind, title, detail, status, extra);
-      repaint();
-      return event;
-    };
-
-    setStreaming(true);
-    state.follow = true;
-    setAgentState("电脑控制中", true);
-    agentLog("step", `完整电脑访问：${task.slice(0, 42)}`);
-    trace("think", "分析任务", task, "done");
-    scrollToBottom(true);
-
-    const controller = new AbortController();
-    state.abort = controller;
-    const observations = [];
-    try {
-      for (let step = 0; step < 8; step += 1) {
-        if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
-        const raw = await callModel(
-          [{ role: "user", content: computerPrompt(task, observations, home) }],
-          {
-            signal: controller.signal,
-            temperature: 0.2,
-            maxTokens: 1200,
-            timeoutMs: 120000,
-          },
-        );
-        const action = parseJsonObject(raw);
-        if (!action || typeof action !== "object") {
-          throw new Error("模型没有返回可执行的动作，请重试");
-        }
-        const thought = String(action.thought || "分析下一步").slice(0, 1200);
-        message.status = "running";
-        trace("think", `第 ${step + 1} 步 · 思考`, thought, "done");
-
-        const finalText = String(action.final || "").trim();
-        const command = String(action.command || "").trim();
-        if (finalText || !command) {
-          message.final = finalText || "任务已结束。";
-          message.status = "done";
-          trace("done", "任务完成", message.final);
-          break;
-        }
-
-        const cwd = String(action.cwd || home).trim() || home;
-        const commandEvent = trace(
-          "command",
-          command.split("\n")[0].slice(0, 160),
-          cwd,
-          "running",
-          { output: "" },
-        );
-        const result = await desktop.computer.run(command, cwd);
-        if (result.blocked) {
-          commandEvent.status = "error";
-          commandEvent.detail = `${cwd}\n\n用户在系统确认中取消了这条命令。`;
-          message.status = "stopped";
-          message.final = "已停止：你取消了这条命令。";
-          trace("done", "已停止", message.final);
-          break;
-        }
-        commandEvent.status = result.code === 0 ? "done" : "error";
-        commandEvent.exitCode = result.code;
-        commandEvent.output = `${result.stdout || ""}${result.stderr || ""}`;
-        repaint();
-        observations.push({
-          command,
-          cwd,
-          code: result.code,
-          output: `${result.stdout || ""}${result.stderr || ""}`,
-        });
-        agentLog(
-          result.code === 0 ? "tool" : "error",
-          `电脑命令${result.code === 0 ? "完成" : "失败"}：${command.slice(0, 50)}`,
-        );
-        message.status = "running";
-        if (step === 7) {
-          message.final = "已达到 8 步执行上限，任务可能未完成。可以继续发消息让我接着做。";
-          message.status = "done";
-          trace("done", "达到步骤上限", message.final);
-        }
-      }
-      if (!message.final) {
-        message.final = "任务已结束。";
-        message.status = "done";
-      }
-      session.messages.push(message);
-      session.updatedAt = now();
-      persistSessions();
-      repaint();
-      toast("电脑任务已完成");
-    } catch (error) {
-      if (error.name === "AbortError" || controller.signal.aborted) {
-        message.status = "stopped";
-        message.final = "已停止。";
-        trace("done", "已停止", "任务被用户停止。");
-      } else {
-        message.status = "error";
-        message.error = error.message || "电脑任务失败，请重试";
-        trace("error", "任务中止", message.error, "error");
-        toast(message.error, "err");
-      }
-      session.messages.push(message);
-      session.updatedAt = now();
-      persistSessions();
-      repaint();
-    } finally {
-      setStreaming(false);
-      state.abort = null;
-      setAgentState("空闲", false);
-      scrollToBottom();
-    }
-  }
-
   // ---------------------------------------------------------------------
   // Editing
   // ---------------------------------------------------------------------
@@ -2388,6 +2009,7 @@ ${history || "（还没有执行任何命令）"}`;
 
     const userMessage = { role: "user", content: typed, ts: now() };
     if (attachments.length) userMessage.attachments = attachments;
+    if (state.linkContext) userMessage.link = state.linkContext;
 
     session.messages.push(userMessage);
     session.updatedAt = now();
@@ -2398,6 +2020,7 @@ ${history || "（还没有执行任何命令）"}`;
     $("#input").value = "";
     state.attachments = [];
     renderAttachList();
+    clearLinkContext();
     autoGrow();
     updateCounter();
     $("#hero").hidden = true;
@@ -2416,21 +2039,8 @@ ${history || "（还没有执行任何命令）"}`;
       toast("编程模式需要在桌面版使用，可在「下载」页安装", "err");
       return;
     }
-    if (state.settings.mode === "computer") {
-      if (!desktop?.computer) {
-        toast("完整电脑访问需要 Dream AI 桌面版 1.4.0 或更新版本", "err");
-        return;
-      }
-      if (!state.computerConsent) {
-        openComputerConsent().then((allowed) => {
-          if (allowed) toast("已授权，请再次发送任务");
-        });
-        return;
-      }
-    }
     if (state.settings.mode === "doc") await runDocTask(session, userMessage);
     else if (state.settings.mode === "code") await runCodeTask(session, userMessage);
-    else if (state.settings.mode === "computer") await runComputerTask(session, userMessage);
     else if (state.settings.mode === "work") await runWorkTask(session, userMessage);
     else await requestCompletion(session);
   }
@@ -2465,11 +2075,7 @@ ${history || "（还没有执行任何命令）"}`;
         })),
       model,
       provider,
-      providerId: provider === "byok" ? state.settings.providerId || "deepseek" : undefined,
-      apiKey:
-        provider === "byok"
-          ? state.userKeys[state.settings.providerId || "deepseek"] || state.userKey
-          : undefined,
+      apiKey: provider === "byok" ? state.userKey : undefined,
       temperature: Number(state.settings.temperature),
       thinking: Boolean(state.settings.thinking),
       style: state.settings.style,
@@ -2682,53 +2288,42 @@ ${history || "（还没有执行任何命令）"}`;
     return state.config?.models || [];
   }
 
-  function modelOption(id, provider = null, providerId = null) {
+  function modelOption(id, provider = null) {
     return (
-      models().find(
-        (m) =>
-          m.id === id &&
-          (provider === null || m.provider === provider) &&
-          (providerId === null || (m.providerId || "deepseek") === providerId),
-      ) || null
+      models().find((m) => m.id === id && (provider === null || m.provider === provider)) || null
     );
   }
 
   function selectModel(model, { silent = false } = {}) {
     if (!model) return;
-    const providerId = model.providerId || "deepseek";
-    if (model.provider === "byok" && !state.userKeys[providerId]) {
-      openKeyModal(model.id, providerId);
+    if (model.provider === "byok" && !state.userKey) {
+      openKeyModal(model.id);
       return;
     }
     state.settings.model = model.id;
     state.settings.provider = model.provider;
-    state.settings.providerId = providerId;
     state.settings.thinking = Boolean(model.reasoning);
-    state.userKey = state.userKeys[providerId] || "";
     $("#thinkBtn").setAttribute("aria-pressed", String(Boolean(model.reasoning)));
     persistSettings();
     syncModelUI();
     closeMenus();
-    if (!silent) {
-      const suffix = model.provider === "byok" && model.providerLabel ? ` · ${model.providerLabel}` : "";
-      toast(`已切换至 ${model.label}${suffix}`);
-    }
+    if (!silent) toast(`已切换至 ${model.label}`);
   }
 
   function setThinking(on) {
     if (on) {
-      const reasoning = models().find(
-        (m) => m.reasoning && (m.provider === "free" || state.userKeys[m.providerId || "deepseek"]),
-      );
+      const reasoning = models().find((m) => m.reasoning);
       if (!reasoning) {
         toast("当前模型不支持深度思考", "err");
         return;
       }
+      if (!state.userKey) {
+        openKeyModal(reasoning.id);
+        return;
+      }
       state.settings.thinking = true;
       state.settings.model = reasoning.id;
-      state.settings.provider = reasoning.provider;
-      state.settings.providerId = reasoning.providerId || "deepseek";
-      state.userKey = state.userKeys[state.settings.providerId] || "";
+      state.settings.provider = "byok";
     } else {
       state.settings.thinking = false;
       if (state.settings.provider === "byok") {
@@ -2738,8 +2333,6 @@ ${history || "（还没有执行任何命令）"}`;
         if (fallback) {
           state.settings.model = fallback.id;
           state.settings.provider = fallback.provider;
-          state.settings.providerId = fallback.providerId || "deepseek";
-          state.userKey = state.userKeys[state.settings.providerId] || "";
         }
       }
     }
@@ -2759,21 +2352,11 @@ ${history || "（还没有执行任何命令）"}`;
     badge.textContent = isKey ? "Key" : "免费";
     badge.classList.toggle("is-key", isKey);
     const select = $("#modelSelect");
-    if (select) {
-      const target = [...select.options].find(
-        (option) =>
-          option.value === id &&
-          (!isKey || (option.dataset.providerId || "deepseek") === (state.settings.providerId || "deepseek")),
-      );
-      if (target) select.value = target.value;
-    }
+    if (select) select.value = `${state.settings.provider}:${id}`;
     $$("#modelMenu .menu__item").forEach((item) => {
       item.classList.toggle(
         "is-active",
-        item.dataset.model === id &&
-          item.dataset.provider === state.settings.provider &&
-          (!isKey ||
-            (item.dataset.providerId || "deepseek") === (state.settings.providerId || "deepseek")),
+        item.dataset.model === id && item.dataset.provider === state.settings.provider,
       );
     });
     $("#thinkBtn").setAttribute("aria-pressed", String(Boolean(state.settings.thinking)));
@@ -2926,22 +2509,18 @@ ${history || "（还没有执行任何命令）"}`;
       if (!list.length) return;
       menu.appendChild(el("div", { class: "menu__label", text: label }));
       list.forEach((model) => {
-        const providerId = model.providerId || "deepseek";
-        const locked = model.provider === "byok" && !state.userKeys[providerId];
+        const locked = model.provider === "byok" && !state.userKey;
         const item = el("button", {
           class: "menu__item",
           type: "button",
           role: "option",
           "data-model": model.id,
           "data-provider": model.provider,
-          "data-provider-id": providerId,
         }, [
           el("span", { class: "menu__item__main" }, [
             el("strong", { text: model.label }),
             el("span", {
-              text: locked
-                ? `${model.providerLabel || model.hint} · 需填写 Key`
-                : `${model.providerLabel || ""}${model.providerLabel ? " · " : ""}${model.hint}`,
+              text: locked ? `${model.hint} · 需填写 Key` : model.hint,
             }),
           ]),
           el("span", {
@@ -2954,27 +2533,14 @@ ${history || "（还没有执行任何命令）"}`;
     };
 
     addGroup("免费模型", models().filter((m) => m.provider === "free"));
-    const byProvider = new Map();
-    models()
-      .filter((m) => m.provider === "byok")
-      .forEach((model) => {
-        const id = model.providerId || "deepseek";
-        if (!byProvider.has(id)) byProvider.set(id, []);
-        byProvider.get(id).push(model);
-      });
-    byProvider.forEach((list, providerId) => {
-      addGroup(`${providerInfo(providerId).label} · Key`, list);
-    });
+    addGroup("使用自己的 Key", models().filter((m) => m.provider === "byok"));
 
     menu.appendChild(el("div", { class: "menu__divider" }));
-    const count = configuredProviderCount();
     const help = el("button", { class: "menu__item menu__item--help", type: "button" }, [
       el("span", { class: "menu__item__main" }, [
-        el("strong", { text: count ? "管理模型连接" : "如何获取 Key？" }),
+        el("strong", { text: state.userKey ? "管理我的 Key" : "如何获取 Key？" }),
         el("span", {
-          text: count
-            ? `${count} 个来源已配置 · 每家的 Key 分开保存`
-            : "支持 DeepSeek / OpenAI / GLM / Kimi / 千问 / OpenRouter",
+          text: state.userKey ? "已保存 · 可更新或清除" : "用你自己的 DeepSeek 额度",
         }),
       ]),
       el("span", {
@@ -2983,10 +2549,7 @@ ${history || "（还没有执行任何命令）"}`;
     ]);
     help.addEventListener("click", () => {
       closeMenus();
-      openKeyModal(
-        null,
-        state.settings.provider === "byok" ? state.settings.providerId : "deepseek",
-      );
+      openKeyModal();
     });
     menu.appendChild(help);
 
@@ -3064,60 +2627,24 @@ ${history || "（还没有执行任何命令）"}`;
 
   let renameTarget = null;
   let pendingModelId = null;
-  let pendingKeyProvider = "deepseek";
-
-  function providerInfo(providerId) {
-    return (
-      (state.config?.providers || []).find((provider) => provider.id === providerId) || {
-        id: providerId,
-        label: providerId || "模型来源",
-        keyUrl: "",
-      }
-    );
-  }
-
-  function configuredProviderCount() {
-    return Object.values(state.userKeys).filter((key) => String(key || "").trim()).length;
-  }
 
   function pendingKeyStatus() {
-    const provider = providerInfo(
-      state.settings.provider === "byok" ? state.settings.providerId : pendingKeyProvider,
-    );
-    const count = configuredProviderCount();
-    if (!count) return "未配置 · 使用免费模型";
-    const hasCurrent = Boolean(state.userKeys[provider.id]);
-    return `${count} 个来源已配置 · ${provider.label}${hasCurrent ? " 已连接" : " 未连接"}`;
+    return state.userKey ? `已配置 · ${state.userKey.slice(0, 6)}…${state.userKey.slice(-4)}` : "未配置 · 使用免费模型";
   }
 
   function updateKeyStatus() {
     const status = $("#keyStatus");
     if (status) status.textContent = pendingKeyStatus();
     const clear = $("#keyClear");
-    if (clear) clear.hidden = !state.userKeys[pendingKeyProvider];
+    if (clear) clear.hidden = !state.userKey;
   }
 
-  function openKeyModal(modelId = null, providerId = null) {
+  function openKeyModal(modelId = null) {
     closeMenus();
     pendingModelId = modelId;
-    pendingKeyProvider =
-      providerId ||
-      (state.settings.provider === "byok" ? state.settings.providerId : "deepseek");
-    const provider = providerInfo(pendingKeyProvider);
     const input = $("#keyInput");
     input.value = "";
-    input.placeholder = state.userKeys[pendingKeyProvider]
-      ? "已保存 · 粘贴新 Key 可更新"
-      : "sk-...";
-    const name = $("#keyProviderName");
-    if (name) name.textContent = provider.label;
-    const title = $("#keyTitle");
-    if (title) title.textContent = `连接 ${provider.label}`;
-    const link = $("#keyLink");
-    if (link) {
-      link.href = provider.keyUrl || "#";
-      link.textContent = provider.keyUrl ? "服务商密钥页面" : "服务商控制台";
-    }
+    input.placeholder = state.userKey ? "已保存 · 粘贴新 Key 可更新" : "sk-...";
     updateKeyStatus();
     openModal("keyModal");
     setTimeout(() => input.focus(), 40);
@@ -3125,53 +2652,42 @@ ${history || "（还没有执行任何命令）"}`;
 
   function saveUserKey() {
     const key = $("#keyInput").value.trim();
-    if (!/^[A-Za-z0-9_.\-]{10,200}$/.test(key)) {
+    if (!/^[A-Za-z0-9_.\-]{20,200}$/.test(key)) {
       toast("Key 格式看起来不对，请检查后重试", "err");
       return;
     }
-    state.userKeys[pendingKeyProvider] = key;
+    state.userKey = key;
     try {
-      localStorage.setItem(STORE_USER_KEYS, JSON.stringify(state.userKeys));
-      localStorage.removeItem(STORE_USER_KEY);
+      localStorage.setItem(STORE_USER_KEY, key);
     } catch {
       toast("浏览器不允许保存，可能是隐私模式", "err");
-    }
-    if (state.settings.providerId === pendingKeyProvider || !pendingModelId) {
-      state.userKey = key;
-      state.settings.providerId = pendingKeyProvider;
     }
     updateKeyStatus();
     buildModelMenu();
     closeModal($("#keyModal"));
-    const target = pendingModelId
-      ? modelOption(pendingModelId, "byok", pendingKeyProvider)
-      : null;
+    const target = pendingModelId ? modelOption(pendingModelId, "byok") : null;
     pendingModelId = null;
     if (target) selectModel(target, { silent: true });
     syncModelUI();
-    toast(target ? `已保存 Key，切换到 ${target.label}` : `已保存 ${providerInfo(pendingKeyProvider).label} 的 Key`);
+    toast(target ? `已保存 Key，切换到 ${target.label}` : "已保存 Key");
   }
 
   function clearUserKey() {
-    delete state.userKeys[pendingKeyProvider];
+    state.userKey = "";
     try {
-      localStorage.setItem(STORE_USER_KEYS, JSON.stringify(state.userKeys));
       localStorage.removeItem(STORE_USER_KEY);
     } catch {
       /* ignore */
     }
-    if (state.settings.providerId === pendingKeyProvider) {
-      state.userKey = "";
-    }
     updateKeyStatus();
     buildModelMenu();
-    if (state.settings.provider === "byok" && !state.userKey) {
+    if (state.settings.provider === "byok") {
       const free = models().find((m) => m.provider === "free");
       if (free) selectModel(free, { silent: true });
     }
     syncModelUI();
     closeModal($("#keyModal"));
-    toast("已清除这个来源在本机保存的 Key");
+    toast("已清除本机保存的 Key");
   }
 
   function openModal(id) {
@@ -3191,25 +2707,6 @@ ${history || "（还没有执行任何命令）"}`;
     const openModals = $$(".modal").filter((m) => !m.hidden);
     if (openModals.length) closeModal(openModals[openModals.length - 1]);
     return openModals.length > 0;
-  }
-
-  let computerConsentResolver = null;
-
-  function openComputerConsent() {
-    const input = $("#computerPhrase");
-    if (input) input.value = "";
-    openModal("computerModal");
-    if (input) setTimeout(() => input.focus(), 60);
-    return new Promise((resolve) => {
-      computerConsentResolver = resolve;
-    });
-  }
-
-  function resolveComputerConsent(allowed) {
-    const resolve = computerConsentResolver;
-    computerConsentResolver = null;
-    closeModal($("#computerModal"));
-    resolve?.(Boolean(allowed));
   }
 
   function openRename(session) {
@@ -3255,6 +2752,9 @@ ${history || "（还没有执行任何命令）"}`;
         lines.push("**你**：", message.content || "");
         if (message.attachments?.length) {
           lines.push(`> 附件：${message.attachments.map((f) => f.name).join("、")}`);
+        }
+        if (message.link) {
+          lines.push(`> 网页：${message.link.title}（${message.link.url}）`);
         }
         lines.push("");
       } else if (message.kind === "doc" && message.document) {
@@ -3323,46 +2823,27 @@ ${history || "（还没有执行任何命令）"}`;
       if (!list.length) return;
       const group = el("optgroup", { label });
       list.forEach((model) => {
-        const option = el("option", { value: model.id, text: model.label });
-        option.dataset.providerId = model.providerId || "free";
-        group.appendChild(option);
+        group.appendChild(el("option", { value: `${model.provider}:${model.id}`, text: model.label }));
       });
       select.appendChild(group);
     };
     addGroup("免费模型", models().filter((m) => m.provider === "free"));
-    const byProvider = new Map();
-    models()
-      .filter((m) => m.provider === "byok")
-      .forEach((model) => {
-        const id = model.providerId || "deepseek";
-        if (!byProvider.has(id)) byProvider.set(id, []);
-        byProvider.get(id).push(model);
-      });
-    byProvider.forEach((list, providerId) => {
-      addGroup(`${providerInfo(providerId).label} · 自己的 Key`, list);
-    });
-    select.value = state.settings.model;
+    addGroup("使用自己的 Key", models().filter((m) => m.provider === "byok"));
+    select.value = `${state.settings.provider}:${state.settings.model}`;
 
     select.addEventListener("change", () => {
-      const option = select.selectedOptions[0];
-      const providerId = option?.dataset.providerId || "deepseek";
-      const target =
-        modelOption(select.value, null, providerId) || modelOption(select.value);
+      const [provider, ...rest] = select.value.split(":");
+      const target = modelOption(rest.join(":"));
       if (!target) return;
-      if (target.provider === "byok" && !state.userKeys[providerId]) {
-        openKeyModal(target.id, providerId);
+      if (provider === "byok" && !state.userKey) {
+        openKeyModal(target.id);
         syncModelUI();
         return;
       }
       selectModel(target, { silent: true });
     });
 
-    $("#manageKeyBtn").addEventListener("click", () =>
-      openKeyModal(
-        null,
-        state.settings.provider === "byok" ? state.settings.providerId : "deepseek",
-      ),
-    );
+    $("#manageKeyBtn").addEventListener("click", () => openKeyModal());
     $("#keySave").addEventListener("click", saveUserKey);
     $("#keyClear").addEventListener("click", clearUserKey);
     $("#keyInput").addEventListener("keydown", (event) => {
@@ -3760,59 +3241,36 @@ ${history || "（还没有执行任何命令）"}`;
     } catch {
       state.config = {
         configured: false,
-        models: [
-          {
-            id: "glm-4-flash",
-            label: "GLM-4-Flash",
-            provider: "free",
-            providerId: "free",
-            reasoning: false,
-            hint: "免费",
-          },
-        ],
-        providers: [],
+        models: [{ id: "glm-4-flash", label: "GLM-4-Flash", provider: "free", reasoning: false, hint: "免费" }],
         defaultModel: "glm-4-flash",
         version: "1.2.0",
       };
     }
 
-    if (!state.settings.model || !modelOption(state.settings.model, null, state.settings.providerId)) {
+    if (!state.settings.model || !modelOption(state.settings.model)) {
       state.settings.model = state.config.defaultModel || models()[0]?.id;
       state.settings.provider = modelOption(state.settings.model)?.provider || "free";
-      state.settings.providerId =
-        modelOption(state.settings.model)?.providerId || "deepseek";
     }
-    let current =
-      modelOption(state.settings.model, state.settings.provider, state.settings.providerId) ||
-      modelOption(state.settings.model, state.settings.provider);
+    let current = modelOption(state.settings.model, state.settings.provider);
     if (!current) {
       const fallback = modelOption(state.settings.model);
       if (fallback) {
         state.settings.provider = fallback.provider;
-        state.settings.providerId = fallback.providerId || "deepseek";
         current = fallback;
       }
     }
 
     // A BYOK model without a saved key falls back to the free model.
-    if (state.settings.provider === "byok" && !state.userKeys[state.settings.providerId]) {
+    if (state.settings.provider === "byok" && !state.userKey) {
       const free = models().find((m) => m.provider === "free") || models()[0];
       if (free) {
         state.settings.model = free.id;
         state.settings.provider = free.provider;
-        state.settings.providerId = free.providerId || "deepseek";
-        state.userKey = "";
       }
       state.settings.thinking = false;
     }
-    current =
-      modelOption(state.settings.model, state.settings.provider, state.settings.providerId) ||
-      modelOption(state.settings.model, state.settings.provider) ||
-      modelOption(state.settings.model);
-    if (current?.reasoning && state.userKeys[state.settings.providerId]) {
-      state.settings.thinking = true;
-    }
-    state.userKey = state.userKeys[state.settings.providerId] || "";
+    current = modelOption(state.settings.model, state.settings.provider) || modelOption(state.settings.model);
+    if (current?.reasoning && state.userKey) state.settings.thinking = true;
 
     buildModelMenu();
     buildSettings();
@@ -3837,7 +3295,7 @@ ${history || "（还没有执行任何命令）"}`;
       const badge = $("#statusBadge");
       badge.hidden = false;
       $("span", badge).textContent = "免费模型暂未开放 · 请使用自己的 Key";
-      badge.title = "在设置 → 模型来源 → 管理，连接自己的模型 Key";
+      badge.title = "在设置 → 模型来源 → 管理，填入自己的 DeepSeek Key";
     }
   }
 
@@ -4043,6 +3501,18 @@ ${history || "（还没有执行任何命令）"}`;
     });
 
     $("#attachBtn").addEventListener("click", () => $("#fileInput").click());
+    $("#linkBtn").addEventListener("click", () => {
+      const error = $("#linkError");
+      if (error) error.hidden = true;
+      openModal("linkModal");
+      setTimeout(() => $("#linkInput")?.focus(), 60);
+    });
+    $("#linkForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const url = $("#linkInput").value.trim();
+      if (url) readLink(url);
+    });
+    $("#linkChipRemove").addEventListener("click", () => clearLinkContext());
     $("#fileInput").addEventListener("change", (event) => {
       addFiles(event.target.files);
       event.target.value = "";
@@ -4085,30 +3555,6 @@ ${history || "（还没有执行任何命令）"}`;
       }
     });
 
-    $("#computerCancel").addEventListener("click", () => resolveComputerConsent(false));
-    $("#computerClose").addEventListener("click", () => resolveComputerConsent(false));
-    $("#computerAllow").addEventListener("click", () => {
-      const phrase = $("#computerPhrase").value.trim();
-      if (phrase !== "我理解并授权") {
-        toast("请完整输入「我理解并授权」", "err");
-        return;
-      }
-      state.computerConsent = true;
-      resolveComputerConsent(true);
-    });
-    $("#computerPhrase").addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        $("#computerAllow").click();
-      }
-    });
-    document.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape" || $("#computerModal").hidden) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      resolveComputerConsent(false);
-    });
-
     window.addEventListener("beforeunload", (event) => {
       if (state.streaming) {
         event.preventDefault();
@@ -4121,7 +3567,6 @@ ${history || "（还没有执行任何命令）"}`;
     loadStorage();
     initTheme();
     setGreeting();
-    initStarClock();
     initEvents();
     initVoice();
     initDesktop();
