@@ -1,0 +1,8 @@
+version: 1.3.0
+files:
+  - url: DreamAI-Setup-1.3.0.exe
+    sha512: jGszvccBkT3F+s8oNuyEeYQgPhgf08qPoMEmkqX3VtGuYJLv1vQGlJ/dBxZW6XDNvD6U7ndRIMqzAk0DifB9Kw==
+    size: 129257762
+path: DreamAI-Setup-1.3.0.exe
+sha512: jGszvccBkT3F+s8oNuyEeYQgPhgf08qPoMEmkqX3VtGuYJLv1vQGlJ/dBxZW6XDNvD6U7ndRIMqzAk0DifB9Kw==
+releaseDate: '2026-10-31T08:17:46.665Z'
