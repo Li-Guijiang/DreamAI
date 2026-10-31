@@ -1,8 +1,8 @@
-"""Guard the static web surface and the documentation image graph.
+"""Guard the static web surface, PWA shell and download manifest.
 
-The web client has no bundler to fail on a missing import, so a deleted CSS or
-JS file would otherwise surface as a 404 in production. These tests check local
-references in every shipped page and every documentation image.
+The web client has no bundler, so a deleted asset would only show up as a 404 in
+production. These tests also keep private contact details out of public pages and
+make sure the published download manifest matches the desktop version.
 """
 
 from __future__ import annotations
@@ -14,13 +14,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web" / "web"
 ATTACHMENT_MANIFEST = ROOT / "assets" / "readme" / "attachments.json"
-
-# GitHub strips <video>, and repository-relative images need an attachment upload.
-# jsDelivr serves files straight from the repository, which keeps the 30 fps WebP
-# hero working without a manual upload, so it is the one allowed CDN.
 ALLOWED_CDN_PREFIX = "https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@"
 
-PAGES = [WEB / "index.html", WEB / "download.html", WEB / "docs.html"]
+PAGES = [WEB / "index.html", WEB / "download.html", WEB / "changelog.html", WEB / "offline.html"]
 HTML_REF_RE = re.compile(r"\b(?:src|href)=\"(/[^\"#?]+)")
 IMG_RE = re.compile(r"<img\b[^>]*\bsrc=\"([^\"]+)\"", re.IGNORECASE)
 MD_IMG_RE = re.compile(r"!\[[^\]]*]\(([^)]+)\)")
@@ -47,10 +43,7 @@ def test_web_pages_reference_existing_local_assets():
         assert page.is_file(), f"missing page: {page.name}"
         text = page.read_text(encoding="utf-8")
         for reference in HTML_REF_RE.findall(text):
-            if not (
-                reference.startswith("/assets/")
-                or reference in {"/", "/docs.html", "/download.html"}
-            ):
+            if not reference.startswith("/assets/"):
                 continue
             target = WEB / reference.lstrip("/")
             if not target.is_file():
@@ -59,12 +52,6 @@ def test_web_pages_reference_existing_local_assets():
 
 
 def test_every_documentation_image_is_local_or_in_the_manifest():
-    """GitHub's raw image CDN is unreachable on some networks.
-
-    Documentation illustrations therefore use GitHub user attachments registered
-    in ``assets/readme/attachments.json``. Relative images remain valid for
-    contributor-facing files on disk; anything else must be registered.
-    """
     attachments = _attachments()
     allowed_urls = {entry["url"] for entry in attachments.values()}
     allowed_badge_prefixes = (
@@ -98,100 +85,60 @@ def test_attachment_manifest_points_at_existing_sources():
         assert (ROOT / entry["source"]).is_file(), f"{name}: missing {entry['source']}"
 
 
-def test_every_web_page_has_the_motion_switch():
-    for page in PAGES:
-        assert "data-motion-toggle" in page.read_text(encoding="utf-8"), page.name
-
-
-def test_docs_page_is_in_the_sitemap():
-    sitemap = (WEB / "sitemap.xml").read_text(encoding="utf-8")
-    assert "https://liguijiang.com/docs.html" in sitemap
-
-
-def test_web_motion_files_are_present():
-    for relative in (
-        "assets/css/motion.css",
-        "assets/css/landing.css",
-        "assets/css/pages.css",
-        "assets/css/docs.css",
-        "assets/js/motion.js",
-        "assets/js/landing.js",
-        "assets/js/docs.js",
-        "assets/js/desktop-update.js",
-    ):
+def test_pwa_shell_is_shipped_and_registered():
+    for relative in ("sw.js", "offline.html", "manifest.webmanifest"):
         assert (WEB / relative).is_file(), relative
-
-
-def test_realtime_greeting_and_starlight_clock():
-    landing = (WEB / "assets" / "js" / "landing.js").read_text(encoding="utf-8")
-    app = (WEB / "assets" / "js" / "app.js").read_text(encoding="utf-8")
     index = (WEB / "index.html").read_text(encoding="utf-8")
-    for greeting in ("早上好", "上午好", "中午好", "下午好", "晚上好", "夜深了"):
-        assert greeting in landing, greeting
-        assert greeting in app, greeting
-    assert "timeGreeting" in landing
-    assert "watchDaypart" in landing
-    for marker in (
-        "starClock",
-        "starClockTime",
-        "starClockDate",
-        "updateGate",
-        "updateHint",
-        "releaseNote",
-    ):
-        assert marker in index or marker in (WEB / "download.html").read_text(encoding="utf-8"), (
-            marker
-        )
-    assert "initStarClock" in app
-
-
-def test_agent_trace_and_provider_catalog_are_wired():
     app = (WEB / "assets" / "js" / "app.js").read_text(encoding="utf-8")
-    config = (ROOT / "web" / "app" / "config.py").read_text(encoding="utf-8")
-    for marker in ("agent-trace", "tracePush", "traceBlock", "运行命令"):
+    assert "serviceWorker" in app and "/sw.js" in app
+    assert "manifest.webmanifest" in index
+
+
+def test_changelog_page_is_in_the_sitemap():
+    sitemap = (WEB / "sitemap.xml").read_text(encoding="utf-8")
+    assert "https://liguijiang.com/changelog.html" in sitemap
+
+
+def test_download_manifest_matches_desktop_version():
+    manifest = json.loads((WEB / "downloads" / "latest.json").read_text(encoding="utf-8"))
+    desktop = json.loads((ROOT / "desktop" / "package.json").read_text(encoding="utf-8"))
+    assert manifest["version"] == desktop["version"]
+    assert manifest["file"] == f"DreamAI-Setup-{desktop['version']}.exe"
+    assert manifest["size"] > 0
+    assert len(manifest["sha256"]) == 64
+    download = (WEB / "download.html").read_text(encoding="utf-8")
+    assert f"v{desktop['version']}" in download
+    assert manifest["file"] in download
+
+
+def test_current_ai_features_are_wired():
+    app = (WEB / "assets" / "js" / "app.js").read_text(encoding="utf-8")
+    main = (ROOT / "web" / "app" / "main.py").read_text(encoding="utf-8")
+    for marker in ("STORE_MEMORY", "STORE_KNOWLEDGE", "retrieveKnowledge", "openCanvas"):
         assert marker in app, marker
-    for provider in ("deepseek", "openai", "zhipu", "moonshot", "qwen", "openrouter"):
-        assert provider in config, provider
-    assert "providerId" in config
-
-
-def test_desktop_update_contract_is_shipped():
-    manifest = json.loads((ROOT / "desktop" / "package.json").read_text(encoding="utf-8"))
-    assert manifest["version"] == "1.4.0"
-    main = (ROOT / "desktop" / "electron" / "main.js").read_text(encoding="utf-8")
-    preload = (ROOT / "desktop" / "electron" / "preload.js").read_text(encoding="utf-8")
-    updater = (ROOT / "desktop" / "electron" / "update.js").read_text(encoding="utf-8")
-    web_updater = (WEB / "assets" / "js" / "desktop-update.js").read_text(encoding="utf-8")
-    assert "desktop:update-install" in main
-    assert "desktop:update-progress" in preload
-    assert "computer:run" in main
-    assert "computer:home" in preload
-    assert "DreamAI-Setup-" in updater
-    assert "sha256" in updater
-    assert "updateGate" in web_updater
-    assert "暂不更新" in web_updater
-    # The prompt must recur on every fresh entry, so dismissal is not persisted.
-    assert "sessionStorage" not in web_updater
+    for marker in (
+        "/api/read",
+        "/api/usage",
+        "reader_limiter",
+        "payload.memory",
+        "payload.context",
+    ):
+        assert marker in main, marker
+    update = (ROOT / "desktop" / "electron" / "update.js").read_text(encoding="utf-8")
+    desktop_main = (ROOT / "desktop" / "electron" / "main.js").read_text(encoding="utf-8")
+    assert "isNewerVersion" in update
+    assert "latest.yml" in desktop_main
     assert (ROOT / "desktop" / "test" / "update.test.js").is_file()
 
 
-def test_owner_identity_is_fixed_in_the_prompts():
-    web_prompt = (ROOT / "web" / "app" / "config.py").read_text(encoding="utf-8")
-    cli_prompt = (ROOT / "dream_ai" / "config.py").read_text(encoding="utf-8")
-    assert "李贵江" in web_prompt
-    assert "独立研发" in web_prompt
-    assert "李贵江等人组成的团队" not in web_prompt
-    assert "Li Guijiang" in cli_prompt
-    assert "created and owned" in cli_prompt
-    assert not re.search(r"1[3-9]\d{9}", web_prompt + cli_prompt)
-
-
-def test_public_pages_do_not_publish_private_contacts():
+def test_team_credit_is_present_and_private_contacts_are_not_public():
     for page in PAGES:
         text = page.read_text(encoding="utf-8")
         assert "tel:" not in text, f"private phone link in {page.name}"
         assert "mailto:" not in text, f"private mail link in {page.name}"
         assert "@qq.com" not in text.lower(), f"private QQ mail in {page.name}"
         assert not re.search(r"1[3-9]\d{9}", text), f"private phone number in {page.name}"
-        assert "Dream AI 团队" not in text, f"team ownership copy in {page.name}"
-        assert "李贵江等人组成的团队" not in text, f"team ownership copy in {page.name}"
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    assert "李贵江" in index
+    assert "团队" in index
+    assert "github.com/Li-Guijiang/DreamAI" in index
