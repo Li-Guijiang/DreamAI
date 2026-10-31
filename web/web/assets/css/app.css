@@ -3228,6 +3228,117 @@ body.desktop-app .canvas-panel {
   border: 0;
   background: #fff;
 }
+/* ---------- Usage dashboard ---------- */
+.usage-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.usage-card {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--line);
+}
+
+.usage-card strong {
+  display: block;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-card em {
+  color: var(--text-3);
+  font-size: 9.5px;
+  font-style: normal;
+}
+
+.usage-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 130px;
+  margin-top: 16px;
+}
+
+.usage-bar {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+}
+
+.usage-bar__track {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  flex: 1;
+  border-radius: 6px;
+  background: var(--line);
+}
+
+.usage-bar__fill {
+  width: 100%;
+  min-height: 4px;
+  border-radius: 6px;
+  background: var(--accent);
+}
+
+.usage-bar__fill--1 { height: 10%; }
+.usage-bar__fill--2 { height: 20%; }
+.usage-bar__fill--3 { height: 30%; }
+.usage-bar__fill--4 { height: 40%; }
+.usage-bar__fill--5 { height: 50%; }
+.usage-bar__fill--6 { height: 60%; }
+.usage-bar__fill--7 { height: 70%; }
+.usage-bar__fill--8 { height: 80%; }
+.usage-bar__fill--9 { height: 90%; }
+.usage-bar__fill--10 { height: 100%; }
+
+.usage-bar span {
+  color: var(--text-3);
+  font-size: 9px;
+}
+
+.usage-heading {
+  margin: 18px 0 6px;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.usage-models {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.usage-models li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.usage-models em {
+  color: var(--text-3);
+  font-style: normal;
+}
+
+.usage-server {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--text-3);
+  font-size: 10.5px;
+  line-height: 1.7;
+}
 /* ---------- Prompt library / slash commands ---------- */
 .composer-dock {
   position: relative;

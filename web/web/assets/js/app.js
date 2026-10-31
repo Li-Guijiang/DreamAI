@@ -10,6 +10,7 @@
 const STORE_MEMORY = "dreamai.memory.v1";
 const STORE_KNOWLEDGE = "dreamai.knowledge.v1";
 const STORE_PROMPTS = "dreamai.prompts.v1";
+const STORE_USAGE = "dreamai.usage.v1";
   const STORE_USER_KEY = "dreamai.userkey.v1";
   const MAX_INPUT = 12000;
   const MAX_FILES = 3;
@@ -160,9 +161,11 @@ const STORE_PROMPTS = "dreamai.prompts.v1";
       docTemplate: "auto",
       useMemory: true,
       useKnowledge: true,
+      autoRoute: false,
     },
     memory: [],
     prompts: [],
+    usage: { days: {} },
     knowledge: { docs: [] },
     kbContextForSend: null,
     userKey: "",
@@ -200,6 +203,13 @@ const STORE_PROMPTS = "dreamai.prompts.v1";
       state.prompts = Array.isArray(data) ? data.filter((item) => item && item.template) : [];
     } catch {
       state.prompts = [];
+    }
+    try {
+      const raw = localStorage.getItem(STORE_USAGE);
+      const data = raw ? JSON.parse(raw) : null;
+      state.usage = data && data.days && typeof data.days === "object" ? { days: data.days } : { days: {} };
+    } catch {
+      state.usage = { days: {} };
     }
     try {
       const raw = localStorage.getItem(STORE_KNOWLEDGE);
@@ -801,12 +811,117 @@ const STORE_PROMPTS = "dreamai.prompts.v1";
     }
   }
 
+  function localDateKey(date = new Date()) {
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  function persistUsage() {
+    try {
+      localStorage.setItem(STORE_USAGE, JSON.stringify(state.usage));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function recordUsage(model, usage, chars = 0) {
+    const key = localDateKey();
+    const days = state.usage.days || (state.usage.days = {});
+    const day = days[key] || { requests: 0, tokens: 0, chars: 0, models: {} };
+    day.requests += 1;
+    day.chars += Number(chars) || 0;
+    const tokens = Number(usage?.total_tokens || 0);
+    if (tokens) day.tokens += tokens;
+    const label = modelLabel(model, state.settings.provider) || model || "未知";
+    day.models[label] = (day.models[label] || 0) + 1;
+    days[key] = day;
+    const keys = Object.keys(days).sort();
+    while (keys.length > 30) delete days[keys.shift()];
+    persistUsage();
+    updateUsageSummary();
+  }
+
+  function updateUsageSummary() {
+    const node = $("#usageSummary");
+    if (!node) return;
+    const day = state.usage.days[localDateKey()];
+    node.textContent = day ? `今天 ${day.requests} 次 · ${day.tokens} tokens` : "今天还没有请求";
+  }
+
+  async function renderUsage() {
+    const host = $("#usageBody");
+    if (!host) return;
+    host.textContent = "";
+    const today = state.usage.days[localDateKey()] || { requests: 0, tokens: 0, models: {} };
+    const days = [];
+    for (let i = 6; i >= 0; i -= 1) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const key = localDateKey(date);
+      days.push({ key, label: `${date.getMonth() + 1}/${date.getDate()}`, value: state.usage.days[key]?.requests || 0 });
+    }
+    const weekTotal = days.reduce((sum, item) => sum + item.value, 0);
+    const max = Math.max(1, ...days.map((item) => item.value));
+
+    const cards = el("div", { class: "usage-cards" }, [
+      el("div", { class: "usage-card" }, [el("strong", { text: String(today.requests) }), el("em", { text: "今日请求" })]),
+      el("div", { class: "usage-card" }, [el("strong", { text: String(today.tokens) }), el("em", { text: "今日 tokens" })]),
+      el("div", { class: "usage-card" }, [el("strong", { text: String(weekTotal) }), el("em", { text: "近 7 天请求" })]),
+    ]);
+    host.appendChild(cards);
+
+    const chart = el("div", { class: "usage-chart" });
+    days.forEach((item) => {
+      chart.appendChild(
+        el("div", { class: "usage-bar" }, [
+          el("div", { class: "usage-bar__track" }, [
+            el("div", { class: `usage-bar__fill usage-bar__fill--${Math.max(1, Math.round((item.value / max) * 10))}` }),
+          ]),
+          el("span", { text: item.label }),
+        ]),
+      );
+    });
+    host.appendChild(chart);
+
+    const models = Object.entries(today.models || {}).sort((a, b) => b[1] - a[1]);
+    if (models.length) {
+      const list = el("ul", { class: "usage-models" });
+      models.forEach(([name, count]) => {
+        list.appendChild(el("li", {}, [el("span", { text: name }), el("em", { text: `${count} 次` })]));
+      });
+      host.appendChild(el("h4", { class: "usage-heading", text: "今日模型分布" }));
+      host.appendChild(list);
+    }
+
+    const serverBox = el("div", { class: "usage-server", text: "正在读取服务端统计…" });
+    host.appendChild(serverBox);
+    try {
+      const response = await fetch("/api/usage", { headers: { Accept: "application/json" } });
+      const data = await response.json();
+      serverBox.textContent = `服务端：累计 ${data.requests || 0} 次请求 · ${(data.completionTokens || 0)} 输出 tokens · 运行 ${Math.floor((data.uptime || 0) / 3600)} 小时`;
+    } catch {
+      serverBox.textContent = "服务端统计暂时不可用。";
+    }
+  }
+
   function persistPrompts() {
     try {
       localStorage.setItem(STORE_PROMPTS, JSON.stringify(state.prompts.slice(0, 50)));
     } catch {
       /* ignore */
     }
+  }
+
+  function chooseRoute(mode, text) {
+    if (!state.userKey) return null;
+    const byok = models().filter((model) => model.provider === "byok");
+    if (!byok.length) return null;
+    const reasoning = byok.find((model) => model.reasoning) || byok[0];
+    const chat = byok.find((model) => !model.reasoning) || byok[0];
+    if (state.settings.thinking) return reasoning;
+    if (mode === "code" || mode === "doc" || mode === "work") return chat;
+    if (/(推理|为什么|证明|分析|比较|方案|架构|算法|设计)/.test(text)) return reasoning;
+    return null;
   }
 
   function allPrompts() {
@@ -2428,6 +2543,14 @@ ${task}`;
     const typed = (text ?? $("#input").value).trim();
     const memoryMatch = /^(?:记住|请记住|以后请记住|以后都)[：:，,\s]+([\s\S]+)$/.exec(typed);
     if (memoryMatch) addMemory(memoryMatch[1]);
+    if (state.settings.autoRoute) {
+      const route = chooseRoute(state.settings.mode, typed);
+      const current = modelOption(state.settings.model, state.settings.provider);
+      if (route && (!current || current.id !== route.id || current.provider !== route.provider)) {
+        selectModel(route, { silent: true });
+        toast(`智能路由：${route.label}`);
+      }
+    }
     if (state.settings.useKnowledge !== false && state.knowledge.docs.length && typed) {
       const hits = retrieveKnowledge(typed, 4);
       if (hits.length) {
@@ -2583,6 +2706,8 @@ ${task}`;
           if (event.name === "delta") assistant.content += event.data.t || "";
           else if (event.name === "reasoning") assistant.reasoning += event.data.t || "";
           else if (event.name === "error") throw new Error(event.data.message || "生成失败");
+          else if (event.name === "usage") assistant.usage = event.data;
+          else if (event.name === "done") assistant.done = event.data;
           else if (event.name === "meta") {
             assistant.model = event.data.model || assistant.model;
             const tag = $(".msg__head .tag", node);
@@ -2614,6 +2739,7 @@ ${task}`;
       setAgentState("空闲", false);
       if (!errored && assistant.content) {
         agentLog("done", `回答完成 · ${assistant.content.length} 字`);
+        recordUsage(assistant.model, assistant.usage || assistant.done?.usage, assistant.content.length);
       }
       body.classList.remove("caret");
 
@@ -3300,6 +3426,15 @@ ${task}`;
     $("#kbBtn").addEventListener("click", () => {
       syncKnowledgeUI();
       openModal("kbModal");
+    });
+    $("#usageBtn").addEventListener("click", () => {
+      renderUsage();
+      openModal("usageModal");
+    });
+    $("#autoRouteToggle").addEventListener("change", (event) => {
+      state.settings.autoRoute = event.target.checked;
+      persistSettings();
+      toast(event.target.checked ? "已开启智能路由" : "已关闭智能路由");
     });
     $("#promptBtn").addEventListener("click", () => {
       renderPrompts();
@@ -4070,6 +4205,9 @@ ${task}`;
     loadStorage();
     syncMemoryUI();
     syncKnowledgeUI();
+    updateUsageSummary();
+    const routeToggle = $("#autoRouteToggle");
+    if (routeToggle) routeToggle.checked = Boolean(state.settings.autoRoute);
     initTheme();
     setGreeting();
     initEvents();

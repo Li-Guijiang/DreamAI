@@ -423,6 +423,19 @@
   </div>
 </div>
 
+<!-- ======================= Usage ======================= -->
+<div class="modal" id="usageModal" role="dialog" aria-modal="true" aria-labelledby="usageTitle" hidden>
+  <div class="modal__scrim" data-close></div>
+  <div class="modal__panel modal__panel--usage">
+    <button class="modal__close" type="button" data-close aria-label="关闭">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <h2 id="usageTitle" class="panel__title">使用统计</h2>
+    <p class="key__lead">本机统计 + 服务端汇总；不包含你的对话内容。</p>
+    <div id="usageBody"></div>
+  </div>
+</div>
+
 <!-- ======================= Memory ======================= -->
 <div class="modal" id="memoryModal" role="dialog" aria-modal="true" aria-labelledby="memoryTitle" hidden>
   <div class="modal__scrim" data-close></div>
@@ -563,6 +576,20 @@
       </div>
     </section>
 
+    <section class="setting">
+      <h3>智能路由</h3>
+      <div class="setting__row">
+        <div><strong>自动选择模型</strong><em>编程 / 文档优先用自己的 DeepSeek Key，复杂问题用 R1。</em></div>
+        <label class="switch"><input type="checkbox" id="autoRouteToggle"><span class="switch__track"></span></label>
+      </div>
+    </section>
+    <section class="setting">
+      <h3>使用统计</h3>
+      <div class="setting__row">
+        <div><strong>本地用量</strong><em id="usageSummary">今天还没有请求</em></div>
+        <button class="btn btn--ghost" id="usageBtn" type="button">查看</button>
+      </div>
+    </section>
     <section class="setting">
       <h3>长期记忆</h3>
       <div class="setting__row">
