@@ -62,7 +62,6 @@
   },
   "dependencies": {
     "docx": "^9.14.0",
-    "electron-updater": "^6.8.11",
     "exceljs": "^4.4.0",
     "pptxgenjs": "^4.0.1"
   }

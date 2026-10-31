@@ -437,16 +437,29 @@ function setupShortcuts() {
 
 function setupAutoUpdate() {
   if (!app.isPackaged) return;
-  try {
-    const { autoUpdater } = require("electron-updater");
-    autoUpdater.autoDownload = true;
-    autoUpdater.on("error", (error) => console.error("updater:", error.message));
-    setTimeout(() => {
-      autoUpdater.checkForUpdatesAndNotify().catch((error) => console.error("updater:", error.message));
-    }, 15000);
-  } catch (error) {
-    console.error("updater init failed", error);
-  }
+  setTimeout(async () => {
+    try {
+      const { isNewerVersion, parseLatestYml } = require("./update");
+      const response = await fetch(`https://liguijiang.com/downloads/latest.yml?t=${Date.now()}`, {
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!response.ok) return;
+      const manifest = parseLatestYml(await response.text());
+      if (!manifest.version || !isNewerVersion(manifest.version, app.getVersion())) return;
+      const { response: choice } = await dialog.showMessageBox({
+        type: "info",
+        buttons: ["稍后", "前往下载"],
+        defaultId: 1,
+        cancelId: 0,
+        title: "Dream AI 有新版本",
+        message: `发现 v${manifest.version}，当前 v${app.getVersion()}。`,
+        detail: "下载新版安装包覆盖安装即可，本地对话与项目不受影响。",
+      });
+      if (choice === 1) shell.openExternal("https://liguijiang.com/download.html");
+    } catch (error) {
+      console.error("update check failed", error.message);
+    }
+  }, 20000);
 }
 
 const gotLock = app.requestSingleInstanceLock();

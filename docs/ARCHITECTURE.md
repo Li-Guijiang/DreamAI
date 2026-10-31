@@ -45,7 +45,7 @@ Electron main (desktop/electron/)
 
 ## Desktop (`desktop/`)
 
-- `electron/main.js` — window, IPC, tray, global shortcut, auto-update.
+- `electron/main.js` — window, IPC, tray, global shortcut, update check.
 - `electron/local-tools.js` — scan / organise / rename inside the selected workspace.
 - `electron/documents.js` — pure-JS document generation; PDF through `printToPDF`.
 - `electron/agent.js` — coding agent: project directories, file writes, command execution, dev servers.

@@ -19,7 +19,7 @@
 ### Desktop
 
 - **Project manager** tab in the agent panel: list projects, open folder, stop all services.
-- **Auto-update** via `electron-updater` with a generic `latest.yml` feed.
+- **Update check**: reads the published `latest.yml`, compares versions and offers the download page when a newer build exists.
 - **Tray icon** and global shortcut `Ctrl+Alt+D`; closing the window keeps the app in the tray.
 - Updater version helpers with unit tests.
 
