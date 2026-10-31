@@ -1,6 +1,6 @@
 "use strict";
 
-const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, Menu, Tray, nativeImage, globalShortcut, dialog, ipcMain, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const tools = require("./local-tools");
@@ -13,6 +13,8 @@ const PRODUCT = "Dream AI";
 let mainWindow = null;
 let pendingOrganize = null;
 let pendingRename = null;
+let tray = null;
+let isQuitting = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -53,6 +55,12 @@ function createWindow() {
   });
   mainWindow.webContents.on("will-attach-webview", (event) => event.preventDefault());
 
+  mainWindow.on("close", (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
+  });
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
@@ -384,6 +392,63 @@ function registerExtraIpc() {
   );
 }
 
+function showMainWindow() {
+  if (!mainWindow) {
+    createWindow();
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function createTray() {
+  try {
+    const icon = nativeImage.createFromPath(path.join(__dirname, "..", "build", "icon.ico"));
+    if (icon.isEmpty()) return;
+    tray = new Tray(icon);
+    tray.setToolTip("Dream AI");
+    tray.setContextMenu(
+      Menu.buildFromTemplate([
+        { label: "打开 Dream AI", click: showMainWindow },
+        { type: "separator" },
+        {
+          label: "退出",
+          click: () => {
+            isQuitting = true;
+            app.quit();
+          },
+        },
+      ]),
+    );
+    tray.on("click", showMainWindow);
+  } catch (error) {
+    console.error("tray failed", error);
+  }
+}
+
+function setupShortcuts() {
+  try {
+    globalShortcut.register("CommandOrControl+Alt+D", showMainWindow);
+  } catch (error) {
+    console.error("shortcut failed", error);
+  }
+}
+
+function setupAutoUpdate() {
+  if (!app.isPackaged) return;
+  try {
+    const { autoUpdater } = require("electron-updater");
+    autoUpdater.autoDownload = true;
+    autoUpdater.on("error", (error) => console.error("updater:", error.message));
+    setTimeout(() => {
+      autoUpdater.checkForUpdatesAndNotify().catch((error) => console.error("updater:", error.message));
+    }, 15000);
+  } catch (error) {
+    console.error("updater init failed", error);
+  }
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -391,6 +456,7 @@ if (!gotLock) {
   app.on("second-instance", () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
       mainWindow.focus();
     }
   });
@@ -406,13 +472,25 @@ if (!gotLock) {
     registerIpc();
     registerExtraIpc();
     createWindow();
+    createTray();
+    setupShortcuts();
+    setupAutoUpdate();
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
   });
 
-  app.on("will-quit", () => agent.stopAll());
+  app.on("will-quit", () => {
+    isQuitting = true;
+    try {
+      globalShortcut.unregisterAll();
+      tray?.destroy();
+    } catch {
+      /* ignore */
+    }
+    agent.stopAll();
+  });
 
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();

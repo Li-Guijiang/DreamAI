@@ -1,23 +1,19 @@
 {
   "name": "dream-ai-desktop",
-  "version": "1.4.0",
+  "version": "1.2.0",
   "private": true,
-  "description": "Dream AI desktop - local file workbench",
+  "description": "Dream AI 桌面版 · 本地文件工作台",
   "main": "electron/main.js",
   "author": {
-    "name": "Li Guijiang",
-    "url": "https://github.com/Li-Guijiang"
+    "name": "Dream AI Team",
+    "email": "599575094@qq.com"
   },
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "start:local": "electron . --url=http://127.0.0.1:8787",
+    "start:local": "cross-env DREAMAI_URL=http://127.0.0.1:8787 electron .",
     "dist": "electron-builder --win nsis --x64",
-    "pack": "electron-builder --dir",
-    "test": "node test/local-tools.test.js && node test/documents.test.js && node test/update.test.js",
-    "test:tools": "node test/local-tools.test.js",
-    "test:docs": "node test/documents.test.js",
-    "test:update": "node test/update.test.js"
+    "pack": "electron-builder --dir"
   },
   "devDependencies": {
     "electron": "45.0.0",
@@ -26,7 +22,7 @@
   "build": {
     "appId": "com.dreamai.desktop",
     "productName": "Dream AI",
-    "copyright": "Copyright © 2026 Li Guijiang",
+    "copyright": "Copyright © 2026 Dream AI Team",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -47,6 +43,12 @@
       ],
       "artifactName": "DreamAI-Setup-${version}.${ext}"
     },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://liguijiang.com/downloads/"
+      }
+    ],
     "nsis": {
       "oneClick": false,
       "perMachine": false,
@@ -60,6 +62,7 @@
   },
   "dependencies": {
     "docx": "^9.14.0",
+    "electron-updater": "^6.8.11",
     "exceljs": "^4.4.0",
     "pptxgenjs": "^4.0.1"
   }
