@@ -361,6 +361,8 @@ class ChatRequest(BaseModel):
     apiKey: str | None = Field(default=None, max_length=200)
     temperature: float | None = None
     maxTokens: int | None = Field(default=None, ge=128, le=8192)
+    memory: list[str] | None = Field(default=None, max_length=30)
+    context: str | None = Field(default=None, max_length=20000)
     thinking: bool = False
     style: str | None = None
 
@@ -559,6 +561,17 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
     system_prompt = settings.system_prompt
     if style in STYLE_PROMPTS:
         system_prompt = f"{system_prompt}\n\n{STYLE_PROMPTS[style]}"
+    if payload.memory:
+        memories = [" ".join(item.split())[:300] for item in payload.memory if item and item.strip()][:20]
+        if memories:
+            system_prompt += "\n\n用户长期记忆（请自然遵守，不要逐条复述）：\n" + "\n".join(
+                f"- {item}" for item in memories
+            )
+    if payload.context and payload.context.strip():
+        system_prompt += (
+            "\n\n以下是本轮参考资料，回答时优先依据它；如果用到请说明来自资料。\n"
+            "<资料>\n" + payload.context.strip()[:20000] + "\n</资料>"
+        )
     messages = prepare_messages(payload.messages, system_prompt)
     temperature = payload.temperature if payload.temperature is not None else settings.temperature
     temperature = min(1.5, max(0.0, temperature + STYLE_TEMPERATURE.get(style, 0.0)))
