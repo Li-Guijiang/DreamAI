@@ -1,117 +1,72 @@
 # Dream AI Desktop
 
-<p align="center"><img src="https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@main/assets/brand/banner-desktop.webp" alt="Animated Dream AI desktop banner" width="720"></p>
+Dream AI 的 Windows 桌面版：一个 Electron 外壳，加载官网同一套界面，并通过安全的
+IPC 桥接提供**本地文件工作台**（整理、批量重命名、保存文档）。
 
-<sub>[Back to the repository home](../README.md) · [Documentation index](../docs/README.md)</sub>
-
-The Windows desktop edition of Dream AI: an Electron shell that loads the same interface as the
-website and adds a **local file workbench** (organise, batch rename, export documents) through a
-narrow IPC bridge.
-
-## Development
+## 开发
 
 ```bash
 cd desktop
-pnpm install          # see the mirror settings below if needed
-pnpm start            # loads https://liguijiang.com by default
+pnpm install          # 需要 ELECTRON_MIRROR 时见下方
+pnpm start            # 默认加载 https://liguijiang.com
 
-# Local development against the dreamai-web uvicorn server;
-# equivalent to: electron . --url=http://127.0.0.1:8787
-pnpm start:local
+# 本地调试（配合 dreamai-web 的 uvicorn）
+DREAMAI_URL=http://127.0.0.1:8787 pnpm start
 ```
 
-Mirrors:
+镜像（国内）：
 
 ```bash
 ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
 ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/
 ```
 
-## Packaging
+## 打包
 
 ```bash
 pnpm dist
-# output: release/DreamAI-Setup-1.4.0.exe
+# 产物：release/DreamAI-Setup-1.3.0.exe
 ```
 
-## In-app updates
-
-Every desktop build loads the live site, so the site is also the update feed.
-`/downloads/latest.json` names the current version, installer, SHA-256 and size.
-On entry, a client whose version is behind opens a blocking update dialog with
-“暂不更新” and “立即更新”. Dismissal is not persisted: every fresh entry prompts
-again until the installation is current. A 1.3.0+ client downloads, verifies and
-launches the installer without leaving the app. The download URL and filename are
-derived from the manifest and checked by the main process; only `liguijiang.com`
-is allowed.
-
-Versions before 1.3.0 do not contain the installer bridge. They still load the
-site, detect their own version through `dreamDesktop.version()`, and offer the
-**download the new installer** path in the same blocking dialog. One silent
-in-app update is possible from 1.3.0 onward.
-
-## Full computer access
-
-The **电脑** mode is only shown when the preload exposes `computer.home()` and
-`computer.run()`. Selecting it requires an explicit declaration and typing
-“我理解并授权”. The consent is not persisted across app launches.
-
-The agent can propose one PowerShell/cmd command at a time. `computer:run` opens a
-native confirmation dialog with the exact command and working directory; refusing
-it returns `blocked` and the agent stops. There is no silent background execution,
-and the mode can be stopped like any other generation. Treat the consent as a
-high-risk operator permission, not a general-purpose default.
-
-Packaging always reads `build/icon.ico` (16–256 px sizes), exported from the brand asset
-`assets/logo/DreamAI-Logo/01_软件图标_圆角底板/DreamAI-icon-1024.png`. The output and resource
-directories are set by `build.directories` in `package.json`. Keep the file name stable when
-replacing the icon so the packaging config does not need to change.
-
-## Testing
+## 测试
 
 ```bash
-pnpm test            # runs both scripts below; requires pnpm install first
-pnpm test:tools      # pure Node: organise / rename / path constraints
-pnpm test:docs       # document generation (docx / xlsx / pptx); needs docx, exceljs, pptxgenjs
+node test/local-tools.test.js     # 纯 Node，测试文件整理/重命名/路径约束
 ```
 
-Electron end-to-end (start the local web service first):
+Electron 端到端（需要先启动本地 Web）：
 
 ```bash
-# start with a debugging port
-electron --remote-debugging-port=9222 . --url=http://127.0.0.1:8787
-# in another terminal
-DREAMAI_DEV_WORKSPACE=<test-folder> node test/e2e.js
+# 启动后额外开放调试端口
+electron --remote-debugging-port=9222 .
+# 另一个终端
+DREAMAI_DEV_WORKSPACE=<测试文件夹> node test/e2e.js
 ```
 
-Development-only flags and variables:
+调试用环境变量（仅本地）：
 
-| Flag / variable | Purpose |
+| 变量 | 作用 |
 | --- | --- |
-| `--url=<address>` | Override the loaded site; takes precedence over `DREAMAI_URL` |
-| `DREAMAI_URL` | Override the loaded site |
-| `DREAMAI_DEV_WORKSPACE` | Preselect the working folder and skip the system dialog |
-| `DREAMAI_DEV_AUTO_CONFIRM=1` | Auto-approve write confirmations; automated tests only |
+| `DREAMAI_URL` | 覆盖加载的站点地址 |
+| `DREAMAI_DEV_WORKSPACE` | 启动时预选工作文件夹，跳过系统选择框 |
+| `DREAMAI_DEV_AUTO_CONFIRM=1` | 自动通过写操作确认框，仅用于自动化测试 |
 
-## Security model
+## 安全模型
 
-- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`.
-- The preload script exposes a fixed set of IPC methods only — never `fs` or `child_process`.
-- Only folders the user picks through a system dialog can be touched, and every path is checked for
-  containment.
-- Symbolic links and hidden files are ignored.
-- Every move, rename, and write is previewed first, then confirmed through a native dialog owned by
-  the main process.
-- Navigation away from the official domain is blocked; external links open in the system browser.
+- `contextIsolation: true`、`nodeIntegration: false`、`sandbox: true`
+- 预加载脚本只暴露固定 IPC 方法，不暴露 `fs` / `child_process`
+- 只能访问用户通过系统对话框选择的文件夹，路径做包含校验
+- 忽略符号链接与隐藏文件
+- 每次移动 / 重命名 / 写入都先预览，再由主进程弹原生确认框
+- 禁止页面导航离开官网域名，外部链接交给系统浏览器
 
-## Local capabilities (MVP)
+## 本地能力（MVP）
 
-| Capability | Description |
+| 能力 | 说明 |
 | --- | --- |
-| Organise by type | Images / documents / video / audio / archives / installers / code / other |
-| Batch rename | Shared prefix plus a sequence number, extensions preserved, before/after preview |
-| Save conversation | Export the current session as Markdown into the working folder |
-| Folder overview | File count, folder count, total size, type distribution |
+| 按类型整理 | 图片 / 文档 / 视频 / 音频 / 压缩包 / 安装包 / 代码 / 其他 |
+| 批量重命名 | 统一前缀 + 序号，保留扩展名，预览新旧对照 |
+| 保存对话 | 将当前会话导出为 Markdown 到工作文件夹 |
+| 文件夹概览 | 文件数、文件夹数、总大小、类型分布 |
 
-The same pattern extends naturally to Word/Excel/PPT generation, image compression, duplicate
-detection, and scheduled tidying.
+后续可以按同样模式扩展：Word/Excel/PPT 生成、图片压缩、重复文件检测、定时整理等。
