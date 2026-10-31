@@ -368,6 +368,18 @@
   </div>
 </div>
 
+<aside class="canvas-panel" id="canvasPanel" hidden aria-label="Artifact 预览">
+  <div class="canvas-panel__head">
+    <strong id="canvasTitle">预览</strong>
+    <div class="canvas-panel__actions">
+      <button class="btn btn--ghost" id="canvasDownload" type="button">下载</button>
+      <button class="icon-btn" id="canvasClose" type="button" aria-label="关闭预览">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+  </div>
+  <iframe id="canvasFrame" title="预览" sandbox="allow-scripts allow-forms allow-modals" referrerpolicy="no-referrer"></iframe>
+</aside>
 <!-- ======================= Knowledge base ======================= -->
 <div class="modal" id="kbModal" role="dialog" aria-modal="true" aria-labelledby="kbTitle" hidden>
   <div class="modal__scrim" data-close></div>

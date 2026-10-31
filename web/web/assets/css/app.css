@@ -3175,6 +3175,59 @@ html[data-theme="light"] .btn--danger {
   font-size: 10px;
 }
 
+/* ---------- Artifact canvas ---------- */
+.canvas-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 190;
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 52vw);
+  border-left: 1px solid var(--line-2);
+  background: var(--bg);
+  box-shadow: -30px 0 80px -40px rgba(0, 0, 0, 0.9);
+}
+
+body.desktop-app .canvas-panel {
+  top: 38px;
+}
+
+.canvas-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.canvas-panel__head strong {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.canvas-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.canvas-panel__actions .btn {
+  height: 28px;
+  font-size: 10.5px;
+}
+
+#canvasFrame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: #fff;
+}
 /* ---------- Knowledge base ---------- */
 .kb-actions {
   display: flex;

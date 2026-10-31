@@ -321,6 +321,42 @@ const STORE_KNOWLEDGE = "dreamai.knowledge.v1";
     });
   }
 
+  let canvasPayload = null;
+
+  function openCanvas(lang, code) {
+    const kind = lang === "md" ? "markdown" : lang;
+    let html = code;
+    let ext = "html";
+    if (kind === "markdown") {
+      html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><style>body{max-width:760px;margin:0 auto;padding:28px 24px;font-family:"Microsoft YaHei",system-ui,sans-serif;line-height:1.8;color:#1b1f2a}h1,h2,h3{line-height:1.35}pre{background:#f5f7fb;padding:12px;border-radius:8px;overflow:auto}code{font-family:Consolas,monospace}blockquote{border-left:3px solid #4a6ef5;margin:0;padding-left:14px;color:#6b7280}table{border-collapse:collapse}td,th{border:1px solid #dde2ec;padding:6px 9px}</style></head><body>${markdown(code)}</body></html>`;
+      ext = "md";
+    } else if (kind === "svg") {
+      html = `<!doctype html><html><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0d13">${code}</body></html>`;
+      ext = "svg";
+    }
+    canvasPayload = { content: code, ext };
+    $("#canvasTitle").textContent = `预览 · ${String(kind).toUpperCase()}`;
+    $("#canvasFrame").srcdoc = html;
+    $("#canvasPanel").hidden = false;
+  }
+
+  function closeCanvas() {
+    $("#canvasPanel").hidden = true;
+    $("#canvasFrame").srcdoc = "";
+    canvasPayload = null;
+  }
+
+  function downloadCanvas() {
+    if (!canvasPayload) return;
+    const blob = new Blob([canvasPayload.content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `dream-artifact.${canvasPayload.ext}`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
   function decorate(container) {
     if (window.Prism) {
       try {
@@ -342,9 +378,17 @@ const STORE_KNOWLEDGE = "dreamai.knowledge.v1";
           el("span", { text: "复制" }),
         ]),
       ]);
+      if (["html", "xml", "svg", "markdown", "md"].includes(lang)) {
+        const preview = el("button", { class: "code-block__copy", type: "button" }, [
+          icon("open"),
+          el("span", { text: "预览" }),
+        ]);
+        preview.addEventListener("click", () => openCanvas(lang, code.textContent || ""));
+        head.insertBefore(preview, head.querySelector(".code-block__copy"));
+      }
       pre.replaceWith(block);
       block.append(head, pre);
-      head.querySelector("button").addEventListener("click", async (event) => {
+      head.querySelector(".code-block__copy:last-of-type").addEventListener("click", async (event) => {
         const btn = event.currentTarget;
         await copyText(code.textContent || "");
         btn.querySelector("span").textContent = "已复制";
@@ -3823,6 +3867,11 @@ ${task}`;
       if (url) readLink(url);
     });
     $("#linkChipRemove").addEventListener("click", () => clearLinkContext());
+    $("#canvasClose").addEventListener("click", closeCanvas);
+    $("#canvasDownload").addEventListener("click", downloadCanvas);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !$("#canvasPanel").hidden) closeCanvas();
+    });
     $("#fileInput").addEventListener("change", (event) => {
       addFiles(event.target.files);
       event.target.value = "";
