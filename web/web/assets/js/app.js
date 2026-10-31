@@ -117,6 +117,7 @@ const STORE_USAGE = "dreamai.usage.v1";
     file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/>',
     open: '<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
     memory: '<path d="M6 4h9a2 2 0 0 1 2 2v14l-5.5-3.5L6 20Z"/>',
+    speaker: '<path d="M4 10v4h3l4 3V7L7 10Z"/><path d="M15 9a4 4 0 0 1 0 6"/><path d="M17.5 6.5a7 7 0 0 1 0 11"/>',
     folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
   };
 
@@ -563,6 +564,45 @@ const STORE_USAGE = "dreamai.usage.v1";
       el("span", { text: label }),
     ]);
     btn.addEventListener("click", onClick);
+    return btn;
+  }
+
+  function speechButton(text) {
+    let speaking = false;
+    const btn = actionBtn("speaker", "朗读", () => {
+      if (!("speechSynthesis" in window)) {
+        toast("当前浏览器不支持朗读", "err");
+        return;
+      }
+      if (speaking || window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        speaking = false;
+        btn.querySelector("span").textContent = "朗读";
+        return;
+      }
+      const clean = String(text || "")
+        .replace(/```[\s\S]*?```/g, " ")
+        .replace(/[#>*`_~]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 4000);
+      if (!clean) return;
+      const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.lang = "zh-CN";
+      utterance.rate = 1.02;
+      utterance.onend = () => {
+        speaking = false;
+        btn.querySelector("span").textContent = "朗读";
+      };
+      utterance.onerror = () => {
+        speaking = false;
+        btn.querySelector("span").textContent = "朗读";
+      };
+      speaking = true;
+      btn.querySelector("span").textContent = "停止";
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    });
     return btn;
   }
 
@@ -1154,6 +1194,7 @@ const STORE_USAGE = "dreamai.usage.v1";
     main.appendChild(
       el("div", { class: "msg__actions" }, [
         actionBtn("memory", "记住", () => addMemory(message.content.slice(0, 160))),
+        speechButton(message.content),
         actionBtn("copy", "复制", async () => {
           await copyText(message.content);
           toast("已复制");
@@ -2540,6 +2581,7 @@ ${task}`;
   }
 
   async function sendMessage(text) {
+    if (window.speechSynthesis?.speaking) window.speechSynthesis.cancel();
     const typed = (text ?? $("#input").value).trim();
     const memoryMatch = /^(?:记住|请记住|以后请记住|以后都)[：:，,\s]+([\s\S]+)$/.exec(typed);
     if (memoryMatch) addMemory(memoryMatch[1]);
