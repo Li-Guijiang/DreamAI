@@ -4274,6 +4274,13 @@ ${task}`;
     fetch("/api/health", { headers: { Accept: "application/json" } }).catch(() => {});
   }
 
+  if ("serviceWorker" in navigator) {
+    const local = ["localhost", "127.0.0.1"].includes(location.hostname);
+    if (location.protocol === "https:" || local) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {

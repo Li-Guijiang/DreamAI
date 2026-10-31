@@ -661,6 +661,21 @@ async def favicon() -> FileResponse:
     return FileResponse(WEB_DIR / "assets" / "img" / "favicon.ico")
 
 
+@app.get("/index.html")
+async def index_html() -> FileResponse:
+    return FileResponse(WEB_DIR / "index.html")
+
+
+@app.get("/sw.js")
+async def service_worker() -> FileResponse:
+    return FileResponse(WEB_DIR / "sw.js", media_type="application/javascript; charset=utf-8")
+
+
+@app.get("/offline.html")
+async def offline_page() -> FileResponse:
+    return FileResponse(WEB_DIR / "offline.html")
+
+
 @app.get("/manifest.webmanifest")
 async def manifest() -> FileResponse:
     return FileResponse(WEB_DIR / "manifest.webmanifest", media_type="application/manifest+json")
