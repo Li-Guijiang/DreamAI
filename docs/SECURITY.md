@@ -1,43 +1,50 @@
-# Security Policy
+# Security
 
-<p align="center"><img src="https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@main/assets/brand/banner-docs.webp" alt="Animated Dream AI documentation banner" width="720"></p>
+Dream AI is designed so the model never receives secrets it does not need, and the
+desktop app can only touch what the user explicitly selected.
 
-<sub>[Back to the documentation index](./README.md)</sub>
+## API keys
 
-## Reporting a Vulnerability
+- The site's free-model key lives only in the server environment (`.env`, mode 600) and never reaches the browser.
+- A user's DeepSeek key is entered in the browser, kept in `localStorage`, and forwarded per request only to the Dream AI API. It is not logged, stored server-side or written to disk.
+- Logs intentionally record request metadata (IP, upstream kind, failure reason) and never prompt content or keys.
 
-If you discover a security vulnerability in Dream AI, please report it
-**privately** so it can be fixed before public disclosure:
+## Link reader (`/api/read`)
 
-- Prefer GitHub: open a **Security Advisory** from the repository's
-  `Security → Report a vulnerability` page.
-- If that is unavailable, open a private issue or contact the maintainer
-  directly. Do not post exploit details in a public issue.
+- Only `http` / `https`, ports 80 / 443.
+- Hostnames are resolved first; loopback, private, link-local, reserved and multicast addresses are rejected.
+- Redirects are followed manually and re-validated; usernames/passwords in URLs are rejected.
+- Responses are capped at 2 MB / 20k characters and limited to text/html or text/plain.
+- Per-IP rate limit: 20 requests / 10 minutes.
 
-## What to Include
+## Web hardening
 
-- A clear description of the vulnerability and its impact.
-- Steps to reproduce, if possible.
-- Suggested fix or mitigation, if you have one.
+- CSP: `default-src 'self'`, no inline scripts/styles.
+- `X-Content-Type-Options`, `X-Frame-Options: DENY`, HSTS, Referrer-Policy.
+- Per-IP sliding-window rate limit, global daily free budget, input size limits.
+- Request bodies over 512 KB are rejected before parsing.
 
-## Scope
+## Desktop boundaries
 
-In scope: code in this repository, configuration handling, and the agent's
-tool execution model.
+- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`.
+- The preload exposes a fixed IPC surface; no `fs`, `child_process` or shell access.
+- Local tools can only touch the workspace chosen through a native dialog.
+- Documents are written only to `<workspace>/Dream AI 文档`; coding projects only to `<workspace>/Dream AI 项目`.
+- Coding commands use a safe-prefix whitelist; destructive patterns always require a native confirmation dialog.
+- Every command is appended to `dreamai-commands.log` inside the project.
+- Dev servers are tracked and killed on app quit; the user can stop them at any time.
+- The window refuses to navigate away from the official site; external links go to the system browser.
 
-Out of scope: vulnerabilities in third-party providers, operating system
-issues unrelated to this project, or reports that only describe theoretical
-risks with no concrete impact.
+## Data location
 
-## Expectations
+| Data | Where |
+| --- | --- |
+| Conversations, memory, knowledge base, prompts, usage | Browser / Electron `localStorage` |
+| Generated documents | Workspace `Dream AI 文档` |
+| Coding projects | Workspace `Dream AI 项目` |
+| API keys (BYOK) | Browser `localStorage` only |
 
-- Reports are reviewed promptly.
-- Credit is given to reporters who wish to be acknowledged after a fix.
-- We do not guarantee a fixed response time, but we treat valid reports
-  seriously.
+## Reporting
 
-## Safe Development Reminders
-
-- Never commit API keys, `.env`, or personal data (see `.gitignore`).
-- Tools that touch the filesystem or network are added only behind explicit
-  user consent and allowlists (planned in `v0.3`).
+Please open a private security advisory on GitHub or email the maintainer instead of
+filing a public issue for vulnerabilities. Include reproduction steps and impact.
