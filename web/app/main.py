@@ -7,21 +7,28 @@ model endpoint. API keys never leave the server.
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import logging
+import re
+import socket
 import time
+from html.parser import HTMLParser
+from urllib.parse import urljoin, urlparse
 from collections import defaultdict, deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
+import httpx
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from . import llm
-from .config import VERSION, WEB_DIR, load_settings
+from .config import BASE_DIR, VERSION, WEB_DIR, load_settings
 
 logging.basicConfig(
     level=logging.INFO,
@@ -105,12 +112,7 @@ _stats = {
 
 
 async def consume_daily_budget() -> bool:
-    """Daily request budget for this worker process (protects the API key).
-
-    The production unit runs two Uvicorn workers, so the effective ceiling is
-    roughly ``daily_limit * workers``. Use one worker or shared storage when a
-    strict process-independent quota is required.
-    """
+    """Global per-process daily request budget (protects the API key)."""
     if settings.daily_limit <= 0:
         return True
     today = time.strftime("%Y-%m-%d")
@@ -133,6 +135,165 @@ def client_ip(request: Request) -> str:
         return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
 
+
+# ---------------------------------------------------------------------------
+# Safe link reader (SSRF-guarded, text only)
+# ---------------------------------------------------------------------------
+
+READER_MAX_BYTES = 2_000_000
+READER_MAX_CHARS = 20_000
+READER_TYPES = {"text/html", "text/plain", "application/xhtml+xml"}
+reader_limiter = RateLimiter(20, 600)
+
+
+class ReaderError(Exception):
+    def __init__(self, message: str, status: int = 400) -> None:
+        super().__init__(message)
+        self.message = message
+        self.status = status
+
+
+class _TextExtractor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.title = ""
+        self._skip = 0
+        self._in_title = False
+        self._title_done = False
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        if tag in {"script", "style", "noscript", "svg", "canvas", "iframe", "template"}:
+            self._skip += 1
+        if tag == "title" and not self._title_done:
+            self._in_title = True
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"script", "style", "noscript", "svg", "canvas", "iframe", "template"} and self._skip:
+            self._skip -= 1
+        if tag == "title" and self._in_title:
+            self._in_title = False
+            self._title_done = True
+
+    def handle_data(self, data: str) -> None:
+        if self._skip:
+            return
+        text = " ".join(data.split())
+        if not text:
+            return
+        if self._in_title and not self._title_done:
+            self.title += text
+        else:
+            self.parts.append(text)
+
+
+async def _public_host(host: str) -> bool:
+    name = host.strip().strip("[]").lower().rstrip(".")
+    if not name or name == "localhost" or name.endswith((".local", ".internal", ".localhost")):
+        return False
+    try:
+        infos = await asyncio.to_thread(socket.getaddrinfo, name, None, type=socket.SOCK_STREAM)
+    except OSError:
+        return False
+    if not infos:
+        return False
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            return False
+        if (
+            not ip.is_global
+            or ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+        ):
+            return False
+    return True
+
+
+async def _validate_read_url(url: str):
+    if not url or len(url) > 2048:
+        raise ReaderError("链接无效")
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        raise ReaderError("只支持 http / https 链接")
+    if parsed.username or parsed.password:
+        raise ReaderError("链接不能包含账号信息")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise ReaderError("链接端口无效") from exc
+    if port not in (None, 80, 443):
+        raise ReaderError("只允许访问 80 / 443 端口")
+    host = parsed.hostname
+    if not host or not await _public_host(host):
+        raise ReaderError("该链接不允许访问（仅支持公网网页）")
+    return parsed
+
+
+async def fetch_readable(url: str) -> dict:
+    current = url
+    headers = {
+        "User-Agent": "DreamAI-Reader/1.0 (+https://liguijiang.com)",
+        "Accept": "text/html, text/plain;q=0.9, */*;q=0.1",
+    }
+    timeout = httpx.Timeout(12.0, connect=6.0)
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=False, headers=headers) as client:
+        for _ in range(4):
+            parsed = await _validate_read_url(current)
+            async with client.stream("GET", current) as response:
+                if response.status_code in {301, 302, 303, 307, 308}:
+                    location = response.headers.get("location")
+                    if not location:
+                        raise ReaderError("链接跳转无效", 400)
+                    current = urljoin(current, location)
+                    continue
+                if response.status_code != 200:
+                    raise ReaderError(f"目标网站返回 HTTP {response.status_code}", 502)
+                ctype = (response.headers.get("content-type") or "").split(";")[0].strip().lower()
+                if ctype not in READER_TYPES:
+                    raise ReaderError("只支持读取网页或纯文本链接", 415)
+
+                chunks: list[bytes] = []
+                total = 0
+                truncated = False
+                async for chunk in response.aiter_bytes():
+                    total += len(chunk)
+                    if total > READER_MAX_BYTES:
+                        truncated = True
+                        break
+                    chunks.append(chunk)
+                raw = b"".join(chunks)
+                body = raw.decode(response.encoding or "utf-8", "replace")
+
+                if ctype == "text/plain":
+                    title = parsed.hostname or current
+                    text = body
+                else:
+                    extractor = _TextExtractor()
+                    extractor.feed(body)
+                    extractor.close()
+                    title = extractor.title.strip() or (parsed.hostname or current)
+                    text = "\n".join(extractor.parts)
+
+                text = re.sub(r"[ \t\r\f\v]+", " ", text)
+                text = re.sub(r"\n{3,}", "\n\n", text).strip()
+                if not text:
+                    raise ReaderError("页面里没有可读文本", 422)
+                if len(text) > READER_MAX_CHARS:
+                    text = text[:READER_MAX_CHARS]
+                    truncated = True
+                return {
+                    "url": current,
+                    "title": title[:200],
+                    "text": text,
+                    "chars": len(text),
+                    "truncated": truncated,
+                }
+        raise ReaderError("链接跳转次数过多")
 
 # ---------------------------------------------------------------------------
 # Middleware: security headers, cache policy, body size guard
@@ -197,7 +358,6 @@ class ChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1, max_length=40)
     model: str | None = None
     provider: Literal["free", "byok"] = "free"
-    providerId: str | None = Field(default=None, max_length=40)
     apiKey: str | None = Field(default=None, max_length=200)
     temperature: float | None = None
     maxTokens: int | None = Field(default=None, ge=128, le=8192)
@@ -244,9 +404,7 @@ def sse(event: str, payload: dict) -> bytes:
 
 def prepare_messages(messages: list[ChatMessage], system_prompt: str) -> list[dict[str, str]]:
     """Trim history (newest-last) by count and size, then prepend the persona."""
-    chat = [{"role": m.role, "content": m.content} for m in messages][
-        -settings.max_history_messages :
-    ]
+    chat = [{"role": m.role, "content": m.content} for m in messages][-settings.max_history_messages :]
 
     total = 0
     kept: list[dict[str, str]] = []
@@ -274,12 +432,8 @@ def resolve_upstream(payload: ChatRequest) -> Upstream:
                 "byok_missing",
                 401,
             )
-        provider = settings.provider(payload.providerId)
-        if provider is None or not provider.models:
-            raise UpstreamError("这个模型来源不可用，请重新选择。", "byok_provider", 400)
-        model_ids = {model.id for model in provider.models}
-        model = payload.model if payload.model in model_ids else provider.models[0].id
-        return Upstream(provider.base_url, key, model, "byok")
+        model = payload.model if payload.model in settings.byok_ids else settings.byok_models[0].id
+        return Upstream(settings.byok_base_url, key, model, "byok")
 
     if not settings.free_configured:
         raise UpstreamError(
@@ -294,6 +448,25 @@ def resolve_upstream(payload: ChatRequest) -> Upstream:
 # Routes
 # ---------------------------------------------------------------------------
 
+
+@app.get("/api/read")
+async def read_link(request: Request, url: str = "") -> JSONResponse:
+    ip = client_ip(request)
+    allowed, retry_after = await reader_limiter.hit(ip)
+    if not allowed:
+        return JSONResponse(
+            {"error": f"读取太频繁了，请 {retry_after} 秒后再试。", "code": "rate_limited"},
+            status_code=429,
+            headers={"Retry-After": str(retry_after)},
+        )
+    try:
+        data = await fetch_readable(url)
+    except ReaderError as exc:
+        return JSONResponse({"error": exc.message, "code": "read_failed"}, status_code=exc.status)
+    except Exception:  # noqa: BLE001
+        logger.exception("reader failed url=%s", url[:200])
+        return JSONResponse({"error": "读取失败，请稍后重试。", "code": "read_failed"}, status_code=502)
+    return JSONResponse(data)
 
 @app.get("/api/health")
 async def health() -> JSONResponse:
@@ -470,16 +643,6 @@ async def index() -> FileResponse:
     return FileResponse(WEB_DIR / "index.html", headers={"Cache-Control": "no-cache"})
 
 
-@app.get("/docs.html")
-async def docs() -> FileResponse:
-    return FileResponse(WEB_DIR / "docs.html", headers={"Cache-Control": "no-cache"})
-
-
-@app.get("/download.html")
-async def download_page() -> FileResponse:
-    return FileResponse(WEB_DIR / "download.html", headers={"Cache-Control": "no-cache"})
-
-
 @app.get("/favicon.ico")
 async def favicon() -> FileResponse:
     return FileResponse(WEB_DIR / "assets" / "img" / "favicon.ico")
@@ -492,17 +655,25 @@ async def manifest() -> FileResponse:
 
 @app.get("/robots.txt")
 async def robots() -> Response:
-    body = "User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: https://liguijiang.com/sitemap.xml\n"
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /api/\n"
+        f"Sitemap: https://liguijiang.com/sitemap.xml\n"
+    )
     return Response(body, media_type="text/plain")
 
 
 @app.get("/sitemap.xml")
-async def sitemap() -> FileResponse:
-    return FileResponse(
-        WEB_DIR / "sitemap.xml",
-        media_type="application/xml",
-        headers={"Cache-Control": "no-cache"},
+async def sitemap() -> Response:
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        "  <url><loc>https://liguijiang.com/</loc><changefreq>weekly</changefreq>"
+        "<priority>1.0</priority></url>\n"
+        "</urlset>\n"
     )
+    return Response(body, media_type="application/xml")
 
 
 app.mount("/assets", StaticFiles(directory=str(WEB_DIR / "assets")), name="assets")
@@ -512,9 +683,7 @@ app.mount("/assets", StaticFiles(directory=str(WEB_DIR / "assets")), name="asset
 async def not_found(request: Request, exc):  # noqa: ANN001
     if request.url.path.startswith("/api/"):
         return JSONResponse({"error": "接口不存在"}, status_code=404)
-    return FileResponse(
-        WEB_DIR / "index.html", status_code=404, headers={"Cache-Control": "no-cache"}
-    )
+    return FileResponse(WEB_DIR / "index.html", status_code=404, headers={"Cache-Control": "no-cache"})
 
 
 if __name__ == "__main__":
