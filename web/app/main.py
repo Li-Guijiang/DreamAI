@@ -94,6 +94,15 @@ _semaphore = asyncio.Semaphore(settings.max_concurrency)
 _daily_lock = asyncio.Lock()
 _daily_state = {"date": time.strftime("%Y-%m-%d"), "count": 0}
 
+_stats = {
+    "requests": 0,
+    "failures": 0,
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "by_model": defaultdict(int),
+    "started_at": STARTED_AT,
+}
+
 
 async def consume_daily_budget() -> bool:
     """Daily request budget for this worker process (protects the API key).
@@ -297,6 +306,29 @@ async def health() -> JSONResponse:
             "byok": list(settings.byok_ids),
             "version": VERSION,
             "uptime": int(time.time() - STARTED_AT),
+            "dailyLimit": settings.daily_limit,
+            "freeRemaining": max(0, settings.daily_limit - _daily_state["count"]) if settings.daily_limit > 0 else None,
+            "rateLimit": settings.rate_limit,
+            "rateWindow": settings.rate_window,
+            "maxConcurrency": settings.max_concurrency,
+            "features": ["memory", "knowledge", "canvas", "reader"],
+        }
+    )
+
+
+@app.get("/api/usage")
+async def usage() -> JSONResponse:
+    return JSONResponse(
+        {
+            "uptime": int(time.time() - STARTED_AT),
+            "version": VERSION,
+            "requests": _stats["requests"],
+            "failures": _stats["failures"],
+            "promptTokens": _stats["prompt_tokens"],
+            "completionTokens": _stats["completion_tokens"],
+            "byModel": dict(_stats["by_model"]),
+            "daily": _daily_state,
+            "dailyLimit": settings.daily_limit,
         }
     )
 
@@ -363,6 +395,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         produced = 0
         failed = False
         cancelled = False
+        usage_payload: dict | None = None
         yield sse("meta", {"model": model, "version": VERSION})
         try:
             async with _semaphore:
@@ -374,6 +407,14 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     temperature=temperature,
                     max_tokens=payload.maxTokens or settings.max_tokens,
                 ):
+                    if kind == "usage":
+                        try:
+                            usage_payload = json.loads(text)
+                        except ValueError:
+                            usage_payload = None
+                        if isinstance(usage_payload, dict):
+                            yield sse("usage", usage_payload)
+                        continue
                     produced += len(text)
                     yield sse("reasoning" if kind == "reasoning" else "delta", {"t": text})
         except llm.LLMError as exc:
@@ -391,15 +432,22 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             logger.exception("unexpected chat error ip=%s", ip)
             yield sse("error", {"message": "服务出现了一点意外，请稍后重试。"})
         finally:
+            _stats["requests"] += 1
+            _stats["by_model"][model] += 1
+            if failed:
+                _stats["failures"] += 1
+            if isinstance(usage_payload, dict):
+                _stats["prompt_tokens"] += int(usage_payload.get("prompt_tokens") or 0)
+                _stats["completion_tokens"] += int(usage_payload.get("completion_tokens") or 0)
             if not failed and not cancelled:
-                yield sse(
-                    "done",
-                    {
-                        "chars": produced,
-                        "elapsed": round(time.monotonic() - started, 2),
-                        "model": model,
-                    },
-                )
+                done_payload = {
+                    "chars": produced,
+                    "elapsed": round(time.monotonic() - started, 2),
+                    "model": model,
+                }
+                if usage_payload:
+                    done_payload["usage"] = usage_payload
+                yield sse("done", done_payload)
 
     return StreamingResponse(
         event_stream(),

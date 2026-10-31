@@ -141,6 +141,10 @@ async def stream_completion(
                         message = message.get("message", "模型服务返回错误")
                     raise LLMError(str(message))
 
+                usage = chunk.get("usage")
+                if isinstance(usage, dict):
+                    yield "usage", json.dumps(usage, ensure_ascii=False)
+
                 choices = chunk.get("choices") or []
                 if not choices:
                     continue
