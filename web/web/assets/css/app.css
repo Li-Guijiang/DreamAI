@@ -3175,6 +3175,106 @@ html[data-theme="light"] .btn--danger {
   font-size: 10px;
 }
 
+/* ---------- Knowledge base ---------- */
+.kb-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.kb-hint {
+  color: var(--text-3);
+  font-size: 10.5px;
+}
+
+.kb-list {
+  max-height: 260px;
+  margin: 14px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.kb-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 11.5px;
+}
+
+.kb-item__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.kb-item__meta strong {
+  display: block;
+  overflow: hidden;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kb-item__meta em {
+  color: var(--text-3);
+  font-size: 9.5px;
+  font-style: normal;
+}
+
+.kb-item__remove {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  color: var(--text-3);
+}
+
+.kb-item__remove:hover {
+  background: var(--line-2);
+  color: var(--text);
+}
+
+.kb-item__remove svg {
+  width: 11px;
+  height: 11px;
+}
+
+.kb-list__empty {
+  padding: 18px 0;
+  color: var(--text-3);
+  font-size: 11px;
+  text-align: center;
+}
+
+.kb-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  margin-top: 8px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text-3);
+  font-size: 9.5px;
+}
+
+.kb-ref svg {
+  width: 10px;
+  height: 10px;
+}
+
+.kb-ref span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 /* ---------- Memory ---------- */
 .switch {
   position: relative;

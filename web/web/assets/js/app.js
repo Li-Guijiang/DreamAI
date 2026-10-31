@@ -8,6 +8,7 @@
   const STORE_SESSIONS = "dreamai.sessions.v1";
   const STORE_SETTINGS = "dreamai.settings.v1";
 const STORE_MEMORY = "dreamai.memory.v1";
+const STORE_KNOWLEDGE = "dreamai.knowledge.v1";
   const STORE_USER_KEY = "dreamai.userkey.v1";
   const MAX_INPUT = 12000;
   const MAX_FILES = 3;
@@ -144,8 +145,11 @@ const STORE_MEMORY = "dreamai.memory.v1";
       mode: "chat",
       docTemplate: "auto",
       useMemory: true,
+      useKnowledge: true,
     },
     memory: [],
+    knowledge: { docs: [] },
+    kbContextForSend: null,
     userKey: "",
     attachments: [],
     search: "",
@@ -174,6 +178,13 @@ const STORE_MEMORY = "dreamai.memory.v1";
       state.memory = Array.isArray(data) ? data.filter((item) => item && item.text) : [];
     } catch {
       state.memory = [];
+    }
+    try {
+      const raw = localStorage.getItem(STORE_KNOWLEDGE);
+      const data = raw ? JSON.parse(raw) : null;
+      state.knowledge = data && Array.isArray(data.docs) ? { docs: data.docs.filter((d) => d && d.name && Array.isArray(d.chunks)) } : { docs: [] };
+    } catch {
+      state.knowledge = { docs: [] };
     }
     try {
       state.userKey = localStorage.getItem(STORE_USER_KEY) || "";
@@ -487,6 +498,173 @@ const STORE_MEMORY = "dreamai.memory.v1";
     return row;
   }
 
+  let knowledgeIndex = null;
+
+  function persistKnowledge() {
+    knowledgeIndex = null;
+    try {
+      localStorage.setItem(STORE_KNOWLEDGE, JSON.stringify(state.knowledge));
+    } catch {
+      toast("知识库太大，保存失败，请删掉一些文档", "err");
+    }
+  }
+
+  function chunkKnowledgeText(text, size = 600, overlap = 80) {
+    const clean = String(text || "").replace(/\r\n/g, "\n").trim();
+    if (!clean) return [];
+    const chunks = [];
+    let start = 0;
+    while (start < clean.length) {
+      let end = Math.min(clean.length, start + size);
+      if (end < clean.length) {
+        const cut = clean.lastIndexOf("\n", end);
+        if (cut > start + size * 0.5) end = cut;
+      }
+      const piece = clean.slice(start, end).trim();
+      if (piece) chunks.push(piece);
+      if (end >= clean.length) break;
+      start = Math.max(end - overlap, start + 1);
+    }
+    return chunks;
+  }
+
+  function tokenizeKnowledge(text) {
+    const lower = String(text || "").toLowerCase();
+    const latin = lower.match(/[a-z0-9_]+/g) || [];
+    const cjk = lower.match(/[\u4e00-\u9fff]/g) || [];
+    const bigrams = [];
+    for (let i = 0; i < cjk.length - 1; i += 1) bigrams.push(cjk[i] + cjk[i + 1]);
+    if (cjk.length === 1) bigrams.push(cjk[0]);
+    return latin.concat(bigrams);
+  }
+
+  function rebuildKnowledgeIndex() {
+    const chunks = [];
+    const df = new Map();
+    let totalLength = 0;
+    for (const doc of state.knowledge.docs) {
+      for (const text of doc.chunks) {
+        const tokens = tokenizeKnowledge(text);
+        if (!tokens.length) continue;
+        chunks.push({ doc: doc.name, text, tokens });
+        totalLength += tokens.length;
+        new Set(tokens).forEach((token) => df.set(token, (df.get(token) || 0) + 1));
+      }
+    }
+    knowledgeIndex = { chunks, df, avgdl: chunks.length ? totalLength / chunks.length : 0 };
+    return knowledgeIndex;
+  }
+
+  function retrieveKnowledge(query, limit = 4) {
+    const index = knowledgeIndex || rebuildKnowledgeIndex();
+    if (!index.chunks.length) return [];
+    const queryTokens = [...new Set(tokenizeKnowledge(query))].slice(0, 24);
+    if (!queryTokens.length) return [];
+    const k1 = 1.4;
+    const b = 0.75;
+    const scored = [];
+    index.chunks.forEach((chunk) => {
+      const tf = new Map();
+      chunk.tokens.forEach((token) => tf.set(token, (tf.get(token) || 0) + 1));
+      let score = 0;
+      for (const token of queryTokens) {
+        const freq = tf.get(token) || 0;
+        if (!freq) continue;
+        const docFreq = index.df.get(token) || 0;
+        const idf = Math.log(1 + (index.chunks.length - docFreq + 0.5) / (docFreq + 0.5));
+        score += idf * ((freq * (k1 + 1)) / (freq + k1 * (1 - b + (b * chunk.tokens.length) / index.avgdl)));
+      }
+      if (score > 0) scored.push({ doc: chunk.doc, text: chunk.text, score });
+    });
+    scored.sort((a, b2) => b2.score - a.score);
+    return scored.slice(0, limit);
+  }
+
+  function renderKnowledge() {
+    const list = $("#kbList");
+    const count = $("#kbCount");
+    const docs = state.knowledge.docs || [];
+    if (count) count.textContent = `${docs.length} 个文档`;
+    if (!list) return;
+    list.textContent = "";
+    if (!docs.length) {
+      list.appendChild(el("li", { class: "kb-list__empty", text: "还没有资料。点击「导入文件」加入 txt / md / 代码等文本。" }));
+      return;
+    }
+    docs.forEach((doc) => {
+      const row = el("li", { class: "kb-item" }, [
+        el("div", { class: "kb-item__meta" }, [
+          el("strong", { text: doc.name }),
+          el("em", { text: `${doc.chunks.length} 个片段 · ${(doc.size / 1024).toFixed(1)} KB` }),
+        ]),
+      ]);
+      const remove = el("button", { type: "button", class: "kb-item__remove", "aria-label": "删除" }, [
+        el("span", { html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>' }),
+      ]);
+      remove.addEventListener("click", () => {
+        state.knowledge.docs = state.knowledge.docs.filter((item) => item.id !== doc.id);
+        persistKnowledge();
+        renderKnowledge();
+      });
+      row.appendChild(remove);
+      list.appendChild(row);
+    });
+  }
+
+  function syncKnowledgeUI() {
+    const toggle = $("#kbToggle");
+    if (toggle) toggle.checked = state.settings.useKnowledge !== false;
+    renderKnowledge();
+  }
+
+  async function addKnowledgeFiles(files) {
+    const list = Array.from(files || []);
+    let total = state.knowledge.docs.reduce((sum, doc) => sum + doc.size, 0);
+    let added = 0;
+    for (const file of list) {
+      if (file.size > 300 * 1024) {
+        toast(`${file.name} 超过 300 KB`, "err");
+        continue;
+      }
+      if (total + file.size > 1.5 * 1024 * 1024) {
+        toast("知识库总大小超过 1.5 MB", "err");
+        break;
+      }
+      let text = "";
+      try {
+        text = await file.text();
+      } catch {
+        continue;
+      }
+      const chunks = chunkKnowledgeText(text);
+      if (!chunks.length) continue;
+      state.knowledge.docs.push({
+        id: `k-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: file.name,
+        size: file.size,
+        chunks,
+      });
+      total += file.size;
+      added += 1;
+    }
+    persistKnowledge();
+    renderKnowledge();
+    if (added) toast(`已导入 ${added} 个文档`);
+  }
+
+  function kbRow(refs) {
+    const row = el("div", { class: "msg__files" });
+    refs.forEach((ref) => {
+      row.appendChild(
+        el("span", { class: "kb-ref", title: ref.preview || ref.doc }, [
+          el("span", { html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21Z"/></svg>' }),
+          el("span", { text: ref.doc }),
+        ]),
+      );
+    });
+    return row;
+  }
+
   function linkRow(link) {
     let host = "";
     try {
@@ -658,6 +836,7 @@ const STORE_MEMORY = "dreamai.memory.v1";
       if (message.content) main.appendChild(el("div", { class: "msg__bubble", text: message.content }));
       if (message.attachments && message.attachments.length) main.appendChild(filesRow(message.attachments));
       if (message.link) main.appendChild(linkRow(message.link));
+      if (message.knowledge?.length) main.appendChild(kbRow(message.knowledge));
 
       const actions = el("div", { class: "msg__actions" });
       if (message.content) actions.appendChild(actionBtn("edit", "编辑", () => startEdit(index)));
@@ -1016,6 +1195,8 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
 
   async function callModel(messages, { onDelta, signal, temperature, maxTokens, timeoutMs = 300000 } = {}) {
     const provider = state.settings.provider || "free";
+    const kbContext = state.kbContextForSend?.context || undefined;
+    state.kbContextForSend = null;
     let effectiveSignal = signal;
     if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
       const timer = AbortSignal.timeout(timeoutMs);
@@ -1033,6 +1214,7 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
         apiKey: provider === "byok" ? state.userKey : undefined,
         temperature: temperature ?? Number(state.settings.temperature),
         maxTokens,
+        context: kbContext,
         memory:
           state.settings.useMemory && state.memory.length
             ? state.memory.map((item) => item.text).slice(0, 20)
@@ -2074,6 +2256,15 @@ ${task}`;
     const typed = (text ?? $("#input").value).trim();
     const memoryMatch = /^(?:记住|请记住|以后请记住|以后都)[：:，,\s]+([\s\S]+)$/.exec(typed);
     if (memoryMatch) addMemory(memoryMatch[1]);
+    if (state.settings.useKnowledge !== false && state.knowledge.docs.length && typed) {
+      const hits = retrieveKnowledge(typed, 4);
+      if (hits.length) {
+        state.kbContextForSend = {
+          context: hits.map((hit, index) => `[资料${index + 1} · ${hit.doc}]\n${hit.text}`).join("\n\n"),
+          refs: hits.map((hit) => ({ doc: hit.doc, preview: hit.text.slice(0, 80) })),
+        };
+      }
+    }
     const attachments = state.attachments.slice();
     if ((!typed && !attachments.length) || state.streaming) return;
     if (typed.length > MAX_INPUT) {
@@ -2089,6 +2280,7 @@ ${task}`;
 
     const userMessage = { role: "user", content: typed, ts: now() };
     if (attachments.length) userMessage.attachments = attachments;
+    if (state.kbContextForSend) userMessage.knowledge = state.kbContextForSend.refs;
     if (state.linkContext) userMessage.link = state.linkContext;
 
     session.messages.push(userMessage);
@@ -2159,7 +2351,13 @@ ${task}`;
       temperature: Number(state.settings.temperature),
       thinking: Boolean(state.settings.thinking),
       style: state.settings.style,
+      context: state.kbContextForSend?.context,
+      memory:
+        state.settings.useMemory && state.memory.length
+          ? state.memory.map((item) => item.text).slice(0, 20)
+          : undefined,
     };
+    state.kbContextForSend = null;
 
     let thinkNode = null;
     let errored = false;
@@ -2836,6 +3034,9 @@ ${task}`;
         if (message.link) {
           lines.push(`> 网页：${message.link.title}（${message.link.url}）`);
         }
+        if (message.knowledge?.length) {
+          lines.push(`> 知识库：${message.knowledge.map((item) => item.doc).join("、")}`);
+        }
         lines.push("");
       } else if (message.kind === "doc" && message.document) {
         lines.push("**Dream AI（文档模式）**：", `已生成 ${message.document.name}（${message.document.path}）`, "");
@@ -2924,6 +3125,20 @@ ${task}`;
     });
 
     $("#manageKeyBtn").addEventListener("click", () => openKeyModal());
+    $("#kbBtn").addEventListener("click", () => {
+      syncKnowledgeUI();
+      openModal("kbModal");
+    });
+    $("#kbUpload").addEventListener("click", () => $("#kbFileInput").click());
+    $("#kbFileInput").addEventListener("change", (event) => {
+      addKnowledgeFiles(event.target.files);
+      event.target.value = "";
+    });
+    $("#kbToggle").addEventListener("change", (event) => {
+      state.settings.useKnowledge = event.target.checked;
+      persistSettings();
+      toast(event.target.checked ? "已启用知识库检索" : "已关闭知识库检索");
+    });
     $("#memoryManage").addEventListener("click", () => {
       closeModal($("#settingsModal"));
       openModal("memoryModal");
@@ -3661,6 +3876,7 @@ ${task}`;
   function init() {
     loadStorage();
     syncMemoryUI();
+    syncKnowledgeUI();
     initTheme();
     setGreeting();
     initEvents();

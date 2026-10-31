@@ -237,6 +237,9 @@
               <span id="docTemplateLabel">自动</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
             </button>
+            <button class="tool" id="kbBtn" type="button" aria-label="知识库" title="本地知识库">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21Z"/><path d="M8 7h8M8 11h6"/></svg>
+            </button>
             <button class="tool" id="linkBtn" type="button" aria-label="阅读网页" title="读取一个网页链接">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg>
             </button>
@@ -362,6 +365,27 @@
     </div>
 
     <p class="panel__note">桌面版只能访问你手动选择的工作文件夹，不会读取其他位置；所有写操作都需要二次确认。</p>
+  </div>
+</div>
+
+<!-- ======================= Knowledge base ======================= -->
+<div class="modal" id="kbModal" role="dialog" aria-modal="true" aria-labelledby="kbTitle" hidden>
+  <div class="modal__scrim" data-close></div>
+  <div class="modal__panel modal__panel--kb">
+    <button class="modal__close" type="button" data-close aria-label="关闭">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <h2 id="kbTitle" class="panel__title">知识库</h2>
+    <p class="key__lead">导入资料后，提问时会先在本地检索相关片段，再连同问题一起交给模型，并在回答下标注来源。</p>
+    <div class="kb-actions">
+      <button class="btn btn--primary" id="kbUpload" type="button">导入文件</button>
+      <label class="switch"><input type="checkbox" id="kbToggle" checked><span class="switch__track"></span></label>
+      <span class="kb-hint">启用检索</span>
+      <span class="kb-hint" id="kbCount">0 个文档</span>
+    </div>
+    <ul class="kb-list" id="kbList"></ul>
+    <p class="panel__note">支持 txt / md / csv / json / 代码等文本文件，单文件 ≤ 300 KB，总大小 ≤ 1.5 MB；资料只保存在本机浏览器。</p>
+    <input type="file" id="kbFileInput" accept=".txt,.md,.markdown,.csv,.json,.js,.ts,.py,.html,.css,.yml,.yaml,.xml,.log" multiple hidden>
   </div>
 </div>
 
