@@ -31,19 +31,19 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Lint with Ruff
-        run: ruff check dream_ai tests examples web/app web/tools
+        run: ruff check dream_ai tests examples web/app
 
       - name: Check formatting
         run: ruff format --check dream_ai tests examples
 
       - name: Check web JavaScript syntax
         run: |
-          for file in web/web/assets/js/*.js; do
+          for file in web/web/assets/js/*.js web/web/sw.js; do
             node --check "$file"
           done
-          node --check desktop/electron/main.js
-          node --check desktop/electron/preload.js
-          node --check desktop/electron/update.js
+          for file in desktop/electron/*.js; do
+            node --check "$file"
+          done
           node desktop/test/update.test.js
 
       - name: Run tests with pytest
