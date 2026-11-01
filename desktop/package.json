@@ -5,8 +5,8 @@
   "description": "Dream AI desktop: local files, document generation and a coding agent",
   "main": "electron/main.js",
   "author": {
-    "name": "Dream AI Team",
-    "email": "599575094@qq.com"
+    "name": "Li Guijiang",
+    "email": "li-guijiang@users.noreply.github.com"
   },
   "license": "MIT",
   "scripts": {
@@ -26,7 +26,7 @@
   "build": {
     "appId": "com.dreamai.desktop",
     "productName": "Dream AI",
-    "copyright": "Copyright (c) 2026 Dream AI Team",
+    "copyright": "Copyright (c) 2026 Li Guijiang",
     "directories": {
       "output": "release",
       "buildResources": "build"

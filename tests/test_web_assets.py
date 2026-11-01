@@ -16,7 +16,13 @@ WEB = ROOT / "web" / "web"
 ATTACHMENT_MANIFEST = ROOT / "assets" / "readme" / "attachments.json"
 ALLOWED_CDN_PREFIX = "https://cdn.jsdelivr.net/gh/Li-Guijiang/DreamAI@"
 
-PAGES = [WEB / "index.html", WEB / "download.html", WEB / "changelog.html", WEB / "offline.html"]
+PAGES = [
+    WEB / "index.html",
+    WEB / "docs.html",
+    WEB / "download.html",
+    WEB / "changelog.html",
+    WEB / "offline.html",
+]
 HTML_REF_RE = re.compile(r"\b(?:src|href)=\"(/[^\"#?]+)")
 IMG_RE = re.compile(r"<img\b[^>]*\bsrc=\"([^\"]+)\"", re.IGNORECASE)
 MD_IMG_RE = re.compile(r"!\[[^\]]*]\(([^)]+)\)")
@@ -153,3 +159,14 @@ def test_team_credit_is_present_and_private_contacts_are_not_public():
     assert "initStarClock" in app_js
     assert "data-motion-toggle" in index
     assert "github.com/Li-Guijiang/DreamAI" in index
+
+
+def test_desktop_shell_is_shared_by_standalone_pages():
+    for name in ("docs.html", "download.html", "changelog.html", "offline.html"):
+        text = (WEB / name).read_text(encoding="utf-8")
+        assert "desktop-shell.css" in text, f"missing window chrome styles in {name}"
+        assert "desktop-shell.js" in text, f"missing window chrome script in {name}"
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    app_js = (WEB / "assets" / "js" / "app.js").read_text(encoding="utf-8")
+    assert 'id="desktopTitlebar"' in index
+    assert 'a[href="/download.html"]' in app_js

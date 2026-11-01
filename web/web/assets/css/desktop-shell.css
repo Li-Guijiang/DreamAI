@@ -1,0 +1,123 @@
+/* Shared window chrome for the frameless Electron shell.
+   The main app has its own copy in app.css; standalone pages load this file. */
+
+body.desktop-app {
+  padding-top: 38px;
+}
+
+body.desktop-app .skip-link {
+  top: 48px;
+}
+
+body.desktop-app .skip-link:not(:focus) {
+  transform: translate(-50%, -280%);
+}
+
+.desktop-titlebar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  height: 38px;
+  background: var(--bg, #08090d);
+  border-bottom: 1px solid var(--line, #23263a);
+  color: var(--text, #f4f5f9);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.dtb__brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-left: 12px;
+  font-size: 12px;
+}
+
+.dtb__brand img {
+  width: 16px;
+  height: 16px;
+}
+
+.dtb__brand strong {
+  font-weight: 600;
+}
+
+.dtb__brand em {
+  padding: 1px 5px;
+  border: 1px solid var(--line-2, #34384f);
+  border-radius: 4px;
+  color: var(--text-3, #8b90a8);
+  font-size: 8.5px;
+  font-style: normal;
+  letter-spacing: 0.14em;
+}
+
+.dtb__drag {
+  flex: 1;
+  height: 100%;
+}
+
+.dtb__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 12px;
+  color: var(--text-3, #8b90a8);
+  font-size: 10.5px;
+}
+
+.dtb__status i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--teal, #4be3c1);
+}
+
+.dtb__controls {
+  display: flex;
+  height: 100%;
+  -webkit-app-region: no-drag;
+}
+
+.dtb__controls button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-3, #8b90a8);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+
+.dtb__controls button:hover {
+  background: var(--line, #23263a);
+  color: var(--text, #f4f5f9);
+}
+
+#winClose:hover {
+  background: #e81123;
+  color: #fff;
+}
+
+.dtb__controls svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+}
+
+@media (max-width: 520px) {
+  .dtb__status {
+    display: none;
+  }
+
+  .dtb__controls button {
+    width: 38px;
+  }
+}

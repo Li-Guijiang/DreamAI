@@ -3800,6 +3800,17 @@ ${task}`;
     $("#agentToggle").hidden = false;
     document.body.classList.add("desktop-app");
 
+    // Download entry points are meaningless once the app is installed.
+    const removeWebOnly = (node) => {
+      if (!node) return;
+      const previous = node.previousElementSibling;
+      node.remove();
+      if (previous?.classList.contains("dot-sep")) previous.remove();
+    };
+    document
+      .querySelectorAll('.download-btn, a[href="/download.html"]')
+      .forEach(removeWebOnly);
+
     if (desktop.window) {
       $("#winMin").addEventListener("click", () => desktop.window.minimize());
       $("#winMax").addEventListener("click", () => desktop.window.toggleMaximize());
