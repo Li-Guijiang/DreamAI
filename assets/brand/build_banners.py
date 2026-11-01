@@ -302,8 +302,9 @@ def build_video(name: str, accent, accent2, mode: str) -> Path:
     GIF is limited to 256 colours and 1x detail; a video keeps gradients smooth
     and stays small because the background is flat.
     """
-    import imageio_ffmpeg
     import subprocess
+
+    import imageio_ffmpeg
 
     render = {"aurora": _aurora_frame, "orbit": _orbit_frame, "grid": _grid_frame}[mode]
     w, h = W * VIDEO_SCALE, H * VIDEO_SCALE

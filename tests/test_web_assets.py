@@ -127,7 +127,13 @@ def test_current_ai_features_are_wired():
     update = (ROOT / "desktop" / "electron" / "update.js").read_text(encoding="utf-8")
     desktop_main = (ROOT / "desktop" / "electron" / "main.js").read_text(encoding="utf-8")
     assert "isNewerVersion" in update
-    assert "latest.yml" in desktop_main
+    # The updater reads latest.json through the service; latest.yml remains the
+    # electron-builder manifest but nothing in the app parses it directly anymore.
+    assert "createUpdateService" in desktop_main
+    assert "installer" in desktop_main
+    assert "dreamai://" in (ROOT / "desktop" / "electron" / "protocol.js").read_text(
+        encoding="utf-8"
+    )
     assert (ROOT / "desktop" / "test" / "update.test.js").is_file()
 
 

@@ -23,7 +23,7 @@ import base64
 import hashlib
 import json
 import sys
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -78,7 +78,7 @@ def build_manifest(version: str, installer: Path | None, notes: str, previous: d
 
 
 def to_yml(manifest: dict) -> str:
-    release_date = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    release_date = datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
     lines = [f"version: {manifest['version']}", "files:", f"  - url: {manifest['file']}"]
     if manifest.get("sha512"):
         lines.append(f"    sha512: {manifest['sha512']}")
