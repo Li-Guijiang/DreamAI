@@ -244,6 +244,140 @@ html[data-theme="light"] .ambient__glow {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
 }
 
+/* Slow meteor shower behind the chat surface. CSS-only so it does not add
+   another render loop on top of the hero canvas. */
+.meteor-shower {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.meteor-shower i {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: clamp(96px, 12vw, 190px);
+  height: 1px;
+  border-radius: 999px;
+  opacity: 0;
+  transform-origin: right center;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--accent) 18%, transparent) 28%,
+    color-mix(in srgb, var(--teal) 58%, #dce8ff) 74%,
+    #fff 100%
+  );
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 55%, transparent));
+  will-change: transform, opacity;
+  animation: dream-meteor 11s linear infinite;
+}
+
+.meteor-shower i::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -1px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 6px #fff,
+    0 0 14px color-mix(in srgb, var(--accent) 72%, transparent);
+  transform: translateY(-50%);
+}
+
+.meteor-shower i:nth-child(1) {
+  top: 13%;
+  left: -12%;
+  animation-delay: 0.5s;
+  animation-duration: 9s;
+}
+
+.meteor-shower i:nth-child(2) {
+  top: 3%;
+  left: 42%;
+  animation-delay: 2.4s;
+  animation-duration: 10s;
+  width: clamp(80px, 9vw, 140px);
+}
+
+.meteor-shower i:nth-child(3) {
+  top: 28%;
+  left: -18%;
+  animation-delay: 4.3s;
+  animation-duration: 11s;
+  width: clamp(72px, 8vw, 120px);
+}
+
+.meteor-shower i:nth-child(4) {
+  top: 7%;
+  left: 68%;
+  animation-delay: 6.2s;
+  animation-duration: 12s;
+}
+
+.meteor-shower i:nth-child(5) {
+  top: 38%;
+  left: 24%;
+  animation-delay: 8.1s;
+  animation-duration: 13s;
+  width: clamp(64px, 7vw, 108px);
+}
+
+.meteor-shower i:nth-child(6) {
+  top: 19%;
+  left: 6%;
+  animation-delay: 10s;
+  animation-duration: 14s;
+  width: clamp(100px, 11vw, 172px);
+}
+
+.meteor-shower i:nth-child(7) {
+  top: 44%;
+  left: 56%;
+  animation-delay: 11.9s;
+  animation-duration: 15s;
+  width: clamp(58px, 6vw, 96px);
+}
+
+@keyframes dream-meteor {
+  0% {
+    opacity: 0;
+    transform: translate3d(-8vw, -8vh, 0) rotate(34deg) scaleX(0.25);
+  }
+  3% {
+    opacity: 0.62;
+  }
+  12% {
+    opacity: 0.75;
+  }
+  18% {
+    opacity: 0;
+    transform: translate3d(58vw, 42vh, 0) rotate(34deg) scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(58vw, 42vh, 0) rotate(34deg) scaleX(1);
+  }
+}
+
+@media (max-width: 860px) {
+  .meteor-shower i:nth-child(3),
+  .meteor-shower i:nth-child(5),
+  .meteor-shower i:nth-child(7) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meteor-shower {
+    display: none;
+  }
+}
+
 /* ---------- Shell ---------- */
 .app {
   position: relative;
@@ -671,31 +805,38 @@ html[data-theme="light"] .session.is-active {
 
 /* ---------- Expand button (when collapsed) ---------- */
 .expand-btn {
-  position: fixed;
-  top: 14px;
-  left: 14px;
-  z-index: 45;
   display: none;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  border: 1px solid var(--line-2);
-  background: var(--surface);
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px 0 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line-2));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 64%),
+    var(--surface);
   color: var(--text-2);
-  box-shadow: var(--shadow-md);
-  transition: color 0.16s, border-color 0.16s, transform 0.16s;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px -18px color-mix(in srgb, var(--accent) 70%, transparent);
+  transition: color 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s;
+}
+
+.expand-btn span {
+  line-height: 1;
 }
 
 .expand-btn:hover {
   color: var(--text);
-  border-color: rgba(124, 156, 255, 0.45);
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--line-2));
   transform: translateY(-1px);
+  box-shadow: 0 12px 28px -18px color-mix(in srgb, var(--accent) 80%, transparent);
 }
 
 .expand-btn svg {
-  width: 17px;
-  height: 17px;
+  width: 15px;
+  height: 15px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.7;
@@ -704,7 +845,19 @@ html[data-theme="light"] .session.is-active {
 }
 
 body.sidebar-collapsed .expand-btn {
-  display: grid;
+  display: inline-flex;
+  animation: dream-expand-in 0.32s var(--motion-ease);
+}
+
+@keyframes dream-expand-in {
+  from {
+    opacity: 0;
+    transform: translateX(-7px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
 }
 
 /* ---------- Main ---------- */
@@ -775,7 +928,7 @@ html[data-theme="light"] .topbar::before {
 }
 
 body.sidebar-collapsed .model-wrap {
-  margin-left: 40px;
+  margin-left: 2px;
 }
 
 .model-pill {

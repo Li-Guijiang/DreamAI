@@ -4241,7 +4241,7 @@ ${task}`;
       }
       document.body.classList.add("sidebar-collapsed");
       localStorage.setItem("dreamai.sidebar", "1");
-      toast("侧边栏已收起，点击左上角按钮可展开");
+      toast("侧边栏已收起，点左上角「展开」或按 Ctrl+B 回来");
     });
     $("#expandBtn").addEventListener("click", () => {
       document.body.classList.remove("sidebar-collapsed");

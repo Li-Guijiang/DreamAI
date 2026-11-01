@@ -2,17 +2,17 @@
  * Caches the app shell so a previously visited page still opens without network.
  * API calls are never cached.
  */
-const CACHE = "dreamai-shell-v1.5.3";
+const CACHE = "dreamai-shell-v1.5.5";
 const SHELL = [
   "/",
   "/index.html",
   "/offline.html",
   "/manifest.webmanifest",
-  "/assets/css/app.css?v=2.0.6",
+  "/assets/css/app.css?v=2.0.8",
   "/assets/css/motion.css?v=2.0.0",
   "/assets/css/landing.css?v=2.0.5",
   "/assets/css/desktop-shell.css?v=1.0.0",
-  "/assets/js/app.js?v=2.0.8",
+  "/assets/js/app.js?v=2.0.9",
   "/assets/js/desktop-shell.js?v=1.0.0",
   "/assets/js/motion.js?v=2.0.0",
   "/assets/js/landing.js?v=2.0.3",
