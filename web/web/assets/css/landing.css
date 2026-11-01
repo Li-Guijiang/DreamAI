@@ -1869,6 +1869,12 @@ body.update-gate-open {
   }
 }
 
+@media (max-width: 370px) {
+  .topbar__actions .motion-toggle {
+    display: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .update-gate,
   .update-gate__panel {

@@ -145,6 +145,11 @@ def test_team_credit_is_present_and_private_contacts_are_not_public():
         assert "@qq.com" not in text.lower(), f"private QQ mail in {page.name}"
         assert not re.search(r"1[3-9]\d{9}", text), f"private phone number in {page.name}"
     index = (WEB / "index.html").read_text(encoding="utf-8")
+    app_js = (WEB / "assets" / "js" / "app.js").read_text(encoding="utf-8")
     assert "李贵江" in index
-    assert "团队" in index
+    assert "团队" not in index
+    assert "独立研发" in index
+    assert "starClock" in index
+    assert "initStarClock" in app_js
+    assert "data-motion-toggle" in index
     assert "github.com/Li-Guijiang/DreamAI" in index

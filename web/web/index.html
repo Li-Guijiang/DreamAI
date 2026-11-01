@@ -7,7 +7,7 @@
 <meta name="description" content="Dream AI 是一个会思考、能协作的通用智能体。写作、编程、推理与创意，从一句话开始。">
 <meta name="theme-color" content="#08090d">
 <meta name="color-scheme" content="dark light">
-<meta name="author" content="李贵江 等">
+<meta name="author" content="李贵江">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Dream AI">
 <meta property="og:title" content="Dream AI">
@@ -26,7 +26,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/assets/css/app.css?v=2.0.6">
 <link rel="stylesheet" href="/assets/css/motion.css?v=2.0.0">
-<link rel="stylesheet" href="/assets/css/landing.css?v=2.0.4">
+<link rel="stylesheet" href="/assets/css/landing.css?v=2.0.5">
 </head>
 <body>
 <div class="ambient" aria-hidden="true">
@@ -88,8 +88,8 @@
       <div class="account">
         <span class="account__avatar" aria-hidden="true">李</span>
         <span class="account__meta">
-          <strong>Dream AI 团队</strong>
-          <em>李贵江 等</em>
+          <strong>李贵江</strong>
+          <em>Dream AI · 独立研发</em>
         </span>
         <button class="icon-btn" id="settingsBtn" type="button" aria-label="设置" title="设置">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
@@ -129,6 +129,14 @@
         <div class="menu" id="modelMenu" role="listbox" hidden></div>
       </div>
 
+      <div class="star-clock" id="starClock" role="timer" aria-label="当前时间">
+        <span class="star-clock__sky" aria-hidden="true"><i></i></span>
+        <span class="star-clock__meta">
+          <time class="star-clock__time" id="starClockTime">--:--</time>
+          <span class="star-clock__date" id="starClockDate">本地时间</span>
+        </span>
+      </div>
+
       <div class="topbar__actions">
         <span class="status" id="statusBadge" hidden><i></i><span></span></span>
         <a class="download-btn" href="/download.html" id="downloadLink" title="下载桌面版">
@@ -142,6 +150,12 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M8 13h8M8 16h5"/></svg>
         </button>        <button class="icon-btn" id="shortcutsBtn" type="button" aria-label="快捷键" title="快捷键 · Ctrl + /">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="4"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M8 14h8"/></svg>
+        </button>
+        <a class="icon-btn hide-sm" href="/docs.html" aria-label="项目文档" title="项目文档 · 架构 / 路线图 / 部署">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v16H6.5A2.5 2.5 0 0 0 4 21.5Z"/><path d="M4 5.5v16M8 7h7M8 11h7"/></svg>
+        </a>
+        <button class="icon-btn motion-toggle" data-motion-toggle type="button" aria-pressed="true" aria-label="暂停全站动效" title="暂停全站动效">
+          <svg class="motion-glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2.2"/><path d="M12 3.5c4.7 0 8.5 3.4 8.5 7.6S16.7 18.7 12 18.7 3.5 15.3 3.5 11.1 7.3 3.5 12 3.5Z"/><path d="M19 5.5 21 3.5M4.2 18.3l-1.8 1.8"/></svg>
         </button>
         <button class="icon-btn" id="themeBtn" type="button" aria-label="切换主题" title="切换明暗主题">
           <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
@@ -517,15 +531,15 @@
     </div>
 
     <p class="about__lead">
-      Dream AI 是一个开源的通用人工智能助手，由李贵江等人组成的团队开发。
+      Dream AI 是一个开源的通用人工智能助手，由李贵江独立研发。
       它学习世界的知识、逻辑与问题，并以开放的方式服务每一个人。
       我们希望把「深度思考」变成一件人人可用的小事。
     </p>
 
-    <h3 class="about__label">开发团队</h3>
+    <h3 class="about__label">创造者</h3>
     <div class="person">
       <span class="person__avatar">李</span>
-      <div><strong>Dream AI 团队</strong><em>李贵江 等 · 开源协作</em></div>
+      <div><strong>李贵江</strong><em>Dream AI 独立研发者</em></div>
     </div>
 
     <div class="about__rows">
@@ -726,7 +740,7 @@
 <script src="/assets/vendor/marked.min.js?v=1.2.0" defer></script>
 <script src="/assets/vendor/purify.min.js?v=1.2.0" defer></script>
 <script src="/assets/vendor/prism.bundle.js?v=1.2.0" defer></script>
-<script src="/assets/js/app.js?v=2.0.6" defer></script>
+<script src="/assets/js/app.js?v=2.0.7" defer></script>
 <script src="/assets/js/motion.js?v=2.0.0" defer></script>
 <script src="/assets/js/landing.js?v=2.0.3" defer></script>
 <script src="/assets/js/desktop-update.js?v=2.0.6" defer></script>
