@@ -1,34 +1,29 @@
 "use strict";
 
 /**
- * Small, dependency-free helpers used by the desktop updater and its tests.
- * electron-updater does the downloading; these functions only reason about
- * version strings and the `latest.yml` manifest we publish next to the
- * installer.
+ * Small, dependency-free helpers used by the desktop updater and its tests:
+ * version ordering and parsing of the `latest.yml` manifest published next to
+ * the installer.
+ *
+ * Ordering lives in ./semver.js so the schedule, the service and the renderer
+ * fallback all agree; these wrappers keep the call sites readable.
  */
 
+const semver = require("./semver");
+
 function parseVersion(value) {
-  const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?/.exec(String(value || "").trim());
-  if (!match) return null;
+  const parsed = semver.parse(value);
+  if (!parsed) return null;
   return {
-    major: Number(match[1]),
-    minor: Number(match[2]),
-    patch: Number(match[3]),
-    pre: match[4] || "",
+    major: parsed.major,
+    minor: parsed.minor,
+    patch: parsed.patch,
+    pre: parsed.prerelease || "",
   };
 }
 
 function compareVersions(a, b) {
-  const left = parseVersion(a);
-  const right = parseVersion(b);
-  if (!left || !right) return 0;
-  for (const key of ["major", "minor", "patch"]) {
-    if (left[key] !== right[key]) return left[key] > right[key] ? 1 : -1;
-  }
-  if (left.pre === right.pre) return 0;
-  if (!left.pre) return 1;
-  if (!right.pre) return -1;
-  return left.pre > right.pre ? 1 : -1;
+  return semver.compare(a, b);
 }
 
 function isNewerVersion(latest, current) {
