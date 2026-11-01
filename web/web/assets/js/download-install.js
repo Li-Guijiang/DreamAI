@@ -13,7 +13,7 @@
 
   const byId = (id) => document.getElementById(id);
   const note = byId("installNote");
-  const probe = byId("installProbe");
+  const probe = byId("installProbe"); // optional; the click handler works without it
   const downloadBtn = byId("downloadBtn");
   const formatSize = (bytes) => {
     if (!bytes) return "约 90 MB";
@@ -72,6 +72,9 @@
   }
 
   function applyInstalled(installedVersion, latestVersion) {
+    // The visitor already knows the app is here; a second click on the download
+    // means "give me the file", so stop probing.
+    if (downloadBtn) downloadBtn.dataset.skipProbe = "1";
     const latest = latestVersion || manifest?.version || installedVersion;
     if (isOlder(installedVersion, latest)) {
       showNote({
@@ -120,23 +123,20 @@
     return true;
   }
 
-  /** The probe needs a user gesture: browsers block protocol launches otherwise. */
-  function startProbe() {
-    if (!probe) return;
-    const target = `dreamai://probe?return=${encodeURIComponent(location.href)}`;
+  /**
+   * Ask the app whether it is installed. A protocol launch needs a user gesture,
+   * so this is called from the download click rather than on load: if the app
+   * answers, this page is replaced by the redirect and the download never starts;
+   * if nothing answers within 1.2 s, the download proceeds as usual.
+   */
+  function probeThenDownload(href) {
     let answered = false;
-    const timer = window.setTimeout(() => {
+    const go = () => {
       if (answered) return;
-      probe.disabled = false;
-      probe.textContent = "未检测到本机安装";
-      showNote({
-        title: "没有检测到本机安装",
-        body: "可能是尚未安装，或浏览器拦截了打开应用的请求。可以直接下载安装包；安装后本页会自动识别。",
-        open: false,
-        redownload: false,
-      });
-    }, 2500);
-
+      answered = true;
+      window.location.href = href;
+    };
+    const timer = window.setTimeout(go, 1200);
     window.addEventListener(
       "pagehide",
       () => {
@@ -145,54 +145,22 @@
       },
       { once: true },
     );
-
-    probe.disabled = true;
-    probe.textContent = "正在检测…";
-    location.href = target;
+    window.location.href = `dreamai://probe?return=${encodeURIComponent(location.href)}`;
   }
 
-  async function loadManifest() {
+  /** The manifest is rendered by download.js; this script only reads the version. */
+  async function readManifest() {
     try {
       const response = await fetch("/downloads/latest.json", { cache: "no-store" });
       if (!response.ok) return;
-      const data = await response.json();
-      manifest = data;
-      if (data.version) byId("dlVersion").textContent = `v${data.version}`;
-
-      if (data.pending) {
-        // The manifest exists before the installer does. Say so instead of
-        // handing out a link that 404s.
-        downloadBtn.removeAttribute("href");
-        downloadBtn.setAttribute("aria-disabled", "true");
-        const label = downloadBtn.querySelector(".download-label");
-        if (label) label.textContent = "安装包构建中";
-        showNote({
-          title: `v${data.version} 正在构建`,
-          body: "这一版已发布，安装包还在上传。稍后刷新本页即可下载；已安装的用户可在应用内检查更新。",
-          open: false,
-          redownload: false,
-        });
-        return;
-      }
-
-      if (data.file) downloadBtn.href = `/downloads/${data.file}`;
-      if (data.size) byId("dlSize").textContent = formatSize(data.size);
-      if (data.date) byId("dlDate").textContent = data.date;
-      if (data.sha256) byId("dlSha").textContent = data.sha256;
-
-      const release = byId("releaseNote");
-      if (release && data.version && data.notes) {
-        byId("releaseTitle").textContent = `v${data.version} 更新公告`;
-        byId("releaseNotes").textContent = data.notes;
-        release.hidden = false;
-      }
+      manifest = await response.json();
     } catch {
-      /* keep static fallbacks */
+      /* the page keeps its static values */
     }
   }
 
   (async () => {
-    await loadManifest();
+    await readManifest();
 
     if (fromQuery()) return;
 
@@ -202,9 +170,17 @@
       return;
     }
 
-    if (probe) {
-      probe.hidden = false;
-      probe.addEventListener("click", startProbe);
+    // No visible control is added: the probe rides on the download click, so the
+    // page keeps the layout it had before install detection existed.
+    if (downloadBtn && !downloadBtn.dataset.probeBound) {
+      downloadBtn.dataset.probeBound = "1";
+      downloadBtn.addEventListener("click", (event) => {
+        const href = downloadBtn.getAttribute("href");
+        if (!href || downloadBtn.dataset.skipProbe === "1") return;
+        event.preventDefault();
+        probeThenDownload(href);
+      });
     }
+    if (probe) probe.hidden = true;
   })();
 })();
