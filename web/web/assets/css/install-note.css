@@ -48,3 +48,11 @@
 .install-note__actions a:hover {
   color: #cfdcff;
 }
+
+/* `.btn` sets display, which overrides the hidden attribute; keep both of the
+   detection controls invisible until the script decides otherwise. */
+#installProbe[hidden],
+#installNote[hidden],
+.install-note__actions a[hidden] {
+  display: none !important;
+}
