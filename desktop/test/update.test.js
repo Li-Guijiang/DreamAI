@@ -24,4 +24,12 @@ assert.strictEqual(manifest.version, "1.3.0");
 assert.strictEqual(manifest.path, "DreamAI-Setup-1.3.0.exe");
 assert.strictEqual(manifest.sha512, "abcdef");
 
+// Numeric identifiers inside a prerelease are numbers, not strings, and a
+// release always outranks its own prereleases.
+assert.strictEqual(compareVersions("1.4.0-beta.2", "1.4.0-beta.10"), -1);
+assert.strictEqual(compareVersions("1.4.0-alpha", "1.4.0-beta"), -1);
+assert.strictEqual(compareVersions("1.4.0", "1.4.0-rc.1"), 1);
+assert.strictEqual(compareVersions("1.10.0", "1.9.0"), 1);
+assert.strictEqual(parseVersion("1.4.0-beta.3").pre, "beta.3");
+
 console.log("update helpers ok");
