@@ -2,7 +2,7 @@
  * Caches the app shell so a previously visited page still opens without network.
  * API calls are never cached.
  */
-const CACHE = "dreamai-shell-v1.5.0";
+const CACHE = "dreamai-shell-v1.5.1";
 const SHELL = [
   "/",
   "/index.html",

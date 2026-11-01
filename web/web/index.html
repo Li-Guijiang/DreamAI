@@ -159,52 +159,74 @@
     <div class="scroll" id="scroll">
       <!-- ======================= Hero ======================= -->
       <section class="hero" id="hero">
-        <img class="hero__mark" src="/assets/img/mark.svg" alt="" width="54" height="54">
-        <h1 class="hero__title"><span id="greetingText">你好</span>，我是 <span class="grad">Dream</span>。</h1>
+        <span class="hero__eyebrow"><i></i>DREAM // OPEN SOURCE <em>v1.5</em></span>
+
+        <div class="hero__orb" aria-hidden="true">
+          <span class="hero__orbit hero__orbit--a"></span>
+          <span class="hero__orbit hero__orbit--b"></span>
+          <span class="hero__orbit hero__orbit--c"></span>
+          <span class="hero__orbit-dot"></span>
+          <span class="hero__orbit-dot hero__orbit-dot--gold"></span>
+          <span class="hero__spark hero__spark--a">✦</span>
+          <span class="hero__spark hero__spark--b">✧</span>
+          <span class="hero__spark hero__spark--c">✦</span>
+          <img class="hero__mark" src="/assets/img/mark.svg" alt="" width="58" height="58">
+        </div>
+
+        <h1 class="hero__title" aria-label="你好，我是 Dream。">
+          <span id="greetingText" class="typeword">你好</span><span aria-hidden="true">，我是 </span><span class="grad">Dream</span><span aria-hidden="true">。</span><span class="type-caret" aria-hidden="true"></span>
+        </h1>
         <p class="hero__sub">
           一个会思考、能协作的通用智能体。<br class="only-desktop">
           写作、编程、推理与创意，都可以从一句话开始。
         </p>
 
+        <button class="hero__terminal" id="heroTerminal" type="button" title="点击把这条灵感填进输入框">
+          <span class="hero__terminal-prompt"><b>dream</b><span>@universe</span> ~ %</span>
+          <span class="hero__terminal-text" id="heroTyped">把今晚的灵感，写成一个世界。</span>
+          <span class="hero__terminal-enter">↵ 填入</span>
+        </button>
+
         <div class="cards">
-          <button class="card" type="button" data-prompt="帮我写一段产品发布会的开场文案，风格克制、有画面感，控制在 200 字以内。">
+          <button class="card" type="button" data-tilt="4" data-prompt="帮我写一段产品发布会的开场文案，风格克制、有画面感，控制在 200 字以内。">
+            <span class="card__index" aria-hidden="true">01 / WRITE</span>
             <span class="card__icon card__icon--a">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.5 2.5 0 0 0-3.5-3.5L4 16.5V20Z"/><path d="M13.5 6.5 17.5 10.5"/></svg>
             </span>
             <span class="card__body"><strong>写作润色</strong><span>打磨文案、文章与邮件，语气随你而定。</span></span>
+            <span class="card__pulse" aria-hidden="true"></span>
             <svg class="card__arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
           </button>
 
-          <button class="card" type="button" data-prompt="用 Python 写一个带类型注解的 LRU 缓存，要求线程安全，并给出使用示例和复杂度分析。">
+          <button class="card" type="button" data-tilt="4" data-prompt="用 Python 写一个带类型注解的 LRU 缓存，要求线程安全，并给出使用示例和复杂度分析。">
+            <span class="card__index" aria-hidden="true">02 / BUILD</span>
             <span class="card__icon card__icon--b">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8 4 12l5 4M15 8l5 4-5 4"/></svg>
             </span>
             <span class="card__body"><strong>编程协作</strong><span>读懂代码、定位问题，给出可运行的方案。</span></span>
+            <span class="card__pulse" aria-hidden="true"></span>
             <svg class="card__arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
           </button>
 
-          <button class="card" type="button" data-prompt="我想在一年内从零开始学会数据分析。请帮我拆解成季度目标、每周任务和可验证的里程碑。">
+          <button class="card" type="button" data-tilt="4" data-prompt="我想在一年内从零开始学会数据分析。请帮我拆解成季度目标、每周任务和可验证的里程碑。">
+            <span class="card__index" aria-hidden="true">03 / REASON</span>
             <span class="card__icon card__icon--c">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a5 5 0 0 0-3 9v3h6v-3a5 5 0 0 0-3-9Z"/><path d="M10 19h4M10.5 22h3"/></svg>
             </span>
             <span class="card__body"><strong>深度推理</strong><span>拆解复杂问题，把思路一步步讲清楚。</span></span>
+            <span class="card__pulse" aria-hidden="true"></span>
             <svg class="card__arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
           </button>
 
-          <button class="card" type="button" data-prompt="我们想做一个面向大学生的 AI 学习助手，请帮我头脑风暴 10 个有差异化的产品点子，并挑选 3 个深入分析。">
+          <button class="card" type="button" data-tilt="4" data-prompt="我们想做一个面向大学生的 AI 学习助手，请帮我头脑风暴 10 个有差异化的产品点子，并挑选 3 个深入分析。">
+            <span class="card__index" aria-hidden="true">04 / IMAGINE</span>
             <span class="card__icon card__icon--d">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2M4.9 6.9l1.4 1.4M3 14h2M19 14h2M17.7 6.9l1.4-1.4"/><path d="M8 14a4 4 0 1 1 8 0c0 1.5-1 2.2-1 3.5H9c0-1.3-1-2-1-3.5Z"/><path d="M10 21h4"/></svg>
             </span>
             <span class="card__body"><strong>灵感共创</strong><span>头脑风暴、起名、策划，把点子变具体。</span></span>
+            <span class="card__pulse" aria-hidden="true"></span>
             <svg class="card__arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
           </button>
-        </div>
-
-        <div class="hero__meta">
-          <span><i></i>流式输出</span>
-          <span><i></i>深度思考</span>
-          <span><i></i>多轮记忆</span>
-          <span><i></i>隐私优先</span>
         </div>
       </section>
 
