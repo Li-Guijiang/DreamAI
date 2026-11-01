@@ -18,7 +18,6 @@ from __future__ import annotations
 import argparse
 import io
 import os
-import posixpath
 import sys
 import tarfile
 import time
@@ -78,7 +77,9 @@ def upload_and_install(payload: bytes, host: str, user: str, password: str, port
                 raise RuntimeError(f"{command}\n{out}\n{err}")
             return out
 
-        run(f"rm -rf {RELEASE_DIR} && mkdir -p {RELEASE_DIR} && tar xzf {remote_tar} -C {RELEASE_DIR}")
+        run(
+            f"rm -rf {RELEASE_DIR} && mkdir -p {RELEASE_DIR} && tar xzf {remote_tar} -C {RELEASE_DIR}"
+        )
         print("uploaded and unpacked")
         # install.sh backs up the current site, rebuilds the venv, writes systemd
         # and nginx config, then calls /api/health.
