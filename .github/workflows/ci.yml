@@ -46,5 +46,22 @@ jobs:
           done
           node desktop/test/update.test.js
 
+      - name: Check desktop updater logic
+        run: |
+          for file in desktop/electron/semver.js desktop/electron/update.js \
+                      desktop/electron/update-schedule.js desktop/electron/update-feed.js \
+                      desktop/electron/update-service.js desktop/electron/installer.js \
+                      desktop/electron/protocol.js; do
+            node --check "$file"
+          done
+          node desktop/test/update.test.js
+          node desktop/test/update-schedule.test.js
+          node desktop/test/update-feed.test.js
+          node desktop/test/update-service.test.js
+          node desktop/test/protocol.test.js
+
+      - name: Check the release manifest against the build
+        run: python web/tools/make_downloads.py --check
+
       - name: Run tests with pytest
         run: pytest
