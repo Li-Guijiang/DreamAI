@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Desktop
+
+- Update checks now run on a schedule (15 s after launch, then every 6 h with
+  ±10 % jitter, 5/15/60 min retries) instead of a single timer; the prompt is
+  offered once per release and installs in one click after verifying size and
+  SHA-256.
+- `dreamai://probe` answers the download page, which now says "本机已安装，无需继续
+  安装" instead of offering a 120 MB download that is not needed.
+- Prerelease ordering is numeric (`beta.10` > `beta.2`), and a manifest with a
+  prerelease tag is rejected on the stable channel.
+
+### Web
+
+- `web/tools/make_downloads.py` generates `latest.json` and `latest.yml` from
+  `desktop/package.json` plus the installer; `--check` fails CI when they drift.
+
 ## v1.5.0 — 2026-10-31
 
 ### Web
