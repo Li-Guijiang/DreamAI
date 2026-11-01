@@ -9,6 +9,21 @@ contextBridge.exposeInMainWorld("dreamDesktop", {
   platform: process.platform,
   version: () => invoke("desktop:version"),
 
+  update: {
+    state: () => invoke("desktop:update-state"),
+    check: () => invoke("desktop:update-check"),
+    onState: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("desktop:update-state", listener);
+      return () => ipcRenderer.removeListener("desktop:update-state", listener);
+    },
+    onProgress: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("desktop:update-progress", listener);
+      return () => ipcRenderer.removeListener("desktop:update-progress", listener);
+    },
+  },
+
   pickFolder: () => invoke("local:pick-folder"),
   getWorkspace: () => invoke("local:workspace"),
   scan: () => invoke("local:scan"),
