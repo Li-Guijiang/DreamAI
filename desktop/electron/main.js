@@ -1,14 +1,20 @@
 "use strict";
 
-const { app, BrowserWindow, Menu, Tray, nativeImage, globalShortcut, dialog, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, Menu, Tray, nativeImage, globalShortcut, dialog, ipcMain, net, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const tools = require("./local-tools");
 const documents = require("./documents");
 const agent = require("./agent");
+const { createUpdateService } = require("./update-service");
+const installer = require("./installer");
+const protocol = require("./protocol");
 
 const APP_URL = process.env.DREAMAI_URL || "https://liguijiang.com";
 const PRODUCT = "Dream AI";
+
+let updateService = null;
+let updatePromptOpen = false;
 
 let mainWindow = null;
 let pendingOrganize = null;
@@ -96,6 +102,13 @@ function wrap(handler) {
 
 function registerIpc() {
   ipcMain.handle("desktop:version", () => app.getVersion());
+
+  ipcMain.handle("desktop:update-state", () => (updateService ? updateService.getState() : null));
+
+  ipcMain.handle(
+    "desktop:update-check",
+    async () => (updateService ? updateService.checkNow({ manual: true }) : null),
+  );
 
   ipcMain.handle(
     "local:pick-folder",
@@ -435,38 +448,115 @@ function setupShortcuts() {
   }
 }
 
+/**
+ * Ask the user, once per version, whether to install the update. The download
+ * itself runs in the main process with streams, so the window keeps painting;
+ * progress is forwarded to the renderer for the in-app dialog.
+ */
+async function offerUpdate(state) {
+  if (updatePromptOpen || !state?.manifest || state.manifest.pending) return;
+  updatePromptOpen = true;
+  try {
+    const { response } = await dialog.showMessageBox({
+      type: "info",
+      buttons: ["稍后", "立即更新"],
+      defaultId: 1,
+      cancelId: 0,
+      title: "Dream AI 有新版本",
+      message: `发现 v${state.manifest.version}，当前 v${state.currentVersion}。`,
+      detail: [
+        state.manifest.notes || "",
+        `安装包 ${(state.manifest.size / (1024 * 1024)).toFixed(1)} MB，下载后会自动校验 SHA-256。`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    });
+    if (response !== 1) return;
+
+    const dir = await fs.promises.mkdtemp(path.join(app.getPath("temp"), "dreamai-update-"));
+    const destination = path.join(dir, state.manifest.file);
+    const send = (payload) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("desktop:update-progress", payload);
+      }
+    };
+    send({ phase: "download", percent: 0 });
+    const file = await installer.downloadInstaller(state.manifest, {
+      destination,
+      onProgress: send,
+    });
+    send({ phase: "installing", percent: 100 });
+    const child = require("child_process").spawn(file, ["/S"], {
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    child.unref();
+    setTimeout(() => app.quit(), 1200);
+  } catch (error) {
+    dialog.showMessageBox({
+      type: "error",
+      buttons: ["知道了"],
+      title: "更新失败",
+      message: error?.message || "更新失败，请稍后重试",
+      detail: "可以稍后再试，或前往官网下载最新安装包。",
+    });
+  } finally {
+    updatePromptOpen = false;
+  }
+}
+
+/** dreamai://probe answers the download page; dreamai://update forces a check. */
+function handleDeepLink(raw) {
+  const link = protocol.parseDeepLink(raw);
+  if (link.action === "invalid") return;
+  if (link.action === "probe") {
+    const latest = updateService ? updateService.getState().manifest : null;
+    shell.openExternal(
+      protocol.probeRedirect(link.returnUrl, {
+        version: app.getVersion(),
+        latest: latest ? latest.version : null,
+      }),
+    );
+    return;
+  }
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+  if (updateService) updateService.checkNow({ manual: true }).catch(() => {});
+}
+
 function setupAutoUpdate() {
-  if (!app.isPackaged) return;
-  setTimeout(async () => {
-    try {
-      const { isNewerVersion, parseLatestYml } = require("./update");
-      const response = await fetch(`https://liguijiang.com/downloads/latest.yml?t=${Date.now()}`, {
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!response.ok) return;
-      const manifest = parseLatestYml(await response.text());
-      if (!manifest.version || !isNewerVersion(manifest.version, app.getVersion())) return;
-      const { response: choice } = await dialog.showMessageBox({
-        type: "info",
-        buttons: ["稍后", "前往下载"],
-        defaultId: 1,
-        cancelId: 0,
-        title: "Dream AI 有新版本",
-        message: `发现 v${manifest.version}，当前 v${app.getVersion()}。`,
-        detail: "下载新版安装包覆盖安装即可，本地对话与项目不受影响。",
-      });
-      if (choice === 1) shell.openExternal("https://liguijiang.com/download.html");
-    } catch (error) {
-      console.error("update check failed", error.message);
+  updateService = createUpdateService({
+    currentVersion: app.getVersion(),
+    isOnline: () => net.isOnline(),
+  });
+  updateService.on("state", (state) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("desktop:update-state", state);
     }
-  }, 20000);
+    if (state.phase === "available") offerUpdate(state).catch(() => {});
+  });
+  updateService.start();
 }
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
-  app.on("second-instance", () => {
+  app.on("open-url", (event, url) => {
+    event.preventDefault();
+    if (url) handleDeepLink(url);
+  });
+
+  app.on("online", () => {
+    if (updateService) updateService.handleOnline();
+  });
+
+  app.on("second-instance", (_event, argv) => {
+    const link = protocol.findDeepLink(argv || []);
+    if (link) handleDeepLink(link);
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
@@ -482,12 +572,23 @@ if (!gotLock) {
       fs.mkdirSync(devWorkspace, { recursive: true });
       tools.setWorkspace(devWorkspace);
     }
+    if (process.defaultApp) {
+      if (process.argv.length >= 2) {
+        app.setAsDefaultProtocolClient("dreamai", process.execPath, [path.resolve(process.argv[1])]);
+      }
+    } else {
+      app.setAsDefaultProtocolClient("dreamai");
+    }
+
     registerIpc();
     registerExtraIpc();
     createWindow();
     createTray();
     setupShortcuts();
     setupAutoUpdate();
+
+    const startupLink = protocol.findDeepLink(process.argv.slice(1));
+    if (startupLink) handleDeepLink(startupLink);
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
