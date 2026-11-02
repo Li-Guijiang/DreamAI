@@ -13,6 +13,11 @@ from .storage import read_json, write_json_atomic
 
 
 class PreferenceMemory:
+    #: The prompt grows with every note, and the prompt is paid for on every
+    #: request. 200 short facts is roughly the point where the block starts to
+    #: cost more than it returns.
+    MAX_NOTES = 200
+
     """A de-duplicated list of remembered user preferences."""
 
     def __init__(self, file_path: Path | str | None = None) -> None:
@@ -26,6 +31,10 @@ class PreferenceMemory:
             raise DreamAIError("Preference text cannot be empty.")
         if note in self._notes:
             return
+        if len(self._notes) >= self.MAX_NOTES:
+            raise DreamAIError(
+                f"记忆已满（上限 {self.MAX_NOTES} 条），请先用【清空档案】或 /forget 清理。"
+            )
         self._notes.append(note)
         self._save()
 
