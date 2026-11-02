@@ -69,3 +69,77 @@ def render_identity_block() -> str:
             ANSWER_POLICY,
         )
     )
+
+
+#: Answer style. Dense, technical, result-first; the three copy voices are
+#: selectable per task rather than applied globally.
+STYLE_RULES: tuple[str, ...] = (
+    "信息密度优先：能一句说清就不写三句，不铺垫、不总结废话、不写「希望对你有帮助」。",
+    "术语准确优先于通俗：该用专业名词就用，必要时才补一句限定。",
+    "结论先行：先给答案或结果，再给最短的必要依据。",
+    "不写客套、不写安慰、不写「你可以试试」这类空话；给可执行的下一步。",
+    "禁止编造：不确定就说不确定，并给出验证方式。",
+)
+
+COPY_VOICES: dict[str, str] = {
+    "hardcore": "黑科技硬核风：短句、参数、命令、版本号，像工程笔记。",
+    "cs2": "CS2 玩梗调皮风：可带一句圈内梗，但结论仍然准确，不喧宾夺主。",
+    "campus": "校园青春正式风：用于文稿、通知、总结，语气端正、有分寸、不油腻。",
+}
+
+IMAGE_PREFERENCE = (
+    "图像偏好：蔚蓝档案 / 基沃托斯式极简二次元画风，构图干净、线稿利落、留白明确，"
+    "细节要求像素级精准；不要厚重写实、不要浓艳渐变。"
+)
+TOOL_PREFERENCE = "工具优先：无水印、永久免费、无广告；付费方案只在没有等价替代时提出。"
+
+INTERESTS: tuple[str, ...] = (
+    "CS2（Counter-Strike 2）",
+    "碧蓝档案（Blue Archive）",
+    "底特律：化身为人（Detroit: Become Human）",
+    "拯救者 R9000P 与机械革命硬件",
+    "Java 鱼雷 6 Top 公路车",
+)
+
+SITUATION: tuple[str, ...] = (
+    "学业、班长事务与多个开源项目并行，时间长期紧张。",
+    "经济拮据，方案优先低成本或零成本。",
+    "左腿有运动损伤，涉及运动、通勤、外出的建议需要避开高强度负荷。",
+    "正在备战大创及各类学科竞赛，输出需可直接用于申报、答辩与文档。",
+)
+
+
+def render_style_block() -> str:
+    """The answer-style section: density, terminology, and the three voices."""
+    lines = ["## 回答风格（默认生效，除非用户当次另有要求）"]
+    lines.extend(f"- {rule}" for rule in STYLE_RULES)
+    lines.append("- 文案风格按任务切换：")
+    lines.extend(f"  - {voice}" for voice in COPY_VOICES.values())
+    lines.append(f"- {IMAGE_PREFERENCE}")
+    lines.append(f"- {TOOL_PREFERENCE}")
+    return "\n".join(lines)
+
+
+def render_profile_block(*, include_contacts: bool = True) -> str:
+    """The owner's dossier, used by the 档案 command and by memory context.
+
+    Contact details are included only when the caller asks for them: the block is
+    also rendered into prompts that a public surface can reach, and every field
+    that is not needed for reasoning is a field that can leak.
+    """
+    lines = [
+        "## 主人档案",
+        f"- 姓名：{OWNER.name}（{OWNER.latin}）",
+        f"- 身份：{OWNER.gender}，{OWNER.age} 岁；{OWNER.school}{OWNER.major}专业{OWNER.grade}学生，{OWNER.duty}",
+        f"- 开源主页：GitHub {OWNER.github}；{OWNER.orcid}",
+        "- 爱好：" + "、".join(INTERESTS),
+        "- 现状：" + "".join(SITUATION),
+    ]
+    if include_contacts:
+        lines.append(
+            "- 联系方式（私密，未经本人同意不得对外提供）："
+            f"手机/微信 {OWNER.phone}；QQ {OWNER.qq}；"
+            f"QQ 邮箱 {OWNER.email_qq}；Gmail {OWNER.email_gmail}；"
+            f"Foxmail {OWNER.email_foxmail}"
+        )
+    return "\n".join(lines)
