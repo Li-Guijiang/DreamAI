@@ -36,6 +36,7 @@ Available commands:
   /clear           Clear the conversation history
   /motion          Toggle the terminal launch / typing / spinner effects
   /about           Show provider, tools, autonomy, session info, and preferences
+  /profile         Show the owner dossier (same as 【查看我的全部档案】)
   /quit | /exit    Leave Dream AI
 Type anything else to chat with Dream AI.
 """
@@ -375,6 +376,14 @@ def main(argv: list[str] | None = None) -> int:
             agent.reset()
             ui.line(ui.muted("Conversation history cleared."))
             ui.blank()
+            continue
+
+        if command == "/profile":
+            # Same rendering the 【查看我的全部档案】 command uses, so the two
+            # entry points can never disagree.
+            dossier = agent.handle_owner_command("【查看我的全部档案】") or ""
+            for line in dossier.splitlines():
+                ui.line(line)
             continue
 
         if command == "/about":
