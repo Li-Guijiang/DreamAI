@@ -12,6 +12,7 @@ from ..autonomy import (
     PlanStep,
 )
 from ..exceptions import ConfigurationError, ToolConfirmationRequired
+from ..identity import mask_contacts, parse_owner_command, render_profile_block
 from ..memory import InMemorySessionMemory, PreferenceMemory
 from ..memory.base import Memory
 from ..providers.base import LLMProvider
@@ -29,12 +30,17 @@ class DreamAIAgent:
         tools: ToolRegistry | None = None,
         memory: Memory | None = None,
         preferences: PreferenceMemory | None = None,
+        public_surface: bool = True,
         autonomy_enabled: bool = True,
         autonomy_max_steps: int = 10,
         autonomy_max_retries: int = 2,
     ) -> None:
         self._provider = provider
         self._preferences = preferences or PreferenceMemory()
+        # A public surface (the web service) cannot tell who is typing, so model
+        # output is masked there. The CLI and the desktop shell are the owner's
+        # own machine and pass False.
+        self._public_surface = public_surface
         self._base_system_prompt = system_prompt or ""
         self._memory = memory or InMemorySessionMemory()
         # The effective prompt (base + remembered preferences) is pushed into the
@@ -93,10 +99,48 @@ class DreamAIAgent:
         self._preferences.forget()
         self._sync_system_prompt()
 
+    # --- Owner commands ----------------------------------------------------
+
+    def handle_owner_command(self, user_text: str) -> str | None:
+        """Answer 【查看我的全部档案】 / 【更新档案】… / 【清空档案】 locally.
+
+        Returns ``None`` for anything else. These never reach the provider: a
+        command that depends on a completion can be refused, paraphrased, or
+        answered with the wrong dossier, and clearing memory must not.
+        """
+        command = parse_owner_command(user_text)
+        if command is None:
+            return None
+
+        if command.kind == "show":
+            notes = self._preferences.list()
+            block = render_profile_block()
+            if notes:
+                appended = "\n".join(f"- {note}" for note in notes)
+                block = f"{block}\n\n## 追加记忆（{len(notes)} 条）\n{appended}"
+            return block
+
+        if command.kind == "update":
+            if not command.payload:
+                return "用法：【更新档案】要记住的内容"
+            self.remember(command.payload)
+            return f"已追加：{command.payload}"
+
+        self.forget_preferences()
+        return "已清空追加记忆。内置身份记录不可通过对话删除。"
+
     def chat(self, user_text: str) -> str:
         """Send one user message and return the assistant's reply."""
+        local = self.handle_owner_command(user_text)
+        if local is not None:
+            self._conversation.add_user(user_text)
+            self._conversation.add_assistant(local)
+            return local
+
         self._conversation.add_user(user_text)
         reply = self._provider.generate(self._conversation.history())
+        if self._public_surface:
+            reply = mask_contacts(reply)
         self._conversation.add_assistant(reply)
         return reply
 
