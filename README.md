@@ -170,7 +170,35 @@ flowchart TB
 
 The core depends on three narrow interfaces (`LLMProvider`, `Memory`, `Tool`), so swapping a model, a storage backend, or a tool never requires touching the agent. The web runtime currently has its own FastAPI streaming path (the dashed edge is planned work, not a shipped claim); the desktop app loads the web interface. Layer-by-layer detail and both data flows: [architecture](./docs/ARCHITECTURE.md).
 
-## 6. Quick start
+## 6. Identity, memory, and privacy
+
+Dream AI is built and owned by one person, and that fact lives in code rather
+than in a prompt somebody edited once: `dream_ai/identity.py` holds the owner
+record, the answer style, and the privacy rules, and every surface reads the
+prompt it renders.
+
+| Behaviour | Where |
+|---|---|
+| Who owns / created / founded it | `render_identity_block()`, composed into `DEFAULT_SYSTEM_PROMPT` |
+| Answer style (density, terminology, three copy voices) | `render_style_block()` |
+| Dossier: school, duties, interests, situation | `render_profile_block()` |
+| Contact masking on public surfaces | `mask_contacts()` + `DreamAIAgent.public_surface` |
+
+Three commands are handled locally, before any model call:
+
+```
+【查看我的全部档案】   show the dossier and everything appended so far
+【更新档案】<text>     append a fact (kept in preferences.json, capped at 200)
+【清空档案】           clear appended facts; the built-in identity stays
+```
+
+Typing `记住：<text>` captures a fact mid-conversation, and the CLI mirrors the
+dossier command as `/profile`. Contact details are deliberately absent from the
+system prompt: they are rendered only by the dossier command, and model output on
+a public surface passes through `mask_contacts()` before it is shown. See
+[ADR 0003](docs/adr/0003-owner-identity-and-personal-memory.md).
+
+## 7. Quick start
 
 ### 6.1 Command line (three steps)
 
@@ -206,7 +234,7 @@ cd web && pip install -r requirements.txt && uvicorn app.main:app --port 8000   
 cd desktop && pnpm install && pnpm start                                        # Desktop
 ```
 
-## 7. Commands and configuration
+## 8. Commands and configuration
 
 <details>
 <summary><b>In-chat commands</b> (click to expand)</summary>
