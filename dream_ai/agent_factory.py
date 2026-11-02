@@ -35,6 +35,9 @@ def build_agent(settings: Settings) -> DreamAIAgent:
         memory=memory,
         preferences=preferences,
         tools=tools,
+        # The CLI and the desktop shell run on the owner's own machine, so model
+        # output keeps the numbers instead of passing through the contact mask.
+        public_surface=False,
         autonomy_enabled=settings.autonomy_enabled,
         autonomy_max_steps=settings.max_steps,
         autonomy_max_retries=settings.max_retries,
