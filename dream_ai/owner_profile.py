@@ -188,10 +188,7 @@ def clear_profile() -> Path | None:
 def render_profile(profile: OwnerProfile | None, *, include_contacts: bool = True) -> str:
     """Render the dossier for the owner command and owner-only prompts."""
     if profile is None:
-        return (
-            "## 主人档案\n- 姓名：李贵江（Li Guijiang）\n"
-            "- 私有档案尚未配置；身份规则仍然有效。"
-        )
+        return "## 主人档案\n- 姓名：李贵江（Li Guijiang）\n- 私有档案尚未配置；身份规则仍然有效。"
     lines = [
         "## 主人档案",
         f"- 姓名：{profile.name}（{profile.latin}）",

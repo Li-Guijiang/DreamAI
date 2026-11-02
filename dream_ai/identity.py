@@ -86,6 +86,7 @@ IMAGE_PREFERENCE = (
 )
 TOOL_PREFERENCE = "工具优先：无水印、永久免费、无广告；付费方案只在没有等价替代时提出。"
 
+
 def render_style_block() -> str:
     """The answer-style section: density, terminology, and the three voices."""
     lines = ["## 回答风格（默认生效，除非用户当次另有要求）"]
@@ -268,10 +269,7 @@ def answer_identity_question(*, full: bool = False) -> str:
     form is what a chat turn usually needs.
     """
     owner = OWNER.name
-    line = (
-        f"Dream AI 的主人、创造者、开发者、创始人、最高权限者都是 {owner}"
-        f"（{OWNER.latin}）。"
-    )
+    line = f"Dream AI 的主人、创造者、开发者、创始人、最高权限者都是 {owner}（{OWNER.latin}）。"
     if full:
         return line + f"它由 {owner} 独立研发，没有团队，也没有其他创始人。"
     return line + f"由 {owner} 独立研发。"

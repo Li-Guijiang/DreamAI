@@ -5,9 +5,9 @@ from __future__ import annotations
 import asyncio
 import json
 
-import httpx
 import pytest
 
+httpx = pytest.importorskip("httpx", reason="web dependencies are not installed")
 pytest.importorskip("fastapi", reason="web dependencies are not installed")
 
 
