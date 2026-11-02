@@ -143,3 +143,52 @@ def render_profile_block(*, include_contacts: bool = True) -> str:
             f"Foxmail {OWNER.email_foxmail}"
         )
     return "\n".join(lines)
+
+
+#: The three bracket commands the owner uses to manage the dossier. They are
+#: handled locally, before any model call, so they cannot be paraphrased away.
+COMMAND_SHOW = "查看我的全部档案"
+COMMAND_UPDATE = "更新档案"
+COMMAND_CLEAR = "清空档案"
+COMMANDS: tuple[str, ...] = (COMMAND_SHOW, COMMAND_UPDATE, COMMAND_CLEAR)
+
+_BRACKETS = ("【", "】")
+
+
+@dataclass(frozen=True)
+class OwnerCommand:
+    """A parsed owner command: what to do, and the text that came with it."""
+
+    kind: str  # "show" | "update" | "clear"
+    payload: str = ""
+
+
+def parse_owner_command(text: str) -> OwnerCommand | None:
+    """Recognise 【查看我的全部档案】 / 【更新档案】… / 【清空档案】.
+
+    Returns ``None`` for anything else, so callers can treat ordinary messages as
+    ordinary messages. A half-width bracket pair is accepted because phone
+    keyboards and IMEs both produce them.
+    """
+    stripped = (text or "").strip()
+    if not stripped:
+        return None
+    body = stripped
+    for opening, closing in (_BRACKETS, ("[", "]")):
+        if body.startswith(opening):
+            end = body.find(closing, len(opening))
+            if end == -1:
+                return None
+            name = body[len(opening) : end].strip()
+            rest = body[end + 1 :].strip()
+            break
+    else:
+        return None
+
+    if name == COMMAND_SHOW:
+        return OwnerCommand("show")
+    if name == COMMAND_CLEAR:
+        return OwnerCommand("clear")
+    if name == COMMAND_UPDATE:
+        return OwnerCommand("update", rest)
+    return None
