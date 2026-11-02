@@ -26,7 +26,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import llm
+from . import llm, owner_auth, owner_store
 from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
 
 logging.basicConfig(
@@ -512,23 +512,47 @@ async def public_config() -> JSONResponse:
     return JSONResponse(settings.public_config())
 
 
-@app.post("/api/chat")
-async def chat(payload: ChatRequest, request: Request) -> Response:
-    try:
-        upstream = resolve_upstream(payload)
-    except UpstreamError as exc:
-        return JSONResponse({"error": exc.message, "code": exc.code}, status_code=exc.status)
+def _local_chat(text: str, *, extra_headers: dict[str, str] | None = None) -> StreamingResponse:
+    """Stream a deterministic, model-free answer (identity or owner command)."""
 
-    ip = client_ip(request)
-    if upstream.kind == "free" and not await consume_daily_budget():
-        return JSONResponse(
+    async def stream() -> AsyncIterator[bytes]:
+        started = time.monotonic()
+        yield sse("meta", {"model": "local", "version": VERSION})
+        yield sse("delta", {"t": text})
+        yield sse(
+            "done",
             {
-                "error": "今天的免费额度已经用完啦，明天再来，或在设置中填写自己的 Key。",
-                "code": "daily_limit",
+                "chars": len(text),
+                "elapsed": round(time.monotonic() - started, 3),
+                "model": "local",
+                "local": True,
             },
-            status_code=429,
         )
 
+    headers = {
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    if extra_headers:
+        headers.update(extra_headers)
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream; charset=utf-8",
+        headers=headers,
+    )
+
+
+def _verification_token(text: str) -> str | None:
+    for prefix in ("【主人验证】", "[主人验证]"):
+        if text.startswith(prefix):
+            return text[len(prefix) :].strip()
+    return None
+
+
+@app.post("/api/chat")
+async def chat(payload: ChatRequest, request: Request) -> Response:
+    ip = client_ip(request)
     allowed, retry_after = await limiter.hit(ip)
     if not allowed:
         return JSONResponse(
@@ -555,6 +579,62 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             status_code=413,
         )
 
+    last_text = payload.messages[-1].content.strip()
+    owner = owner_auth.is_owner(request)
+
+    token = _verification_token(last_text)
+    if token is not None:
+        if not owner_auth.configured():
+            return _local_chat("主人验证尚未启用。请在服务器配置私有验证口令后重试。")
+        if not owner_auth.verify_token(token):
+            return _local_chat("验证失败。")
+        cookie = owner_auth.cookie_header(request)
+        return _local_chat(
+            "主人验证通过。私有档案已解锁 30 天，可以发送【查看我的全部档案】。",
+            extra_headers={"Set-Cookie": cookie} if cookie else None,
+        )
+
+    if owner and last_text.startswith(("记住：", "记住:", "请记住：", "请记住:")):
+        fact = last_text.split("：", 1)[-1] if "：" in last_text else last_text.split(":", 1)[-1]
+        _, stored = owner_store.append_note(fact)
+        return _local_chat("已记住并写入私有档案：" + stored if stored else "内容为空，未写入。")
+
+    command = owner_store.parse_command(last_text)
+    if command is not None:
+        if not owner:
+            return _local_chat("该指令仅主人可用。请先完成主人验证。")
+        kind, argument = command
+        if kind == "show":
+            return _local_chat(owner_store.render_profile(owner_store.load_profile()))
+        if kind == "update":
+            if not argument:
+                return _local_chat("用法：【更新档案】要追加的内容")
+            _, fact = owner_store.append_note(argument)
+            if not fact:
+                return _local_chat("内容为空，未追加。")
+            return _local_chat(f"已追加档案：{fact}")
+        owner_store.clear_profile()
+        return _local_chat("已清空私有档案；公开身份规则不会被删除。")
+
+    # Identity questions and owner commands are handled before the provider
+    # call: a weak model must not be able to paraphrase the owner away.
+    if is_identity_question(last_text):
+        return _local_chat(IDENTITY_ANSWER)
+
+    try:
+        upstream = resolve_upstream(payload)
+    except UpstreamError as exc:
+        return JSONResponse({"error": exc.message, "code": exc.code}, status_code=exc.status)
+
+    if upstream.kind == "free" and not await consume_daily_budget():
+        return JSONResponse(
+            {
+                "error": "今天的免费额度已经用完啦，明天再来，或在设置中填写自己的 Key。",
+                "code": "daily_limit",
+            },
+            status_code=429,
+        )
+
     model = upstream.model
     style = payload.style if payload.style in STYLE_PROMPTS else "default"
     system_prompt = settings.system_prompt
@@ -571,37 +651,26 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             "\n\n以下是本轮参考资料，回答时优先依据它；如果用到请说明来自资料。\n"
             "<资料>\n" + payload.context.strip()[:20000] + "\n</资料>"
         )
-    messages = prepare_messages(payload.messages, system_prompt)
+    if owner:
+        profile = owner_store.load_profile()
+        if profile:
+            system_prompt += "\n\n" + owner_store.render_profile(profile, include_contacts=True)
+
+    # Never forward a verification token or a dossier block to a public model
+    # prompt. Owner history is scoped to the owner cookie; if that cookie has
+    # expired, the browser may still hold the profile reply in localStorage.
+    safe_history: list[ChatMessage] = []
+    for message in payload.messages:
+        content = message.content
+        if _verification_token(content.strip()) is not None:
+            continue
+        if not owner:
+            if "## 主人档案" in content or "## 追加记忆" in content:
+                continue
+            content = owner_store.mask_contacts(content)
+        safe_history.append(ChatMessage(role=message.role, content=content))
+    messages = prepare_messages(safe_history, system_prompt)
     temperature = payload.temperature if payload.temperature is not None else settings.temperature
-
-    # Identity questions are answered here, not by the model. A 4B-class model
-    # told about the owner in its prompt still answered "the team" often enough
-    # that the guarantee has to come from code; this also removes a round trip
-    # from the answer, so it arrives immediately.
-    if is_identity_question(payload.messages[-1].content):
-        async def identity_stream() -> AsyncIterator[bytes]:
-            started = time.monotonic()
-            yield sse("meta", {"model": model, "version": VERSION})
-            yield sse("delta", {"t": IDENTITY_ANSWER})
-            yield sse(
-                "done",
-                {
-                    "chars": len(IDENTITY_ANSWER),
-                    "elapsed": round(time.monotonic() - started, 3),
-                    "model": model,
-                    "local": True,
-                },
-            )
-
-        return StreamingResponse(
-            identity_stream(),
-            media_type="text/event-stream; charset=utf-8",
-            headers={
-                "Cache-Control": "no-cache, no-transform",
-                "Connection": "keep-alive",
-                "X-Accel-Buffering": "no",
-            },
-        )
     temperature = min(1.5, max(0.0, temperature + STYLE_TEMPERATURE.get(style, 0.0)))
 
     async def event_stream() -> AsyncIterator[bytes]:

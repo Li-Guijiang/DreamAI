@@ -2,20 +2,18 @@
 
 from __future__ import annotations
 
-from dream_ai.identity import OWNER, leaks_contact, mask_contacts, privacy_clause
+from dream_ai.identity import leaks_contact, mask_contacts, privacy_clause
 
 
 def test_every_contact_string_is_masked():
-    text = (
-        f"手机 {OWNER.phone}，微信 {OWNER.wechat}，QQ {OWNER.qq}，"
-        f"邮箱 {OWNER.email_qq} / {OWNER.email_gmail} / {OWNER.email_foxmail}"
-    )
+    text = "手机 13800138000，邮箱 demo@example.com，另一个 demo2@example.org"
 
     masked = mask_contacts(text)
 
     assert not leaks_contact(masked)
-    for secret in (OWNER.phone, OWNER.qq, OWNER.email_qq, OWNER.email_gmail, OWNER.email_foxmail):
-        assert secret not in masked
+    assert "13800138000" not in masked
+    assert "demo@example.com" not in masked
+    assert "demo2@example.org" not in masked
 
 
 def test_ordinary_text_is_untouched():

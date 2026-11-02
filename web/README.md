@@ -204,6 +204,9 @@ nginx -t && nginx -s reload
 
 - API Key 仅存放于服务器 `.env`（权限 `600`），不会写进前端产物；
 - 对话只保存在访问者自己的浏览器里，服务端不落盘、不需要登录；
+- 主人私有档案存放在仓库和网站根目录之外的 JSON 文件（权限 `600`），
+  只有通过 `【主人验证】` 取得 HttpOnly 签名 Cookie 的请求才会读取；
+- 公开对话的 system prompt 不含任何联系方式、健康或经济信息；
 - 所有模型输出经 DOMPurify 清洗后再渲染，链接统一 `noopener noreferrer`；
 - 响应头包含 CSP、`X-Frame-Options: DENY`、`nosniff` 等；
 - 按 IP 限流与并发上限，避免公开站点被刷。
@@ -215,15 +218,11 @@ DreamAI 仓库里的 `dream_ai/` 是命令行版本的智能体内核（Provider
 后续可以把 `dream_ai.tools` 的工具调用与 `autonomy` 引擎接到 `/api/chat` 的工具
 事件上，让网页端也具备联网、文件与多步任务能力。
 
-## 团队
+## 创造者
 
-| | |
-| --- | --- |
-| 李贵江 | 发起人 · 全栈开发 |
+Dream AI 由李贵江独立研发。GitHub：<https://github.com/Li-Guijiang>
 
-- 电话：191 1073 4460
-- 邮箱：599575094@qq.com
-- GitHub：<https://github.com/Li-Guijiang>
+私人联系方式不写入公开仓库；需要时由主人通过验证后在私有档案中查看。
 
 ## License
 

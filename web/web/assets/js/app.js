@@ -2596,6 +2596,8 @@ ${task}`;
   // stutter on long replies.
   let streamNode = null;
   let streamChars = 0;
+  let streamRevealRaf = 0;
+  let streamRevealLast = 0;
 
   function scrollToBottom(force = false) {
     const scroller = $("#scroll");
@@ -2729,6 +2731,54 @@ ${task}`;
 
     let thinkNode = null;
     let errored = false;
+    let aborted = false;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function revealFrame(now) {
+      streamRevealRaf = 0;
+      if (!streamNode) return;
+      const pending = assistant.content.length - streamChars;
+      if (pending <= 0) {
+        streamRevealLast = 0;
+        return;
+      }
+      if (!streamRevealLast) streamRevealLast = now;
+      const elapsed = Math.min(80, Math.max(0, now - streamRevealLast));
+      streamRevealLast = now;
+      // Catch up when the network delivers a large chunk, but reveal at a
+      // readable pace when the provider is slow. One text node + one RAF loop
+      // avoids both markdown re-parsing and per-token layout thrash.
+      const charsPerSecond = pending > 900 ? 1200 : pending > 400 ? 720 : pending > 120 ? 360 : 190;
+      let count = Math.max(1, Math.round((elapsed / 1000) * charsPerSecond));
+      count = Math.min(count, pending);
+      streamNode.appendData(assistant.content.slice(streamChars, streamChars + count));
+      streamChars += count;
+      if (state.follow) scrollToBottom(true);
+      if (streamChars < assistant.content.length) {
+        streamRevealRaf = requestAnimationFrame(revealFrame);
+      } else {
+        streamRevealLast = 0;
+      }
+    }
+
+    function startReveal() {
+      if (!streamNode || streamChars >= assistant.content.length) return;
+      if (reducedMotion || window.DreamMotion?.enabled === false) {
+        streamNode.appendData(assistant.content.slice(streamChars));
+        streamChars = assistant.content.length;
+        if (state.follow) scrollToBottom(true);
+        return;
+      }
+      if (streamRevealRaf) return;
+      streamRevealLast = 0;
+      streamRevealRaf = requestAnimationFrame(revealFrame);
+    }
+
+    function stopReveal() {
+      if (streamRevealRaf) cancelAnimationFrame(streamRevealRaf);
+      streamRevealRaf = 0;
+      streamRevealLast = 0;
+    }
 
     const paint = () => {
       if (!assistant.content && !assistant.reasoning) return;
@@ -2738,10 +2788,7 @@ ${task}`;
         body.appendChild(streamNode);
         body.classList.add("caret");
       }
-      if (assistant.content.length > streamChars) {
-        streamNode.appendData(assistant.content.slice(streamChars));
-        streamChars = assistant.content.length;
-      }
+      startReveal();
       if (assistant.reasoning) {
         if (!thinkNode) {
           thinkNode = thinkingNode(assistant.reasoning, true);
@@ -2799,6 +2846,7 @@ ${task}`;
       }
     } catch (error) {
       if (error.name === "AbortError") {
+        aborted = true;
         if (!assistant.content && !assistant.reasoning) node.remove();
         else toast("已停止生成");
       } else {
@@ -2814,6 +2862,23 @@ ${task}`;
     } finally {
       clearTimeout(streamPaint.timer);
       streamPaint.timer = null;
+      // Let the reveal queue catch up before swapping to rendered markdown;
+      // cap the wait so a stalled tab cannot delay completion forever.
+      if (!errored && !aborted && assistant.content && streamChars < assistant.content.length) {
+        await new Promise((resolve) => {
+          const deadline = performance.now() + 700;
+          const tick = () => {
+            if (streamChars >= assistant.content.length || performance.now() >= deadline) {
+              resolve();
+              return;
+            }
+            requestAnimationFrame(tick);
+          };
+          startReveal();
+          requestAnimationFrame(tick);
+        });
+      }
+      stopReveal();
       setStreaming(false);
       state.abort = null;
       setAgentState("空闲", false);
@@ -2824,6 +2889,10 @@ ${task}`;
       body.classList.remove("caret");
 
       if (!errored && (assistant.content || assistant.reasoning)) {
+        if (streamNode && assistant.content.length > streamChars) {
+          streamNode.appendData(assistant.content.slice(streamChars));
+          streamChars = assistant.content.length;
+        }
         body.innerHTML = markdown(assistant.content);
         decorate(body);
         if (thinkNode) {

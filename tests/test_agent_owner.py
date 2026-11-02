@@ -71,7 +71,7 @@ def test_clear_command_empties_appended_memory_only():
 def test_public_surface_masks_contacts_in_model_output():
     class LeakyProvider:
         def generate(self, messages):  # noqa: ANN001
-            return "他的手机是 19110734460，邮箱 599575094@qq.com"
+            return "他的手机是 13800138000，邮箱 demo@example.com"
 
     agent = DreamAIAgent(
         provider=LeakyProvider(),
@@ -82,15 +82,15 @@ def test_public_surface_masks_contacts_in_model_output():
 
     reply = agent.chat("他是谁")
 
-    assert "19110734460" not in reply
-    assert "599575094@qq.com" not in reply
+    assert "13800138000" not in reply
+    assert "demo@example.com" not in reply
     assert "已隐藏" in reply
 
 
 def test_owner_surface_keeps_the_numbers():
     class EchoProvider:
         def generate(self, messages):  # noqa: ANN001
-            return "19110734460"
+            return "13800138000"
 
     agent = DreamAIAgent(
         provider=EchoProvider(),
@@ -99,4 +99,4 @@ def test_owner_surface_keeps_the_numbers():
         public_surface=False,
     )
 
-    assert agent.chat("我的手机号") == "19110734460"
+    assert agent.chat("我的手机号") == "13800138000"

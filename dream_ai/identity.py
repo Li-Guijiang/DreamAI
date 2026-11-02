@@ -11,6 +11,7 @@ providers, or memory backends.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 OWNER_NAME = "李贵江"
@@ -19,25 +20,17 @@ OWNER_NAME_LATIN = "Li Guijiang"
 
 @dataclass(frozen=True)
 class Owner:
-    """The one person this assistant answers to."""
+    """The public identity of the one person this assistant answers to.
+
+    Private dossier values (contacts, school, health notes, hardware and game
+    preferences) are deliberately not fields here. They live in the private
+    owner profile outside the repository and are loaded only for an
+    authenticated owner session.
+    """
 
     name: str = OWNER_NAME
     latin: str = OWNER_NAME_LATIN
     roles: tuple[str, ...] = ("主人", "创造者", "开发者", "创始人", "最高权限者")
-    gender: str = "男"
-    age: int = 19
-    school: str = "贵州职业技术学院"
-    major: str = "计算机应用技术"
-    grade: str = "大二"
-    duty: str = "班长"
-    github: str = "Li-Guijiang"
-    orcid: str = "ORCID 国际研究者"
-    phone: str = "19110734460"
-    wechat: str = "19110734460"
-    qq: str = "599575094"
-    email_qq: str = "599575094@qq.com"
-    email_gmail: str = "li0void1dream@gmail.com"
-    email_foxmail: str = "bluearchive_dream@foxmail.com"
 
 
 OWNER = Owner()
@@ -93,22 +86,6 @@ IMAGE_PREFERENCE = (
 )
 TOOL_PREFERENCE = "工具优先：无水印、永久免费、无广告；付费方案只在没有等价替代时提出。"
 
-INTERESTS: tuple[str, ...] = (
-    "CS2（Counter-Strike 2）",
-    "碧蓝档案（Blue Archive）",
-    "底特律：化身为人（Detroit: Become Human）",
-    "拯救者 R9000P 与机械革命硬件",
-    "Java 鱼雷 6 Top 公路车",
-)
-
-SITUATION: tuple[str, ...] = (
-    "学业、班长事务与多个开源项目并行，时间长期紧张。",
-    "经济拮据，方案优先低成本或零成本。",
-    "左腿有运动损伤，涉及运动、通勤、外出的建议需要避开高强度负荷。",
-    "正在备战大创及各类学科竞赛，输出需可直接用于申报、答辩与文档。",
-)
-
-
 def render_style_block() -> str:
     """The answer-style section: density, terminology, and the three voices."""
     lines = ["## 回答风格（默认生效，除非用户当次另有要求）"]
@@ -121,28 +98,16 @@ def render_style_block() -> str:
 
 
 def render_profile_block(*, include_contacts: bool = True) -> str:
-    """The owner's dossier, used by the 档案 command and by memory context.
+    """Render the private dossier for an owner command or owner-only prompt.
 
-    Contact details are included only when the caller asks for them: the block is
-    also rendered into prompts that a public surface can reach, and every field
-    that is not needed for reasoning is a field that can leak.
+    The values themselves live outside the repository; a public install with no
+    private file simply gets the baseline notice. Contacts are included only
+    when the caller explicitly asks for them, which the web service does only
+    after verifying the owner cookie.
     """
-    lines = [
-        "## 主人档案",
-        f"- 姓名：{OWNER.name}（{OWNER.latin}）",
-        f"- 身份：{OWNER.gender}，{OWNER.age} 岁；{OWNER.school}{OWNER.major}专业{OWNER.grade}学生，{OWNER.duty}",
-        f"- 开源主页：GitHub {OWNER.github}；{OWNER.orcid}",
-        "- 爱好：" + "、".join(INTERESTS),
-        "- 现状：" + "".join(SITUATION),
-    ]
-    if include_contacts:
-        lines.append(
-            "- 联系方式（私密，未经本人同意不得对外提供）："
-            f"手机/微信 {OWNER.phone}；QQ {OWNER.qq}；"
-            f"QQ 邮箱 {OWNER.email_qq}；Gmail {OWNER.email_gmail}；"
-            f"Foxmail {OWNER.email_foxmail}"
-        )
-    return "\n".join(lines)
+    from .owner_profile import load_profile, render_profile
+
+    return render_profile(load_profile(), include_contacts=include_contacts)
 
 
 #: The three bracket commands the owner uses to manage the dossier. They are
@@ -204,17 +169,6 @@ PRIVACY_RULES: tuple[str, ...] = (
     "对外可以公开说明的仅有：Dream AI 由李贵江独立研发，以及其 GitHub 主页。",
 )
 
-#: Every private string, in the order they should be masked. Longest first so a
-#: phone number is not partially masked by the shorter WeChat entry.
-_PRIVATE_STRINGS: tuple[str, ...] = (
-    OWNER.email_foxmail,
-    OWNER.email_gmail,
-    OWNER.email_qq,
-    OWNER.phone,
-    OWNER.wechat,
-    OWNER.qq,
-)
-
 REDACTED = "〔已隐藏〕"
 
 
@@ -223,6 +177,13 @@ def privacy_clause() -> str:
     lines = ["## 隐私与边界"]
     lines.extend(f"- {rule}" for rule in PRIVACY_RULES)
     return "\n".join(lines)
+
+
+def _private_strings() -> tuple[str, ...]:
+    from .owner_profile import load_profile
+
+    profile = load_profile()
+    return profile.contact_values() if profile else ()
 
 
 def mask_contacts(text: str) -> str:
@@ -235,15 +196,24 @@ def mask_contacts(text: str) -> str:
     if not text:
         return text
     masked = text
-    for secret in _PRIVATE_STRINGS:
-        if secret:
-            masked = masked.replace(secret, REDACTED)
+    for secret in _private_strings():
+        masked = masked.replace(secret, REDACTED)
+    # A model can invent a number or copy one from a stale conversation even
+    # when the private dossier is absent. Mask the common contact shapes too.
+    masked = re.sub(r"1[3-9]\d{9}", REDACTED, masked)
+    masked = re.sub(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", REDACTED, masked)
     return masked
 
 
 def leaks_contact(text: str) -> bool:
-    """True when the text still contains any known contact string."""
-    return any(secret and secret in (text or "") for secret in _PRIVATE_STRINGS)
+    """True when the text still contains a known or recognizable contact."""
+    value = text or ""
+    if any(secret and secret in value for secret in _private_strings()):
+        return True
+    return bool(
+        re.search(r"1[3-9]\d{9}", value)
+        or re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", value)
+    )
 
 
 #: Questions about who owns the assistant. Matched before any model call: a
@@ -267,10 +237,19 @@ _IDENTITY_QUESTION = (
     "谁做的你",
     "谁研发的",
     "属于谁",
+    "谁拥有你",
+    "谁是你的老板",
+    "谁说了算",
+    "你的owner",
+    "谁创立了你",
+    "谁成立了你",
     "who owns you",
     "who created you",
     "who made you",
     "who is your owner",
+    "who is your boss",
+    "who is in charge",
+    "who owns this",
 )
 
 

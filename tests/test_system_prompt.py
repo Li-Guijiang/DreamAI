@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from dream_ai.config import DEFAULT_SYSTEM_PROMPT
 from dream_ai.identity import OWNER
 
@@ -28,7 +30,7 @@ def test_prompt_stays_within_a_sane_size():
 
 
 def test_prompt_does_not_contain_contact_details():
-    # Contacts live in the dossier command, not in the prompt that a public
+    # Contacts live in the private dossier, not in the prompt that a public
     # surface sends to a provider on every turn.
-    for secret in (OWNER.phone, OWNER.qq, OWNER.email_qq, OWNER.email_gmail, OWNER.email_foxmail):
-        assert secret not in DEFAULT_SYSTEM_PROMPT
+    assert not re.search(r"1[3-9]\d{9}", DEFAULT_SYSTEM_PROMPT)
+    assert not re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", DEFAULT_SYSTEM_PROMPT)
