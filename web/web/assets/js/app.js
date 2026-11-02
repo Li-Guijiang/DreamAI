@@ -2591,6 +2591,11 @@ ${task}`;
   // ---------------------------------------------------------------------
 
   let streamPaint = { last: 0, timer: null };
+  // Streaming writes into a single text node and only re-renders markdown once,
+  // at the end. Re-parsing the whole answer every 90 ms was what made the caret
+  // stutter on long replies.
+  let streamNode = null;
+  let streamChars = 0;
 
   function scrollToBottom(force = false) {
     const scroller = $("#scroll");
@@ -2679,6 +2684,8 @@ ${task}`;
   }
 
   async function requestCompletion(session) {
+    streamNode = null;
+    streamChars = 0;
     const provider = state.settings.provider || "free";
     const model = state.settings.model || state.config?.defaultModel;
     const assistant = { role: "assistant", content: "", reasoning: "", model, provider, ts: now() };
@@ -2725,9 +2732,16 @@ ${task}`;
 
     const paint = () => {
       if (!assistant.content && !assistant.reasoning) return;
-      body.innerHTML = markdown(assistant.content);
-      body.classList.add("caret");
-      decorate(body);
+      if (!streamNode) {
+        body.textContent = "";
+        streamNode = document.createTextNode("");
+        body.appendChild(streamNode);
+        body.classList.add("caret");
+      }
+      if (assistant.content.length > streamChars) {
+        streamNode.appendData(assistant.content.slice(streamChars));
+        streamChars = assistant.content.length;
+      }
       if (assistant.reasoning) {
         if (!thinkNode) {
           thinkNode = thinkingNode(assistant.reasoning, true);
@@ -2736,7 +2750,7 @@ ${task}`;
           $(".think__text", thinkNode).textContent = assistant.reasoning;
         }
       }
-      if (state.follow) scrollToBottom(true);
+      if (state.follow) requestAnimationFrame(() => scrollToBottom(true));
     };
 
     try {
@@ -2829,7 +2843,9 @@ ${task}`;
     }
 
     function schedulePaint(immediate = false) {
-      const gap = 90;
+      // Appending a text node is cheap, so the cadence can be tighter than the
+      // markdown path could afford: ~30 fps instead of ~11.
+      const gap = 33;
       const delay = Math.max(0, gap - (Date.now() - streamPaint.last));
       if (immediate) {
         streamPaint.last = Date.now();
