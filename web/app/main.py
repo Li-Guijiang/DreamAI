@@ -27,7 +27,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from . import llm
-from .config import VERSION, WEB_DIR, load_settings
+from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
 
 logging.basicConfig(
     level=logging.INFO,
@@ -573,6 +573,35 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         )
     messages = prepare_messages(payload.messages, system_prompt)
     temperature = payload.temperature if payload.temperature is not None else settings.temperature
+
+    # Identity questions are answered here, not by the model. A 4B-class model
+    # told about the owner in its prompt still answered "the team" often enough
+    # that the guarantee has to come from code; this also removes a round trip
+    # from the answer, so it arrives immediately.
+    if is_identity_question(payload.messages[-1].content):
+        async def identity_stream() -> AsyncIterator[bytes]:
+            started = time.monotonic()
+            yield sse("meta", {"model": model, "version": VERSION})
+            yield sse("delta", {"t": IDENTITY_ANSWER})
+            yield sse(
+                "done",
+                {
+                    "chars": len(IDENTITY_ANSWER),
+                    "elapsed": round(time.monotonic() - started, 3),
+                    "model": model,
+                    "local": True,
+                },
+            )
+
+        return StreamingResponse(
+            identity_stream(),
+            media_type="text/event-stream; charset=utf-8",
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
     temperature = min(1.5, max(0.0, temperature + STYLE_TEMPERATURE.get(style, 0.0)))
 
     async def event_stream() -> AsyncIterator[bytes]:
