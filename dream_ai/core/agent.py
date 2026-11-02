@@ -129,8 +129,30 @@ class DreamAIAgent:
         self.forget_preferences()
         return "已清空追加记忆。内置身份记录不可通过对话删除。"
 
+    #: Facts prefixed like this are captured without a command, so the owner can
+    #: drop a preference mid-conversation the way they would in the web client.
+    CAPTURE_PREFIXES = ("记住：", "记住:")
+
+    def capture_preference(self, user_text: str) -> str | None:
+        """Remember a '记住：…' message and confirm it, without a model call."""
+        text = (user_text or "").strip()
+        for prefix in self.CAPTURE_PREFIXES:
+            if text.startswith(prefix):
+                fact = text[len(prefix) :].strip()
+                if not fact:
+                    return "用法：记住：要记住的内容"
+                self.remember(fact)
+                return f"已记住：{fact}"
+        return None
+
     def chat(self, user_text: str) -> str:
         """Send one user message and return the assistant's reply."""
+        captured = self.capture_preference(user_text)
+        if captured is not None:
+            self._conversation.add_user(user_text)
+            self._conversation.add_assistant(captured)
+            return captured
+
         local = self.handle_owner_command(user_text)
         if local is not None:
             self._conversation.add_user(user_text)
