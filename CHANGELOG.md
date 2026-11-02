@@ -18,6 +18,22 @@
 
 ## Unreleased
 
+### AI core
+
+- The assistant now carries an owner record that every surface inherits: owner,
+  creator, developer, founder and ultimate-authority questions resolve to one
+  person, with the substitutes it must not name spelled out.
+- Answer style is part of the prompt: density first, terminology over plain
+  language, no pleasantries or comfort talk, with three selectable copy voices
+  and a documented exception for zero-base deployment tutorials.
+- Personal memory: 【查看我的全部档案】/【更新档案】/【清空档案】 are answered
+  locally before the model runs, `记住：…` captures a fact mid-sentence, and the
+  store refuses past 200 notes instead of truncating.
+- Privacy is enforced in code: contacts never enter the system prompt, and model
+  output on a public surface passes through a contact mask.
+
+## Unreleased
+
 ### Desktop
 
 - Update checks now run on a schedule (15 s after launch, then every 6 h with
