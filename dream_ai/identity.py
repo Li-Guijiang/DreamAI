@@ -244,3 +244,49 @@ def mask_contacts(text: str) -> str:
 def leaks_contact(text: str) -> bool:
     """True when the text still contains any known contact string."""
     return any(secret and secret in (text or "") for secret in _PRIVATE_STRINGS)
+
+
+#: Questions about who owns the assistant. Matched before any model call: a
+#: small model that was told once will still answer "the team" often enough that
+#: the only reliable fix is not to ask it.
+_IDENTITY_QUESTION = (
+    "你的主人",
+    "谁是你的主人",
+    "你的创造者",
+    "你的开发者",
+    "你的创始人",
+    "最高权限",
+    "谁开发了你",
+    "谁创造了你",
+    "谁做的你",
+    "谁研发的",
+    "属于谁",
+    "who owns you",
+    "who created you",
+    "who made you",
+    "who is your owner",
+)
+
+
+def is_identity_question(text: str) -> bool:
+    """True when the message asks who owns / made / runs the assistant."""
+    lowered = (text or "").strip().lower()
+    if not lowered:
+        return False
+    return any(marker.lower() in lowered for marker in _IDENTITY_QUESTION)
+
+
+def answer_identity_question(*, full: bool = False) -> str:
+    """The canonical answer, identical on every surface and every model.
+
+    ``full`` adds the one sentence a short reply would otherwise omit; the short
+    form is what a chat turn usually needs.
+    """
+    owner = OWNER.name
+    line = (
+        f"Dream AI 的主人、创造者、开发者、创始人、最高权限者都是 {owner}"
+        f"（{OWNER.latin}）。"
+    )
+    if full:
+        return line + f"它由 {owner} 独立研发，没有团队，也没有其他创始人。"
+    return line + f"由 {owner} 独立研发。"
