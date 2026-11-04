@@ -146,10 +146,7 @@ def clear_profile() -> Path | None:
 
 def render_profile(profile: OwnerProfile | None, *, include_contacts: bool = True) -> str:
     if profile is None:
-        return (
-            "## 主人档案\n- 姓名：李贵江（Li Guijiang）\n"
-            "- 私有档案尚未配置；身份规则仍然有效。"
-        )
+        return "## 主人档案\n- 姓名：李贵江（Li Guijiang）\n- 私有档案尚未配置；身份规则仍然有效。"
     lines = [
         "## 主人档案",
         f"- 姓名：{profile.name}（{profile.latin}）",
@@ -224,4 +221,3 @@ def mask_contacts(text: str, profile: OwnerProfile | None = None) -> str:
     masked = re.sub(r"1[3-9]\d{9}", "〔已隐藏〕", masked)
     masked = re.sub(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", "〔已隐藏〕", masked)
     return masked
-

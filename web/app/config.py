@@ -90,12 +90,33 @@ def is_identity_question(text: str) -> bool:
     """True when the message asks who owns or made the assistant."""
     lowered = (text or "").strip().lower()
     markers = (
-        "你的主人", "谁是你的主人", "你的创造者", "你的开发者", "你的创始人",
-        "谁的创造者", "谁的开发者", "谁的创始人", "最高权限", "谁开发了你",
-        "谁创造了你", "谁做的你", "谁研发的", "属于谁", "谁拥有你", "谁是你的老板",
-        "谁说了算", "你的owner", "谁创立了你", "谁成立了你",
-        "who owns you", "who created you", "who made you", "who is your owner",
-        "who is your boss", "who is in charge", "who owns this",
+        "你的主人",
+        "谁是你的主人",
+        "你的创造者",
+        "你的开发者",
+        "你的创始人",
+        "谁的创造者",
+        "谁的开发者",
+        "谁的创始人",
+        "最高权限",
+        "谁开发了你",
+        "谁创造了你",
+        "谁做的你",
+        "谁研发的",
+        "属于谁",
+        "谁拥有你",
+        "谁是你的老板",
+        "谁说了算",
+        "你的owner",
+        "谁创立了你",
+        "谁成立了你",
+        "who owns you",
+        "who created you",
+        "who made you",
+        "who is your owner",
+        "who is your boss",
+        "who is in charge",
+        "who owns this",
     )
     return any(marker in lowered for marker in markers)
 
@@ -283,11 +304,15 @@ def load_settings() -> Settings:
 
     return Settings(
         free_api_key=_env("DREAMAI_FREE_API_KEY"),
-        free_base_url=(_env("DREAMAI_FREE_BASE_URL", "https://open.bigmodel.cn/api/paas/v4") or "").rstrip("/"),
+        free_base_url=(
+            _env("DREAMAI_FREE_BASE_URL", "https://open.bigmodel.cn/api/paas/v4") or ""
+        ).rstrip("/"),
         free_model=_env("DREAMAI_FREE_MODEL", "glm-4-flash") or "glm-4-flash",
         free_label=_env("DREAMAI_FREE_LABEL", "GLM-4-Flash") or "GLM-4-Flash",
         free_key_url=_env("DREAMAI_FREE_KEY_URL", "https://open.bigmodel.cn/usercenter/apikeys"),
-        byok_base_url=(_env("DREAMAI_BYOK_BASE_URL", "https://api.deepseek.com/v1") or "").rstrip("/"),
+        byok_base_url=(_env("DREAMAI_BYOK_BASE_URL", "https://api.deepseek.com/v1") or "").rstrip(
+            "/"
+        ),
         byok_models=_parse_byok_models(),
         byok_key_url=_env("DREAMAI_BYOK_KEY_URL", "https://platform.deepseek.com/api_keys"),
         byok_label=_env("DREAMAI_BYOK_LABEL", "DeepSeek") or "DeepSeek",

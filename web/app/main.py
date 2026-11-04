@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from . import llm, owner_auth, owner_store
 from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
+from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
 
 logging.basicConfig(
     level=logging.INFO,
@@ -168,7 +169,10 @@ class _TextExtractor(HTMLParser):
             self._in_title = True
 
     def handle_endtag(self, tag: str) -> None:
-        if tag in {"script", "style", "noscript", "svg", "canvas", "iframe", "template"} and self._skip:
+        if (
+            tag in {"script", "style", "noscript", "svg", "canvas", "iframe", "template"}
+            and self._skip
+        ):
             self._skip -= 1
         if tag == "title" and self._in_title:
             self._in_title = False
@@ -240,7 +244,9 @@ async def fetch_readable(url: str) -> dict:
         "Accept": "text/html, text/plain;q=0.9, */*;q=0.1",
     }
     timeout = httpx.Timeout(12.0, connect=6.0)
-    async with httpx.AsyncClient(timeout=timeout, follow_redirects=False, headers=headers) as client:
+    async with httpx.AsyncClient(
+        timeout=timeout, follow_redirects=False, headers=headers
+    ) as client:
         for _ in range(4):
             parsed = await _validate_read_url(current)
             async with client.stream("GET", current) as response:
@@ -293,6 +299,7 @@ async def fetch_readable(url: str) -> dict:
                     "truncated": truncated,
                 }
         raise ReaderError("链接跳转次数过多")
+
 
 # ---------------------------------------------------------------------------
 # Middleware: security headers, cache policy, body size guard
@@ -356,7 +363,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1, max_length=40)
     model: str | None = None
-    provider: Literal["free", "byok"] = "free"
+    provider: str = "free"
     apiKey: str | None = Field(default=None, max_length=200)
     temperature: float | None = None
     maxTokens: int | None = Field(default=None, ge=128, le=8192)
@@ -375,13 +382,16 @@ class UpstreamError(Exception):
 
 
 class Upstream:
-    __slots__ = ("base_url", "api_key", "model", "kind")
+    """A resolved request target: which provider, which key, which model."""
 
-    def __init__(self, base_url: str, api_key: str, model: str, kind: str) -> None:
-        self.base_url = base_url
+    __slots__ = ("provider", "api_key", "model", "kind", "label")
+
+    def __init__(self, provider, api_key: str, model: str, kind: str, label: str) -> None:
+        self.provider = provider
         self.api_key = api_key
         self.model = model
         self.kind = kind
+        self.label = label
 
 
 # Optional answer-style presets chosen in the composer. They are short
@@ -405,7 +415,9 @@ def sse(event: str, payload: dict) -> bytes:
 
 def prepare_messages(messages: list[ChatMessage], system_prompt: str) -> list[dict[str, str]]:
     """Trim history (newest-last) by count and size, then prepend the persona."""
-    chat = [{"role": m.role, "content": m.content} for m in messages][-settings.max_history_messages :]
+    chat = [{"role": m.role, "content": m.content} for m in messages][
+        -settings.max_history_messages :
+    ]
 
     total = 0
     kept: list[dict[str, str]] = []
@@ -423,18 +435,37 @@ def prepare_messages(messages: list[ChatMessage], system_prompt: str) -> list[di
     return [{"role": "system", "content": system_prompt}, *kept]
 
 
+def _valid_key(key: str) -> bool:
+    """Shape check only: never call the provider to verify a visitor's key."""
+    cleaned = (key or "").strip()
+    return 20 <= len(cleaned) <= 200 and not any(char.isspace() for char in cleaned)
+
+
 def resolve_upstream(payload: ChatRequest) -> Upstream:
-    """Pick the upstream for this request: site free model or the visitor's key."""
-    if payload.provider == "byok":
+    """Pick the upstream: a BYOK provider, the legacy byok alias, or the free model."""
+    requested = (payload.provider or "free").strip().lower()
+
+    # "byok" predates the provider registry and always meant DeepSeek; keep it
+    # working for browsers that still send it.
+    if requested == "byok":
+        requested = "deepseek"
+
+    if requested in BYOK_PROVIDERS:
+        provider = get_provider(requested)
+        assert provider is not None
         key = (payload.apiKey or "").strip()
-        if len(key) < 20 or len(key) > 200 or any(char.isspace() for char in key):
+        if not _valid_key(key):
             raise UpstreamError(
-                "请先在设置中填写自己的 API Key，再使用该模型。",
+                f"请先在设置中填写 {provider.label} 的 API Key，再使用该模型。",
                 "byok_missing",
                 401,
             )
-        model = payload.model if payload.model in settings.byok_ids else settings.byok_models[0].id
-        return Upstream(settings.byok_base_url, key, model, "byok")
+        return Upstream(
+            provider, key, resolve_model(provider.id, payload.model), provider.kind, provider.label
+        )
+
+    if requested != "free":
+        raise UpstreamError("不支持的模型提供商。", "unknown_provider", 400)
 
     if not settings.free_configured:
         raise UpstreamError(
@@ -442,7 +473,20 @@ def resolve_upstream(payload: ChatRequest) -> Upstream:
             "free_not_configured",
             503,
         )
-    return Upstream(settings.free_base_url, settings.free_api_key, settings.free_model, "free")
+
+    class _Free:
+        id = "free"
+        label = "免费模型"
+        kind = "openai"
+        base_url = settings.free_base_url
+
+    return Upstream(
+        _Free(),
+        settings.free_api_key,
+        resolve_model("", payload.model) or settings.free_model,
+        "openai",
+        "免费模型",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -466,8 +510,11 @@ async def read_link(request: Request, url: str = "") -> JSONResponse:
         return JSONResponse({"error": exc.message, "code": "read_failed"}, status_code=exc.status)
     except Exception:  # noqa: BLE001
         logger.exception("reader failed url=%s", url[:200])
-        return JSONResponse({"error": "读取失败，请稍后重试。", "code": "read_failed"}, status_code=502)
+        return JSONResponse(
+            {"error": "读取失败，请稍后重试。", "code": "read_failed"}, status_code=502
+        )
     return JSONResponse(data)
+
 
 @app.get("/api/health")
 async def health() -> JSONResponse:
@@ -481,7 +528,9 @@ async def health() -> JSONResponse:
             "version": VERSION,
             "uptime": int(time.time() - STARTED_AT),
             "dailyLimit": settings.daily_limit,
-            "freeRemaining": max(0, settings.daily_limit - _daily_state["count"]) if settings.daily_limit > 0 else None,
+            "freeRemaining": max(0, settings.daily_limit - _daily_state["count"])
+            if settings.daily_limit > 0
+            else None,
             "rateLimit": settings.rate_limit,
             "rateWindow": settings.rate_window,
             "maxConcurrency": settings.max_concurrency,
@@ -509,7 +558,9 @@ async def usage() -> JSONResponse:
 
 @app.get("/api/config")
 async def public_config() -> JSONResponse:
-    return JSONResponse(settings.public_config())
+    config = settings.public_config()
+    config["providers"] = public_catalog()
+    return JSONResponse(config)
 
 
 def _local_chat(text: str, *, extra_headers: dict[str, str] | None = None) -> StreamingResponse:
@@ -641,7 +692,9 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
     if style in STYLE_PROMPTS:
         system_prompt = f"{system_prompt}\n\n{STYLE_PROMPTS[style]}"
     if payload.memory:
-        memories = [" ".join(item.split())[:300] for item in payload.memory if item and item.strip()][:20]
+        memories = [
+            " ".join(item.split())[:300] for item in payload.memory if item and item.strip()
+        ][:20]
         if memories:
             system_prompt += "\n\n用户长期记忆（请自然遵守，不要逐条复述）：\n" + "\n".join(
                 f"- {item}" for item in memories
@@ -683,7 +736,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         try:
             async with _semaphore:
                 async for kind, text in llm.stream_completion(
-                    base_url=upstream.base_url,
+                    upstream.provider,
                     api_key=upstream.api_key,
                     model=model,
                     messages=messages,
@@ -704,8 +757,8 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             failed = True
             logger.info("chat failed ip=%s kind=%s: %s", ip, upstream.kind, exc)
             message = exc.message
-            if upstream.kind == "byok" and exc.status_code in (401, 402, 403):
-                message = "你的 API Key 无效、没有权限或余额不足，请在设置中更新后重试。"
+            if upstream.provider.id != "free" and exc.status_code in (401, 402, 403):
+                message = f"{upstream.label} 拒绝了这次请求：Key 无效、无权限或余额不足，请在设置中更新后重试。"
             yield sse("error", {"message": message})
         except asyncio.CancelledError:
             cancelled = True
@@ -780,12 +833,7 @@ async def manifest() -> FileResponse:
 
 @app.get("/robots.txt")
 async def robots() -> Response:
-    body = (
-        "User-agent: *\n"
-        "Allow: /\n"
-        "Disallow: /api/\n"
-        "Sitemap: https://liguijiang.com/sitemap.xml\n"
-    )
+    body = "User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: https://liguijiang.com/sitemap.xml\n"
     return Response(body, media_type="text/plain")
 
 
@@ -808,7 +856,9 @@ app.mount("/assets", StaticFiles(directory=str(WEB_DIR / "assets")), name="asset
 async def not_found(request: Request, exc):  # noqa: ANN001
     if request.url.path.startswith("/api/"):
         return JSONResponse({"error": "接口不存在"}, status_code=404)
-    return FileResponse(WEB_DIR / "index.html", status_code=404, headers={"Cache-Control": "no-cache"})
+    return FileResponse(
+        WEB_DIR / "index.html", status_code=404, headers={"Cache-Control": "no-cache"}
+    )
 
 
 if __name__ == "__main__":
