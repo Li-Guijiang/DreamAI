@@ -11,3 +11,4 @@ New decisions should be added as numbered Markdown files, e.g. `0001-pluggable-p
 
 | [0002](./0002-version-check-and-install-detection.md) | Version checks, in-app updates, install detection |
 | [0003](./0003-owner-identity-and-personal-memory.md) | Owner identity, personal memory, and privacy boundaries |
+| [0004](./0004-answer-quality-and-reasoning.md) | Answer quality: reasoning, structure, and a natural voice |
