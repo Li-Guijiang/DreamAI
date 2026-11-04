@@ -350,3 +350,18 @@ def render_tone_block() -> str:
     lines.extend(f"- {rule}" for rule in TONE_RULES)
     lines.append("- 以下表达一律不出现：" + "、".join(f"「{p}」" for p in BANNED_PHRASES))
     return "\n".join(lines)
+
+
+def render_quality_block() -> str:
+    """Everything about how an answer is produced, in one block.
+
+    Order matters: the reasoning contract first (it shapes the thinking), then
+    the structure (it shapes the answer), then the voice (it shapes the wording).
+    """
+    return "\n\n".join(
+        (
+            render_reasoning_block(),
+            render_structure_block(),
+            render_tone_block(),
+        )
+    )
