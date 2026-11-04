@@ -67,6 +67,12 @@ def test_web_prompt_keeps_the_owner_record():
     assert "独立研发" in prompt
 
 
+def test_web_prompt_stays_within_budget():
+    # The service pays for this prompt on every request; the quality block took
+    # it from ~780 to ~1200 characters, and 2000 is the ceiling.
+    assert len(web_config.DEFAULT_SYSTEM_PROMPT) < 2000
+
+
 def test_web_prompt_carries_the_privacy_rule():
     prompt = web_config.DEFAULT_SYSTEM_PROMPT
 
