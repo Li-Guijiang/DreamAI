@@ -49,4 +49,11 @@ def test_emoji_budget_is_applied_to_the_reply():
 
     reply = agent.chat("做完了吗")
 
-    assert reply.count("😊") + reply.count("🚀") + reply.count("🔥") + reply.count("✨") + reply.count("🎉") <= 3
+    assert (
+        reply.count("😊")
+        + reply.count("🚀")
+        + reply.count("🔥")
+        + reply.count("✨")
+        + reply.count("🎉")
+        <= 3
+    )

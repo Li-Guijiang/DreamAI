@@ -427,7 +427,7 @@ _EMOJI_RE = re.compile(
     "["
     "\U0001f300-\U0001faff"  # symbols, pictographs, emoticons
     "\U0001f000-\U0001f0ff"  # mahjong, cards
-    "\u2600-\u27bf"          # misc symbols and dingbats
+    "\u2600-\u27bf"  # misc symbols and dingbats
     "\U0001f1e6-\U0001f1ff"  # regional indicators (flags)
     "]+",
     flags=re.UNICODE,
