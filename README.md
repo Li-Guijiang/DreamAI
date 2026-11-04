@@ -211,6 +211,8 @@ reaches the screen. Both are now explicit.
 | Banned phrases | Sixteen strings that make text read as machine output | `BANNED_PHRASES` |
 | Post-filter | Strips a trailing filler sentence if the model adds one anyway | `strip_filler()` |
 | Streaming | 24-character delta coalescing, append-only text nodes | `web/app/llm.py`, `app.js` |
+| Thinking panel | Live reasoning, then a collapsed `已思考（用时 X 秒）` line | `app.js`, `app.css` |
+| Emoji | At most three, never inside code or a table; enforced after generation | `EMOJI_POLICY`, `limit_emoji()` |
 
 The same rules exist twice: `dream_ai/identity.py` for the CLI and the desktop
 shell, and `web/app/config.py` for the service, which can run without the Python
