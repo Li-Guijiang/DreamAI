@@ -2732,6 +2732,8 @@ ${task}`;
     let thinkNode = null;
     let thinkText = null;
     let thinkChars = 0;
+    let thinkStartedAt = 0;
+    let thinkEndedAt = 0;
     let errored = false;
     let aborted = false;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2792,6 +2794,7 @@ ${task}`;
       }
       startReveal();
       if (assistant.reasoning) {
+        if (!thinkStartedAt) thinkStartedAt = performance.now();
         if (!thinkNode) {
           thinkNode = thinkingNode("", true);
           thinkHost.insertBefore(thinkNode, body);
@@ -2907,7 +2910,14 @@ ${task}`;
         if (thinkNode) {
           thinkNode.open = false;
           $(".think__text", thinkNode).textContent = assistant.reasoning;
-          $(".think__summary span:last-child", thinkNode).textContent = "思考过程";
+          // Same shape as DeepSeek: a collapsed line that says how long the model
+          // thought. Measured from the first reasoning token to the first answer
+          // token, so a slow network does not inflate it.
+          const ended = thinkEndedAt || performance.now();
+          const elapsed = Math.max(0, (ended - thinkStartedAt) / 1000);
+          const label = elapsed >= 10 ? `${Math.round(elapsed)} 秒` : `${Math.max(0.1, elapsed).toFixed(1)} 秒`;
+          $(".think__summary span:last-child", thinkNode).textContent = `已思考（用时 ${label}）`;
+          thinkNode.classList.add("is-done");
         }
         if (assistant.content) session.messages.push(assistant);
         session.updatedAt = now();
