@@ -42,3 +42,11 @@ def test_mask_still_applies_after_stripping():
 
     assert "19110734460" not in reply
     assert "希望" not in reply
+
+
+def test_emoji_budget_is_applied_to_the_reply():
+    agent = make("搞定了 😊 下一步 🚀 跑测试 🔥 然后提交 ✨ 收工 🎉", public_surface=False)
+
+    reply = agent.chat("做完了吗")
+
+    assert reply.count("😊") + reply.count("🚀") + reply.count("🔥") + reply.count("✨") + reply.count("🎉") <= 3
