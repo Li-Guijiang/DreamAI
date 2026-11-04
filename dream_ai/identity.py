@@ -421,3 +421,54 @@ EMOJI_POLICY: tuple[str, ...] = (
     "不用连续重复的 emoji 表达情绪，不用 emoji 替代关键词。",
 )
 MAX_EMOJI = 3
+
+
+_EMOJI_RE = re.compile(
+    "["
+    "\U0001f300-\U0001faff"  # symbols, pictographs, emoticons
+    "\U0001f000-\U0001f0ff"  # mahjong, cards
+    "\u2600-\u27bf"          # misc symbols and dingbats
+    "\U0001f1e6-\U0001f1ff"  # regional indicators (flags)
+    "]+",
+    flags=re.UNICODE,
+)
+
+_FENCE_RE = re.compile(r"```[\s\S]*?```|`[^`\n]*`")
+
+
+def limit_emoji(text: str, max_emoji: int = MAX_EMOJI) -> str:
+    """Keep at most ``max_emoji`` emoji clusters outside code spans.
+
+    Runs on the finished reply: a model that ignores the budget still ships a
+    readable answer, and code, commands and error text are left untouched because
+    they are fenced off before counting starts.
+    """
+    if not text:
+        return text
+
+    protected: list[str] = []
+
+    def stash(match: re.Match[str]) -> str:
+        protected.append(match.group(0))
+        return f"\x00{len(protected) - 1}\x00"
+
+    masked = _FENCE_RE.sub(stash, text)
+    budget = max(0, max_emoji)
+
+    def trim(match: re.Match[str]) -> str:
+        nonlocal budget
+        cluster = match.group(0)
+        if budget <= 0:
+            return ""
+        keep = cluster[:budget]
+        budget -= len(keep)
+        return keep
+
+    masked = _EMOJI_RE.sub(trim, masked)
+    # Any leftover double space left by a removed emoji, without touching indent.
+    masked = re.sub(r"[ \t]{2,}(?=\S)", " ", masked)
+    masked = re.sub(r"[ \t]+$", "", masked, flags=re.MULTILINE)
+
+    for index, original in enumerate(protected):
+        masked = masked.replace(f"\x00{index}\x00", original)
+    return masked
