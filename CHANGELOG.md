@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Answer quality
+
+- The reasoning channel now has a shape - 理解 / 拆解 / 关键判断 / 自查 - and is
+  written to be read rather than as scratch work.
+- Answer structure is specified: conclusion first, three-line summary before the
+  expansion, code before commentary, no closing summary.
+- Voice rules plus sixteen banned phrases (`希望对你有帮助`, `作为一个 AI`,
+  `总而言之`, `首先/其次/最后` …), mirrored in the web service prompt and checked
+  by a test that walks the list.
+- A trailing filler sentence is stripped after generation, so a model that
+  ignores the ban still ships a clean last line.
+- Streaming: upstream deltas coalesce at 24 characters, and both the answer and
+  the reasoning panel append to a single text node instead of re-rendering.
+
+### Owner record
+
+- Unchanged in content; only the surrounding prompt grew.
+
+## Unreleased
+
 ### AI core
 
 - The assistant now carries an owner record that every surface inherits: owner,
