@@ -12,6 +12,7 @@ const STORE_KNOWLEDGE = "dreamai.knowledge.v1";
 const STORE_PROMPTS = "dreamai.prompts.v1";
 const STORE_USAGE = "dreamai.usage.v1";
   const STORE_USER_KEY = "dreamai.userkey.v1";
+  const STORE_PROVIDER = "dreamai.provider.v1";
   const MAX_INPUT = 12000;
   const MAX_FILES = 3;
   const MAX_FILE_CHARS = 20000;
@@ -170,6 +171,9 @@ const STORE_USAGE = "dreamai.usage.v1";
     knowledge: { docs: [] },
     kbContextForSend: null,
     userKey: "",
+    keys: {},
+    providerId: "deepseek",
+    providers: [],
     attachments: [],
     search: "",
     streaming: false,
@@ -220,10 +224,24 @@ const STORE_USAGE = "dreamai.usage.v1";
       state.knowledge = { docs: [] };
     }
     try {
-      state.userKey = localStorage.getItem(STORE_USER_KEY) || "";
+      const raw = localStorage.getItem(STORE_USER_KEY) || "";
+      let parsed = null;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        parsed = null;
+      }
+      // Older builds stored one bare DeepSeek key; migrate it into the map.
+      state.keys = parsed && typeof parsed === "object" ? parsed : raw ? { deepseek: raw } : {};
     } catch {
-      state.userKey = "";
+      state.keys = {};
     }
+    try {
+      state.providerId = localStorage.getItem(STORE_PROVIDER) || "deepseek";
+    } catch {
+      state.providerId = "deepseek";
+    }
+    state.userKey = state.keys[state.providerId] || "";
     if (!["dark", "light", "system"].includes(state.settings.theme)) state.settings.theme = "dark";
     if (!["sm", "md", "lg"].includes(state.settings.size)) state.settings.size = "md";
     if (!["free", "byok"].includes(state.settings.provider)) state.settings.provider = "free";
@@ -1561,8 +1579,8 @@ ${results.map((r, i) => `步骤 ${i + 1}（${steps[i].title}）：\n${r}`).join(
       body: JSON.stringify({
         messages,
         model: state.settings.model || state.config?.defaultModel,
-        provider,
-        apiKey: provider === "byok" ? state.userKey : undefined,
+        provider: provider === "byok" ? state.providerId : "free",
+        apiKey: provider === "byok" ? state.keys[state.providerId] : undefined,
         temperature: temperature ?? Number(state.settings.temperature),
         maxTokens,
         context: kbContext,
@@ -2717,7 +2735,7 @@ ${task}`;
         })),
       model,
       provider,
-      apiKey: provider === "byok" ? state.userKey : undefined,
+      apiKey: provider === "byok" ? state.keys[state.providerId] : undefined,
       temperature: Number(state.settings.temperature),
       thinking: Boolean(state.settings.thinking),
       style: state.settings.style,
@@ -3042,7 +3060,7 @@ ${task}`;
 
   function selectModel(model, { silent = false } = {}) {
     if (!model) return;
-    if (model.provider === "byok" && !state.userKey) {
+    if (model.provider === "byok" && !state.keys[state.providerId]) {
       openKeyModal(model.id);
       return;
     }
@@ -3063,7 +3081,7 @@ ${task}`;
         toast("当前模型不支持深度思考", "err");
         return;
       }
-      if (!state.userKey) {
+      if (!state.keys[state.providerId]) {
         openKeyModal(reasoning.id);
         return;
       }
@@ -3374,23 +3392,54 @@ ${task}`;
   let renameTarget = null;
   let pendingModelId = null;
 
+  function providerById(id) {
+    return state.providers.find((p) => p.id === id) || null;
+  }
+
+  function providerLabel(id = state.providerId) {
+    return providerById(id)?.label || "DeepSeek";
+  }
+
   function pendingKeyStatus() {
-    return state.userKey ? `已配置 · ${state.userKey.slice(0, 6)}…${state.userKey.slice(-4)}` : "未配置 · 使用免费模型";
+    const key = state.keys[state.providerId] || "";
+    if (!key) return `未配置 · ${providerLabel()} 需要 Key`;
+    return `${providerLabel()} · 已配置 ${key.slice(0, 6)}…${key.slice(-4)}`;
+  }
+
+  function fillProviderSelect() {
+    const select = $("#providerSelect");
+    if (!select) return;
+    const catalog = state.providers.length
+      ? state.providers
+      : [{ id: "deepseek", label: "DeepSeek", hint: "" }];
+    select.innerHTML = "";
+    for (const provider of catalog) {
+      const option = document.createElement("option");
+      option.value = provider.id;
+      option.textContent = provider.label;
+      select.appendChild(option);
+    }
+    if (!catalog.some((p) => p.id === state.providerId)) state.providerId = catalog[0].id;
+    select.value = state.providerId;
+    const hint = $("#providerHint");
+    if (hint) hint.textContent = providerById(state.providerId)?.hint || "";
   }
 
   function updateKeyStatus() {
     const status = $("#keyStatus");
     if (status) status.textContent = pendingKeyStatus();
     const clear = $("#keyClear");
-    if (clear) clear.hidden = !state.userKey;
+    if (clear) clear.hidden = !state.keys[state.providerId];
   }
 
   function openKeyModal(modelId = null) {
     closeMenus();
     pendingModelId = modelId;
+    fillProviderSelect();
     const input = $("#keyInput");
-    input.value = "";
-    input.placeholder = state.userKey ? "已保存 · 粘贴新 Key 可更新" : "sk-...";
+    const saved = state.keys[state.providerId] || "";
+    input.value = saved;
+    input.placeholder = saved ? "已保存 · 粘贴新 Key 可更新" : "sk-...";
     updateKeyStatus();
     openModal("keyModal");
     setTimeout(() => input.focus(), 40);
@@ -3402,9 +3451,15 @@ ${task}`;
       toast("Key 格式看起来不对，请检查后重试", "err");
       return;
     }
+    state.keys[state.providerId] = key;
     state.userKey = key;
     try {
-      localStorage.setItem(STORE_USER_KEY, key);
+      localStorage.setItem(STORE_PROVIDER, state.providerId);
+    } catch {
+      /* private mode */
+    }
+    try {
+      localStorage.setItem(STORE_USER_KEY, JSON.stringify(state.keys));
     } catch {
       toast("浏览器不允许保存，可能是隐私模式", "err");
     }
@@ -3419,9 +3474,11 @@ ${task}`;
   }
 
   function clearUserKey() {
+    // Only the selected provider's key: clearing OpenAI must not wipe DeepSeek.
+    delete state.keys[state.providerId];
     state.userKey = "";
     try {
-      localStorage.removeItem(STORE_USER_KEY);
+      localStorage.setItem(STORE_USER_KEY, JSON.stringify(state.keys));
     } catch {
       /* ignore */
     }
@@ -3639,6 +3696,22 @@ ${task}`;
       state.settings.useMemory = event.target.checked;
       persistSettings();
       toast(event.target.checked ? "已开启长期记忆" : "已关闭长期记忆");
+    });
+    $("#providerSelect")?.addEventListener("change", (event) => {
+      state.providerId = event.target.value;
+      try {
+        localStorage.setItem(STORE_PROVIDER, state.providerId);
+      } catch {
+        /* private mode: the choice lasts for this tab only */
+      }
+      const key = state.keys[state.providerId] || "";
+      const input = $("#keyInput");
+      input.value = key;
+      input.placeholder = key ? "已保存 · 粘贴新 Key 可更新" : "sk-...";
+      const hint = $("#providerHint");
+      if (hint) hint.textContent = providerById(state.providerId)?.hint || "";
+      updateKeyStatus();
+      buildModelMenu();
     });
     $("#keySave").addEventListener("click", saveUserKey);
     $("#keyClear").addEventListener("click", clearUserKey);
@@ -4083,6 +4156,27 @@ ${task}`;
       const response = await fetch("/api/config", { headers: { Accept: "application/json" } });
       if (!response.ok) throw new Error("config");
       state.config = await response.json();
+      state.providers = Array.isArray(state.config.providers) ? state.config.providers : [];
+      // Fold every BYOK vendor into the same model list the picker already reads,
+      // so switching provider only changes which ids are offered.
+      if (state.providers.length) {
+        const extra = state.providers.flatMap((p) =>
+          (p.models || []).map((m) => ({
+            id: m.id,
+            label: `${m.label} · ${p.label}`,
+            provider: "byok",
+            vendor: p.id,
+            reasoning: Boolean(m.reasoning),
+          })),
+        );
+        const seen = new Set();
+        state.config.models = [...(state.config.models || []), ...extra].filter((m) => {
+          const key = `${m.provider}:${m.id}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }
     } catch {
       state.config = {
         configured: false,

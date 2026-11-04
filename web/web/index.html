@@ -611,7 +611,7 @@
         <span class="pill-tag" id="freeTag">默认</span>
       </div>
       <div class="setting__row">
-        <div><strong>自己的 DeepSeek Key</strong><em id="keyStatus">未配置 · 使用免费模型</em></div>
+        <div><strong>自己的 API Key</strong><em id="keyStatus">未配置 · 使用免费模型</em></div>
         <button class="btn btn--ghost" id="manageKeyBtn" type="button">管理</button>
       </div>
     </section>
@@ -703,7 +703,7 @@
     </button>
     <h2 id="keyTitle" class="panel__title">使用自己的 DeepSeek Key</h2>
     <p class="key__lead">
-      免费模型适合日常对话。想用 DeepSeek V3 / R1，把自己的 Key 填进来即可，
+      免费模型适合日常对话。想用 DeepSeek / OpenAI / Claude / Gemini，把自己的 Key 填进来即可，
       <strong>消耗的是你自己的额度</strong>，与站长无关。
     </p>
     <ol class="key__steps">
@@ -711,6 +711,9 @@
       <li>左侧「API Keys」→「创建 API Key」</li>
       <li>复制 <code>sk-</code> 开头的 Key，粘贴到下面</li>
     </ol>
+    <label class="key__label" for="providerSelect">服务商</label>
+    <select class="text-input" id="providerSelect"></select>
+    <p class="key__hint" id="providerHint"></p>
     <input class="text-input" id="keyInput" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
     <p class="key__warn">Key 只保存在你的浏览器，每次请求临时转发，服务器不存储、不写日志。</p>
     <div class="modal__actions">
@@ -743,7 +746,7 @@
 <script src="/assets/vendor/marked.min.js?v=1.2.0" defer></script>
 <script src="/assets/vendor/purify.min.js?v=1.2.0" defer></script>
 <script src="/assets/vendor/prism.bundle.js?v=1.2.0" defer></script>
-<script src="/assets/js/app.js?v=2.1.1" defer></script>
+<script src="/assets/js/app.js?v=2.2.0" defer></script>
 <script src="/assets/js/motion.js?v=2.0.0" defer></script>
 <script src="/assets/js/landing.js?v=2.0.3" defer></script>
 <script src="/assets/js/desktop-update.js?v=2.0.6" defer></script>
