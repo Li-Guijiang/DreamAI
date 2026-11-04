@@ -1,8 +1,8 @@
-"""Streaming client for any OpenAI-compatible chat-completions endpoint.
+"""Streaming client for the three provider wire formats.
 
-Keeping this layer dependency-free (httpx only) means the web service can talk
-to DeepSeek, OpenAI, DashScope compatible mode, Moonshot, local vLLM/Ollama and
-so on, just by changing ``DREAMAI_BASE_URL``.
+The wire details live in ``adapters.py``; this module owns the HTTP client, the
+SSE loop and error mapping. Keeping it to httpx plus two pure helpers means a new
+OpenAI-compatible vendor needs no change here at all.
 """
 
 from __future__ import annotations
@@ -10,9 +10,10 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import AsyncIterator
-from typing import Any
 
 import httpx
+
+from .adapters import build_request, parse_chunk
 
 logger = logging.getLogger("dreamai.llm")
 
@@ -118,8 +119,8 @@ async def coalesce(
 
 
 async def stream_completion(
+    provider,
     *,
-    base_url: str,
     api_key: str,
     model: str,
     messages: list[dict[str, str]],
@@ -129,7 +130,7 @@ async def stream_completion(
     """Yield coalesced ``(kind, text)`` where kind is ``content`` or ``reasoning``."""
     async for item in coalesce(
         _stream_raw(
-            base_url=base_url,
+            provider,
             api_key=api_key,
             model=model,
             messages=messages,
@@ -141,8 +142,8 @@ async def stream_completion(
 
 
 async def _stream_raw(
+    provider,
     *,
-    base_url: str,
     api_key: str,
     model: str,
     messages: list[dict[str, str]],
@@ -150,66 +151,47 @@ async def _stream_raw(
     max_tokens: int = 4096,
 ) -> AsyncIterator[tuple[str, str]]:
     """Parse the provider stream into per-token items."""
-    payload: dict[str, Any] = {
-        "model": model,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-        "stream": True,
-    }
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-        "Accept": "text/event-stream",
-        "User-Agent": "DreamAI-Web/1.0 (+https://liguijiang.com)",
-    }
+    url, headers, payload = build_request(
+        provider,
+        api_key=api_key,
+        model=model,
+        messages=messages,
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+    headers["User-Agent"] = "DreamAI-Web/1.0 (+https://liguijiang.com)"
 
     client = get_client()
     try:
-        async with client.stream(
-            "POST", endpoint(base_url), headers=headers, json=payload
-        ) as response:
+        async with client.stream("POST", url, headers=headers, json=payload) as response:
             if response.status_code != 200:
                 body = await response.aread()
                 logger.warning("upstream %s: %s", response.status_code, body[:300])
                 raise LLMError(_extract_error(response.status_code, body), response.status_code)
 
+            event_name = ""
             async for line in response.aiter_lines():
                 if not line:
+                    event_name = ""
                     continue
                 if line.startswith(":"):  # comment / keep-alive
+                    continue
+                if line.startswith("event:"):
+                    event_name = line[6:].strip()
                     continue
                 if not line.startswith("data:"):
                     continue
                 data = line[5:].strip()
-                if not data or data == "[DONE]":
-                    if data == "[DONE]":
-                        break
+                if not data:
                     continue
+                if data == "[DONE]":
+                    break
                 try:
-                    chunk = json.loads(data)
-                except ValueError:
-                    continue
-                if isinstance(chunk, dict) and chunk.get("error"):
-                    message = chunk["error"]
-                    if isinstance(message, dict):
-                        message = message.get("message", "模型服务返回错误")
-                    raise LLMError(str(message))
-
-                usage = chunk.get("usage")
-                if isinstance(usage, dict):
-                    yield "usage", json.dumps(usage, ensure_ascii=False)
-
-                choices = chunk.get("choices") or []
-                if not choices:
-                    continue
-                delta = choices[0].get("delta") or {}
-                reasoning = delta.get("reasoning_content")
-                if isinstance(reasoning, str) and reasoning:
-                    yield "reasoning", reasoning
-                content = delta.get("content")
-                if isinstance(content, str) and content:
-                    yield "content", content
+                    items = parse_chunk(provider.kind, event_name, data)
+                except ValueError as exc:
+                    raise LLMError(str(exc)) from exc
+                for kind, text in items:
+                    yield kind, text
     except LLMError:
         raise
     except httpx.TimeoutException as exc:
