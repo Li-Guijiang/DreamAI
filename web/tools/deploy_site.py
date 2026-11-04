@@ -12,7 +12,7 @@ written to disk:
 
 A key works too, and is the better option once one is installed on the server:
 
-    set DREAMAI_SSH_KEY=%USERPROFILE%\.ssh\dreamai_deploy
+    set DREAMAI_SSH_KEY=%USERPROFILE%/.ssh/dreamai_deploy
     python web/tools/deploy_site.py
 
 Exit codes: 0 deployed and healthy, 1 failed (the remote output is printed).
