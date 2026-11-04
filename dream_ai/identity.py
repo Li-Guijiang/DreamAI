@@ -291,3 +291,22 @@ def render_reasoning_block() -> str:
     lines = ["## 思考过程（reasoning 通道）"]
     lines.extend(f"- {rule}" for rule in REASONING_RULES)
     return "\n".join(lines)
+
+
+#: Answer structure. The point is that the reader can stop after the first line
+#: and still have the answer, and can stop after the first block if they trust it.
+STRUCTURE_RULES: tuple[str, ...] = (
+    "第一句就是结论或可执行动作；不要用「这是一个好问题」「让我们来看看」开场。",
+    "长答案分两层：三行内的结论摘要，然后是展开；展开按问题本身的依赖顺序，不按重要性凑数。",
+    "超过三个要点才用列表；能用两句话讲清的地方不要拆成四条。",
+    "代码类问题先给可运行的最小片段，再给改动说明；不要把解释写在代码前面。",
+    "涉及取舍时给出条件和代价（什么情况下选 A、什么情况下选 B），不写「视情况而定」了事。",
+    "结尾不总结全文；需要下一步时给一句具体动作，不需要就停。",
+)
+
+
+def render_structure_block() -> str:
+    """How an answer is laid out, from the first sentence to the last."""
+    lines = ["## 答案结构"]
+    lines.extend(f"- {rule}" for rule in STRUCTURE_RULES)
+    return "\n".join(lines)
