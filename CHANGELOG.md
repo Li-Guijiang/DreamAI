@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Models
+
+- Bring-your-own-key now covers DeepSeek, OpenAI, Anthropic (Claude), Google
+  Gemini and 智谱 GLM, each with its own stored key and model list.
+- A provider registry plus three wire adapters replace the single OpenAI-compatible
+  client: Anthropic's system/max_tokens/thinking_delta and Gemini's
+  contents/thought parts are handled natively.
+- Custom model ids are accepted, so any gateway name works without a code change.
+
+## Unreleased
+
 ### Thinking panel
 
 - The reasoning stream is rendered live, then collapsed into `已思考（用时 X 秒）`
