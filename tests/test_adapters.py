@@ -1,0 +1,94 @@
+"""Each wire format is built and parsed without a network or a key."""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "web"))
+
+from app.adapters import build_request, parse_chunk  # noqa: E402
+from app.providers import PROVIDERS  # noqa: E402
+
+MESSAGES = [
+    {"role": "system", "content": "你是 Dream AI"},
+    {"role": "user", "content": "你好"},
+]
+
+
+def build(provider_id: str, **kwargs):
+    return build_request(
+        PROVIDERS[provider_id],
+        api_key=kwargs.pop("api_key", "k" * 40),
+        model=kwargs.pop("model", "test-model"),
+        messages=kwargs.pop("messages", MESSAGES),
+        temperature=0.4,
+        max_tokens=512,
+    )
+
+
+def test_openai_compatible_uses_bearer_and_messages():
+    url, headers, payload = build("deepseek")
+
+    assert url == "https://api.deepseek.com/v1/chat/completions"
+    assert headers["Authorization"] == "Bearer " + "k" * 40
+    assert payload["messages"] == MESSAGES
+    assert payload["stream"] is True
+
+
+def test_anthropic_moves_system_out_of_messages():
+    url, headers, payload = build("anthropic")
+
+    assert url == "https://api.anthropic.com/v1/messages"
+    assert headers["x-api-key"] == "k" * 40
+    assert headers["anthropic-version"]
+    assert payload["system"] == "你是 Dream AI"
+    assert all(m["role"] != "system" for m in payload["messages"])
+    assert payload["max_tokens"] == 512, "Anthropic requires max_tokens"
+
+
+def test_google_uses_contents_and_key_in_query():
+    url, headers, payload = build("google")
+
+    assert ":streamGenerateContent" in url
+    assert "key=" in url
+    assert "systemInstruction" in payload
+    assert payload["contents"][0]["parts"][0]["text"] == "你好"
+    assert "Authorization" not in headers
+
+
+def test_openai_chunk_carries_reasoning_and_content():
+    data = json.dumps({"choices": [{"delta": {"reasoning_content": "想", "content": "答"}}]})
+
+    assert parse_chunk("openai", "message", data) == [("reasoning", "想"), ("content", "答")]
+
+
+def test_anthropic_chunk_reads_thinking_delta():
+    data = json.dumps({"delta": {"type": "thinking_delta", "thinking": "想"}})
+
+    assert parse_chunk("anthropic", "content_block_delta", data) == [("reasoning", "想")]
+
+
+def test_anthropic_ignores_other_events():
+    assert parse_chunk("anthropic", "message_start", "{}") == []
+
+
+def test_google_chunk_reads_thought_parts():
+    data = json.dumps({"candidates": [{"content": {"parts": [{"text": "想", "thought": True}]}}]})
+
+    assert parse_chunk("google", "message", data) == [("reasoning", "想")]
+
+
+def test_done_and_garbage_are_ignored():
+    assert parse_chunk("openai", "", "[DONE]") == []
+    assert parse_chunk("openai", "", "not json") == []
+
+
+def test_upstream_error_is_raised_for_the_route_to_map():
+    data = json.dumps({"error": {"message": "余额不足"}})
+
+    with pytest.raises(ValueError, match="余额不足"):
+        parse_chunk("openai", "", data)
