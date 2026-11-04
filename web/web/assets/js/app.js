@@ -3273,7 +3273,8 @@ ${task}`;
       if (!list.length) return;
       menu.appendChild(el("div", { class: "menu__label", text: label }));
       list.forEach((model) => {
-        const locked = model.provider === "byok" && !state.userKey;
+        const keyOwner = model.vendor || state.providerId;
+        const locked = model.provider === "byok" && !state.keys[keyOwner];
         const item = el("button", {
           class: "menu__item",
           type: "button",
@@ -3297,14 +3298,31 @@ ${task}`;
     };
 
     addGroup("免费模型", models().filter((m) => m.provider === "free"));
-    addGroup("使用自己的 Key", models().filter((m) => m.provider === "byok"));
+
+    // One section per vendor, so 5 providers do not collapse into one list of
+    // near-identical rows. Falls back to a single section on an older server that
+    // does not send a provider catalog.
+    const byok = models().filter((m) => m.provider === "byok");
+    const vendors = [];
+    for (const model of byok) {
+      const id = model.vendor || "byok";
+      let group = vendors.find((item) => item.id === id);
+      if (!group) {
+        group = { id, label: model.vendor ? providerLabel(id) : "使用自己的 Key", list: [] };
+        vendors.push(group);
+      }
+      group.list.push(model);
+    }
+    for (const group of vendors) addGroup(group.label, group.list);
 
     menu.appendChild(el("div", { class: "menu__divider" }));
     const help = el("button", { class: "menu__item menu__item--help", type: "button" }, [
       el("span", { class: "menu__item__main" }, [
-        el("strong", { text: state.userKey ? "管理我的 Key" : "如何获取 Key？" }),
+        el("strong", { text: state.keys[state.providerId] ? `管理 Key · ${providerLabel()}` : "添加我的 Key" }),
         el("span", {
-          text: state.userKey ? "已保存 · 可更新或清除" : "用你自己的 DeepSeek 额度",
+          text: state.keys[state.providerId]
+            ? "已保存 · 可更新、切换服务商或清除"
+            : "DeepSeek / OpenAI / Claude / Gemini，各家用自己的 Key",
         }),
       ]),
       el("span", {
@@ -3634,7 +3652,22 @@ ${task}`;
       select.appendChild(group);
     };
     addGroup("免费模型", models().filter((m) => m.provider === "free"));
-    addGroup("使用自己的 Key", models().filter((m) => m.provider === "byok"));
+
+    // One section per vendor, so 5 providers do not collapse into one list of
+    // near-identical rows. Falls back to a single section on an older server that
+    // does not send a provider catalog.
+    const byok = models().filter((m) => m.provider === "byok");
+    const vendors = [];
+    for (const model of byok) {
+      const id = model.vendor || "byok";
+      let group = vendors.find((item) => item.id === id);
+      if (!group) {
+        group = { id, label: model.vendor ? providerLabel(id) : "使用自己的 Key", list: [] };
+        vendors.push(group);
+      }
+      group.list.push(model);
+    }
+    for (const group of vendors) addGroup(group.label, group.list);
     select.value = `${state.settings.provider}:${state.settings.model}`;
 
     select.addEventListener("change", () => {
