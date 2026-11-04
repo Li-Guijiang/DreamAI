@@ -254,6 +254,27 @@ cd web && pip install -r requirements.txt && uvicorn app.main:app --port 8000   
 cd desktop && pnpm install && pnpm start                                        # Desktop
 ```
 
+## 9. Models and keys
+
+Five providers are wired in, each with its own key field. Visitors paste a key in
+settings; it stays in their browser and is forwarded per request.
+
+| Provider | Wire format | Default models |
+|---|---|---|
+| DeepSeek | OpenAI-compatible | `deepseek-chat`, `deepseek-reasoner` |
+| OpenAI | OpenAI-compatible | `gpt-4o-mini`, `gpt-4o` |
+| Anthropic | `/v1/messages` | `claude-3-5-sonnet-latest`, `claude-3-5-haiku-latest` |
+| Google Gemini | `:streamGenerateContent` | `gemini-2.0-flash`, `gemini-1.5-pro` |
+| 智谱 GLM | OpenAI-compatible | `glm-4-flash`, `glm-4-plus` |
+
+Adding a vendor is a data change in `web/app/providers.py`; the request shaping and
+SSE parsing live in `web/app/adapters.py` and are covered by tests that need no
+key or network.
+
+**Custom model ids.** The model field accepts any string, so a gateway that
+exposes names this table does not list still works: pick the provider, type the
+exact id, paste the key.
+
 ## 9. Commands and configuration
 
 <details>
