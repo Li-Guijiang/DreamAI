@@ -2730,6 +2730,8 @@ ${task}`;
     state.kbContextForSend = null;
 
     let thinkNode = null;
+    let thinkText = null;
+    let thinkChars = 0;
     let errored = false;
     let aborted = false;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2791,10 +2793,17 @@ ${task}`;
       startReveal();
       if (assistant.reasoning) {
         if (!thinkNode) {
-          thinkNode = thinkingNode(assistant.reasoning, true);
+          thinkNode = thinkingNode("", true);
           thinkHost.insertBefore(thinkNode, body);
-        } else {
-          $(".think__text", thinkNode).textContent = assistant.reasoning;
+          const host = $(".think__text", thinkNode);
+          // Appending to one text node keeps the panel O(n) instead of rewriting
+          // the whole reasoning string on every frame.
+          thinkText = host.firstChild || host.appendChild(document.createTextNode(""));
+          thinkChars = 0;
+        }
+        if (thinkText && assistant.reasoning.length > thinkChars) {
+          thinkText.appendData(assistant.reasoning.slice(thinkChars));
+          thinkChars = assistant.reasoning.length;
         }
       }
       if (state.follow) requestAnimationFrame(() => scrollToBottom(true));
