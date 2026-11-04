@@ -4196,15 +4196,22 @@ ${task}`;
         const extra = state.providers.flatMap((p) =>
           (p.models || []).map((m) => ({
             id: m.id,
-            label: `${m.label} · ${p.label}`,
+            label: m.label,
             provider: "byok",
             vendor: p.id,
             reasoning: Boolean(m.reasoning),
           })),
         );
+        const upgraded = new Set(extra.map((m) => m.id));
+        // The server may still list the legacy DeepSeek pair without a vendor;
+        // drop those duplicates so the tagged entries win and DeepSeek gets its
+        // own section instead of falling into the fallback group.
+        const legacy = (state.config.models || []).filter(
+          (m) => !(m.provider === "byok" && upgraded.has(m.id)),
+        );
         const seen = new Set();
-        state.config.models = [...(state.config.models || []), ...extra].filter((m) => {
-          const key = `${m.provider}:${m.id}`;
+        state.config.models = [...legacy, ...extra].filter((m) => {
+          const key = `${m.provider}:${m.vendor || ""}:${m.id}`;
           if (seen.has(key)) return false;
           seen.add(key);
           return true;
