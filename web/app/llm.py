@@ -85,6 +85,38 @@ def _extract_error(status: int, body: bytes) -> str:
     return f"{hint}（HTTP {status}）" + (f" 详情：{detail}" if detail else "")
 
 
+#: One SSE event per token means ~40 events a second, each with its own JSON
+#: envelope, its own write on the client and its own frame budget. Merging
+#: consecutive tokens of the same kind keeps the stream visually identical while
+#: cutting the event count by roughly four.
+COALESCE_CHARS = 24
+
+
+async def coalesce(
+    source: AsyncIterator[tuple[str, str]], max_chars: int = COALESCE_CHARS
+) -> AsyncIterator[tuple[str, str]]:
+    """Merge consecutive ``(kind, text)`` items until ``max_chars`` or a kind change."""
+    kind = ""
+    buffer: list[str] = []
+    size = 0
+
+    async for next_kind, text in source:
+        if not text:
+            continue
+        if kind and next_kind != kind:
+            yield kind, "".join(buffer)
+            buffer, size = [], 0
+        kind = next_kind
+        buffer.append(text)
+        size += len(text)
+        if size >= max_chars:
+            yield kind, "".join(buffer)
+            buffer, size = [], 0
+
+    if buffer:
+        yield kind, "".join(buffer)
+
+
 async def stream_completion(
     *,
     base_url: str,
@@ -94,7 +126,30 @@ async def stream_completion(
     temperature: float = 0.7,
     max_tokens: int = 4096,
 ) -> AsyncIterator[tuple[str, str]]:
-    """Yield ``(kind, text)`` where kind is ``content`` or ``reasoning``."""
+    """Yield coalesced ``(kind, text)`` where kind is ``content`` or ``reasoning``."""
+    async for item in coalesce(
+        _stream_raw(
+            base_url=base_url,
+            api_key=api_key,
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+    ):
+        yield item
+
+
+async def _stream_raw(
+    *,
+    base_url: str,
+    api_key: str,
+    model: str,
+    messages: list[dict[str, str]],
+    temperature: float = 0.7,
+    max_tokens: int = 4096,
+) -> AsyncIterator[tuple[str, str]]:
+    """Parse the provider stream into per-token items."""
     payload: dict[str, Any] = {
         "model": model,
         "messages": messages,
