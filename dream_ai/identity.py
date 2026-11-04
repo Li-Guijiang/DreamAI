@@ -273,3 +273,21 @@ def answer_identity_question(*, full: bool = False) -> str:
     if full:
         return line + f"它由 {owner} 独立研发，没有团队，也没有其他创始人。"
     return line + f"由 {owner} 独立研发。"
+
+
+#: The thinking channel is shown to the user, so it has a contract: a readable
+#: plan, not raw scratch work, and never the answer itself.
+REASONING_RULES: tuple[str, ...] = (
+    "理解：用一句话复述真实诉求，指出现有问题里哪一层没被说清（不要复述原句）。",
+    "拆解：列出要解决的子问题，按依赖顺序排；只保留真正会写进答案的那几步。",
+    "关键判断：写出一到两个会改变结论的选择，说明选它的理由和代价。",
+    "自查：确认没有漏掉条件、没有更简单的路径、没有和已知事实冲突。",
+    "思考内容会展示给用户，因此写成可读的推演，不写草稿、不复述最终答案。",
+)
+
+
+def render_reasoning_block() -> str:
+    """The thinking-channel contract, rendered into the prompt."""
+    lines = ["## 思考过程（reasoning 通道）"]
+    lines.extend(f"- {rule}" for rule in REASONING_RULES)
+    return "\n".join(lines)
