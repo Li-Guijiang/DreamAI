@@ -12,7 +12,7 @@ from ..autonomy import (
     PlanStep,
 )
 from ..exceptions import ConfigurationError, ToolConfirmationRequired
-from ..identity import mask_contacts, parse_owner_command, render_profile_block
+from ..identity import mask_contacts, parse_owner_command, render_profile_block, strip_filler
 from ..memory import InMemorySessionMemory, PreferenceMemory
 from ..memory.base import Memory
 from ..providers.base import LLMProvider
@@ -161,6 +161,7 @@ class DreamAIAgent:
 
         self._conversation.add_user(user_text)
         reply = self._provider.generate(self._conversation.history())
+        reply = strip_filler(reply)
         if self._public_surface:
             reply = mask_contacts(reply)
         self._conversation.add_assistant(reply)
