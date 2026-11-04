@@ -48,6 +48,25 @@ def test_web_detects_identity_questions():
     assert not detect("帮我写一份大创申报书")
 
 
+def test_web_prompt_mirrors_the_quality_rules():
+    from dream_ai.identity import BANNED_PHRASES
+
+    prompt = web_config.DEFAULT_SYSTEM_PROMPT
+
+    for section in ("关于思考过程", "关于答案结构", "关于语气与用词"):
+        assert section in prompt, section
+    for phrase in BANNED_PHRASES:
+        assert phrase in prompt, phrase
+
+
+def test_web_prompt_keeps_the_owner_record():
+    prompt = web_config.DEFAULT_SYSTEM_PROMPT
+
+    for role in ("主人", "创造者", "开发者", "创始人", "最高权限者"):
+        assert role in prompt
+    assert "独立研发" in prompt
+
+
 def test_web_prompt_carries_the_privacy_rule():
     prompt = web_config.DEFAULT_SYSTEM_PROMPT
 
