@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Thinking panel
+
+- The reasoning stream is rendered live, then collapsed into `已思考（用时 X 秒）`
+  when the answer starts - timed between the first reasoning token and the first
+  answer token, so a slow network does not inflate it.
+- Collapsed it is a single dim line; expanded it is a tinted, inset panel capped
+  at 320px of scroll, so reasoning and answer are visually distinct.
+
+### Emoji
+
+- A policy with a number: at most three per reply, one per sentence, only at
+  greetings, confirmations and encouraging conclusions, never inside code,
+  commands, paths, tables or error text.
+- `limit_emoji()` enforces it after generation, stashing fenced and inline code
+  first so a script that prints emoji is left alone.
+
+## Unreleased
+
 ### Answer quality
 
 - The reasoning channel now has a shape - 理解 / 拆解 / 关键判断 / 自查 - and is
