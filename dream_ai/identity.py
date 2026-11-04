@@ -376,6 +376,8 @@ FILLER_CLOSERS: tuple[str, ...] = (
     "如有其他问题，随时告诉我",
     "如果还有其他问题，欢迎随时提问",
     "还有什么可以帮你的吗",
+    "随时告诉我",
+    "欢迎随时提问",
 )
 
 #: Only separators are trimmed after a removal: the period that closed the
