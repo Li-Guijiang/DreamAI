@@ -10,6 +10,11 @@ written to disk:
     python web/tools/deploy_site.py            # full deploy
     python web/tools/deploy_site.py --dry-run  # build the bundle, touch nothing
 
+A key works too, and is the better option once one is installed on the server:
+
+    set DREAMAI_SSH_KEY=%USERPROFILE%\.ssh\dreamai_deploy
+    python web/tools/deploy_site.py
+
 Exit codes: 0 deployed and healthy, 1 failed (the remote output is printed).
 """
 
@@ -45,7 +50,14 @@ def build_bundle() -> bytes:
     return buffer.getvalue()
 
 
-def upload_and_install(payload: bytes, host: str, user: str, password: str, port: int = 22) -> None:
+def upload_and_install(
+    payload: bytes,
+    host: str,
+    user: str,
+    password: str = "",
+    key_path: str = "",
+    port: int = 22,
+) -> None:
     import paramiko
 
     client = paramiko.SSHClient()
@@ -54,7 +66,8 @@ def upload_and_install(payload: bytes, host: str, user: str, password: str, port
         host,
         port=port,
         username=user,
-        password=password,
+        password=password or None,
+        key_filename=key_path or None,
         timeout=25,
         banner_timeout=25,
         auth_timeout=25,
@@ -130,12 +143,13 @@ def main() -> int:
         return 0
 
     password = os.environ.get("DREAMAI_SSH_PASSWORD", "")
-    if not password:
-        print("DREAMAI_SSH_PASSWORD is not set", file=sys.stderr)
+    key_path = os.environ.get("DREAMAI_SSH_KEY", "")
+    if not password and not key_path:
+        print("set DREAMAI_SSH_PASSWORD or DREAMAI_SSH_KEY first", file=sys.stderr)
         return 1
 
     try:
-        upload_and_install(payload, args.host, args.user, password)
+        upload_and_install(payload, args.host, args.user, password=password, key_path=key_path)
     except Exception as error:
         print(f"deploy failed: {error}", file=sys.stderr)
         return 1
