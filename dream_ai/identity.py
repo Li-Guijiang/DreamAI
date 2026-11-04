@@ -365,3 +365,44 @@ def render_quality_block() -> str:
             render_tone_block(),
         )
     )
+
+
+#: Closing lines that add nothing and make a reply read as a template. Only
+#: trailing sentences are removed: the same words inside an example are fine.
+FILLER_CLOSERS: tuple[str, ...] = (
+    "希望对你有帮助",
+    "希望这能帮到你",
+    "希望以上内容对你有帮助",
+    "如有其他问题，随时告诉我",
+    "如果还有其他问题，欢迎随时提问",
+    "还有什么可以帮你的吗",
+)
+
+#: Only separators are trimmed after a removal: the period that closed the
+#: sentence before the filler belongs to that sentence, so it stays.
+_CLOSER_PUNCTUATION = "，、,;；:：~～ \n\t"
+
+
+def strip_filler(text: str) -> str:
+    """Remove a trailing filler sentence, if the answer ends with one.
+
+    Applied after generation rather than only asked for in the prompt: a model
+    that ignores the ban still ships a clean last line. Only the tail is touched,
+    so the same words inside an example stay where they are.
+    """
+    if not text:
+        return text
+
+    trimmed = text.rstrip()
+    while trimmed:
+        # A closing period is part of the filler here, not of the sentence before
+        # it, so strip it first and look again.
+        if trimmed.endswith("。") and any(trimmed[:-1].endswith(f) for f in FILLER_CLOSERS):
+            trimmed = trimmed[:-1]
+            continue
+        matched = next((f for f in FILLER_CLOSERS if trimmed.endswith(f)), None)
+        if not matched:
+            break
+        trimmed = trimmed[: -len(matched)].rstrip(_CLOSER_PUNCTUATION)
+
+    return trimmed or text
