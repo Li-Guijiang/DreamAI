@@ -198,7 +198,25 @@ system prompt: they are rendered only by the dossier command, and model output o
 a public surface passes through `mask_contacts()` before it is shown. See
 [ADR 0003](docs/adr/0003-owner-identity-and-personal-memory.md).
 
-## 7. Quick start
+## 7. Answer quality
+
+Two things decide how a reply reads: what the prompt asks for, and how the text
+reaches the screen. Both are now explicit.
+
+| Layer | What it does | Where |
+|---|---|---|
+| Reasoning | Fixed shape 理解 / 拆解 / 关键判断 / 自查, written to be read | `render_reasoning_block()` |
+| Structure | Conclusion first, summary then expansion, no closing summary | `render_structure_block()` |
+| Voice | Colleague tone, alternating sentence length, specifics over 若干 | `render_tone_block()` |
+| Banned phrases | Sixteen strings that make text read as machine output | `BANNED_PHRASES` |
+| Post-filter | Strips a trailing filler sentence if the model adds one anyway | `strip_filler()` |
+| Streaming | 24-character delta coalescing, append-only text nodes | `web/app/llm.py`, `app.js` |
+
+The same rules exist twice: `dream_ai/identity.py` for the CLI and the desktop
+shell, and `web/app/config.py` for the service, which can run without the Python
+package. A test walks `BANNED_PHRASES` and fails if either copy loses one.
+
+## 8. Quick start
 
 ### 6.1 Command line (three steps)
 
@@ -234,7 +252,7 @@ cd web && pip install -r requirements.txt && uvicorn app.main:app --port 8000   
 cd desktop && pnpm install && pnpm start                                        # Desktop
 ```
 
-## 8. Commands and configuration
+## 9. Commands and configuration
 
 <details>
 <summary><b>In-chat commands</b> (click to expand)</summary>
