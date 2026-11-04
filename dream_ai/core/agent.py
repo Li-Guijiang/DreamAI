@@ -12,7 +12,7 @@ from ..autonomy import (
     PlanStep,
 )
 from ..exceptions import ConfigurationError, ToolConfirmationRequired
-from ..identity import mask_contacts, parse_owner_command, render_profile_block, strip_filler, strip_filler
+from ..identity import mask_contacts, parse_owner_command, render_profile_block, strip_filler
 from ..memory import InMemorySessionMemory, PreferenceMemory
 from ..memory.base import Memory
 from ..providers.base import LLMProvider
