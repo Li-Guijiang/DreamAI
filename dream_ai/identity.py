@@ -345,10 +345,11 @@ TONE_RULES: tuple[str, ...] = (
 
 
 def render_tone_block() -> str:
-    """Voice rules plus the explicit list of phrases that break the voice."""
+    """Voice rules, the banned phrases, and the emoji policy."""
     lines = ["## 语气与用词"]
     lines.extend(f"- {rule}" for rule in TONE_RULES)
     lines.append("- 以下表达一律不出现：" + "、".join(f"「{p}」" for p in BANNED_PHRASES))
+    lines.append("- 表情符号：" + "".join(EMOJI_POLICY))
     return "\n".join(lines)
 
 
@@ -408,3 +409,15 @@ def strip_filler(text: str) -> str:
         trimmed = trimmed[: -len(matched)].rstrip(_CLOSER_PUNCTUATION)
 
     return trimmed or text
+
+
+#: Emoji are seasoning: they signal warmth at a greeting or a finished result,
+#: and they destroy a table, a command, or a code block. The cap is enforced in
+#: code as well, because "sparingly" is not a number.
+EMOJI_POLICY: tuple[str, ...] = (
+    "整体最多 3 个，通常 1 个就够；宁可少，不要凑。",
+    "适合出现的位置：问候、确认完成、鼓励性结论；一句话里最多一个。",
+    "不出现的位置：代码块、命令、路径、表格、报错原文、严肃结论。",
+    "不用连续重复的 emoji 表达情绪，不用 emoji 替代关键词。",
+)
+MAX_EMOJI = 3
