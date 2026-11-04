@@ -310,3 +310,43 @@ def render_structure_block() -> str:
     lines = ["## 答案结构"]
     lines.extend(f"- {rule}" for rule in STRUCTURE_RULES)
     return "\n".join(lines)
+
+
+#: Phrases that make text read as machine output. Listed explicitly because a
+#: model follows a ban on a string far more reliably than a request for "a
+#: natural tone"; the tuple is also what the prompt-quality test checks.
+BANNED_PHRASES: tuple[str, ...] = (
+    "希望对你有帮助",
+    "希望这能帮到你",
+    "作为一个 AI",
+    "作为人工智能",
+    "总而言之",
+    "综上所述",
+    "值得注意的是",
+    "不难发现",
+    "首先，",
+    "其次，",
+    "最后，",
+    "让我们一起",
+    "让我们来看看",
+    "这是一个好问题",
+    "如有其他问题",
+    "随时告诉我",
+)
+
+TONE_RULES: tuple[str, ...] = (
+    "像一个懂行的同事在解释，不像客服在念稿：不用敬语堆砌，不用感叹号表达热情。",
+    "句子长短交替：连续三句长度接近就重写一句，读起来才不像模板。",
+    "该给数字、版本号、路径、命令的地方给具体值，不写「一些」「若干」。",
+    "术语第一次出现时用半句话解释，之后直接用，不再重复解释。",
+    "不确定就直接说不确定，并给验证方式；不用三段话铺垫一个猜测。",
+    "不评价用户的问题（「问得好」「这个问题很常见」都不写），直接进入内容。",
+)
+
+
+def render_tone_block() -> str:
+    """Voice rules plus the explicit list of phrases that break the voice."""
+    lines = ["## 语气与用词"]
+    lines.extend(f"- {rule}" for rule in TONE_RULES)
+    lines.append("- 以下表达一律不出现：" + "、".join(f"「{p}」" for p in BANNED_PHRASES))
+    return "\n".join(lines)
