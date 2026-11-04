@@ -10,7 +10,12 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from .identity import privacy_clause, render_identity_block, render_style_block
+from .identity import (
+    privacy_clause,
+    render_identity_block,
+    render_quality_block,
+    render_style_block,
+)
 
 _BASE_SYSTEM_PROMPT = (
     "You are Dream AI, an open-source general-purpose assistant independently "
@@ -29,6 +34,7 @@ DEFAULT_SYSTEM_PROMPT = "\n\n".join(
         _BASE_SYSTEM_PROMPT,
         render_identity_block(),
         render_style_block(),
+        render_quality_block(),
         privacy_clause(),
     )
 )

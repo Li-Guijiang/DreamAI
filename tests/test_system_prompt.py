@@ -25,8 +25,24 @@ def test_prompt_keeps_the_english_baseline():
 
 def test_prompt_stays_within_a_sane_size():
     # Every turn pays for this prompt; a runaway block would cost tokens on each
-    # request, so the ceiling is part of the contract.
-    assert len(DEFAULT_SYSTEM_PROMPT) < 2500
+    # request, so the ceiling is part of the contract. The quality block added
+    # ~800 characters, hence the 3000 budget.
+    assert len(DEFAULT_SYSTEM_PROMPT) < 3000
+
+
+def test_prompt_carries_the_quality_block():
+    assert "思考过程" in DEFAULT_SYSTEM_PROMPT
+    assert "答案结构" in DEFAULT_SYSTEM_PROMPT
+    assert "语气与用词" in DEFAULT_SYSTEM_PROMPT
+    assert "希望对你有帮助" in DEFAULT_SYSTEM_PROMPT, "banned phrases must be listed"
+
+
+def test_owner_information_survives_every_prompt_change():
+    # The owner record is not allowed to shrink while the style is being tuned.
+    assert OWNER.name in DEFAULT_SYSTEM_PROMPT
+    for role in OWNER.roles:
+        assert role in DEFAULT_SYSTEM_PROMPT
+    assert "独立研发" in DEFAULT_SYSTEM_PROMPT
 
 
 def test_prompt_does_not_contain_contact_details():
