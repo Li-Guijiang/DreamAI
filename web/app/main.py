@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field, field_validator
 from . import llm, owner_auth, owner_store
 from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
 from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
+from .quality import compress_history
 
 logging.basicConfig(
     level=logging.INFO,
@@ -413,11 +414,20 @@ def sse(event: str, payload: dict) -> bytes:
     return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n".encode()
 
 
-def prepare_messages(messages: list[ChatMessage], system_prompt: str) -> list[dict[str, str]]:
-    """Trim history (newest-last) by count and size, then prepend the persona."""
+def prepare_messages(
+    messages: list[ChatMessage], system_prompt: str
+) -> tuple[list[dict[str, str]], str]:
+    """Trim history by count and size, and return what was folded away.
+
+    Truncation used to drop the oldest turns silently, which loses the subject of
+    a follow-up. The dropped turns now come back as a short digest so the model
+    still knows what the conversation was about.
+    """
     chat = [{"role": m.role, "content": m.content} for m in messages][
         -settings.max_history_messages :
     ]
+
+    chat, digest = compress_history(chat, settings.max_history_chars, keep_turns=6)
 
     total = 0
     kept: list[dict[str, str]] = []
@@ -432,7 +442,7 @@ def prepare_messages(messages: list[ChatMessage], system_prompt: str) -> list[di
     while kept and kept[0]["role"] != "user":
         kept.pop(0)
 
-    return [{"role": "system", "content": system_prompt}, *kept]
+    return [{"role": "system", "content": system_prompt}, *kept], digest
 
 
 def _valid_key(key: str) -> bool:
