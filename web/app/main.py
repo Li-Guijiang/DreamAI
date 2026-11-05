@@ -759,14 +759,18 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         yield sse("meta", {"model": model, "version": VERSION})
         try:
             async with _semaphore:
-                async for kind, text in llm.stream_completion(
-                    upstream.provider,
-                    api_key=upstream.api_key,
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=budget,
-                ):
+                async def _primary() -> AsyncIterator[tuple[str, str]]:
+                    async for item in llm.stream_completion(
+                        upstream.provider,
+                        api_key=upstream.api_key,
+                        model=model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_tokens=budget,
+                    ):
+                        yield item
+
+                async for kind, text in llm.stream_with_retry(_primary):
                     if kind == "usage":
                         try:
                             usage_payload = json.loads(text)
