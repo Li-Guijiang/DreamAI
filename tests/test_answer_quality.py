@@ -51,3 +51,20 @@ def test_quality_block_stays_small_enough_to_pay_for_every_turn():
     # Roughly 300 Chinese characters of prompt per turn; beyond that the block
     # costs more attention than it returns.
     assert len(render_quality_block()) < 1200
+
+
+def test_decision_rules_come_before_the_answer_structure():
+    from dream_ai.identity import render_quality_block
+
+    block = render_quality_block()
+
+    assert block.index("## 作答策略") < block.index("## 答案结构")
+    assert "先判断问题类型" in block
+    assert "最多问一个问题" in block
+    assert "待核实" in block
+
+
+def test_quality_block_still_fits_the_budget():
+    from dream_ai.identity import render_quality_block
+
+    assert len(render_quality_block()) < 1400
