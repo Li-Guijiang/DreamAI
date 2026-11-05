@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field, field_validator
 from . import llm, owner_auth, owner_store
 from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
 from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
-from .quality import classify_tier, compress_history, needs_context, tier_params
+from .quality import compress_history, needs_context, plan_generation
 
 logging.basicConfig(
     level=logging.INFO,
@@ -739,10 +739,10 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
     # Size the reply to the question: a greeting does not need 4k tokens, and a
     # design question should not be cut off at 768.
     last_user = next((m.content for m in reversed(payload.messages) if m.role == "user"), "")
-    tier = classify_tier(last_user)
-    budget = payload.maxTokens or settings.max_tokens
-    temperature, budget, tier_hint = tier_params(tier, temperature, budget)
-    temperature = min(1.5, max(0.0, temperature))
+    plan = plan_generation(last_user, temperature, payload.maxTokens or settings.max_tokens)
+    tier, temperature, budget, tier_hint = (
+        plan["tier"], plan["temperature"], plan["max_tokens"], plan["hint"]
+    )
     if tier_hint:
         system_prompt = f"{system_prompt}\n\n{tier_hint}"
         messages[0] = {"role": "system", "content": system_prompt}
@@ -756,7 +756,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         failed = False
         cancelled = False
         usage_payload: dict | None = None
-        yield sse("meta", {"model": model, "version": VERSION})
+        yield sse("meta", {"model": model, "version": VERSION, "tier": tier})
         try:
             async with _semaphore:
                 async def _primary() -> AsyncIterator[tuple[str, str]]:
@@ -805,6 +805,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 _stats["completion_tokens"] += int(usage_payload.get("completion_tokens") or 0)
             if not failed and not cancelled:
                 done_payload = {
+                    "tier": tier,
                     "chars": produced,
                     "elapsed": round(time.monotonic() - started, 2),
                     "model": model,

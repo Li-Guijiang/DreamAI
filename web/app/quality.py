@@ -199,3 +199,20 @@ def looks_empty(text: str) -> bool:
     if len(body) < 2:
         return True
     return body in {"。", "…", "...", "抱歉，我无法回答。", "我无法回答这个问题。"}
+
+
+def plan_generation(text: str, base_temperature: float, base_max_tokens: int) -> dict:
+    """One call that returns everything the route needs for a turn.
+
+    Keeps the two heuristics together so the route has a single entry point and the
+    whole decision (tier, temperature, budget, hint) stays testable without a
+    provider.
+    """
+    tier = classify_tier(text)
+    temperature, max_tokens, hint = tier_params(tier, base_temperature, base_max_tokens)
+    return {
+        "tier": tier,
+        "temperature": min(1.5, max(0.0, temperature)),
+        "max_tokens": max(128, min(8192, max_tokens)),
+        "hint": hint,
+    }
