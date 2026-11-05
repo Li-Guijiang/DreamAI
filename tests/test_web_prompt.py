@@ -75,6 +75,14 @@ def test_web_prompt_carries_the_emoji_policy():
     assert "不用 emoji 替代关键词" in prompt
 
 
+def test_web_prompt_carries_the_decision_rules():
+    prompt = web_config.DEFAULT_SYSTEM_PROMPT
+
+    assert "关于作答策略" in prompt
+    assert "最多问一个问题" in prompt
+    assert "待核实" in prompt
+
+
 def test_web_prompt_stays_within_budget():
     # The service pays for this prompt on every request; the quality block took
     # it from ~780 to ~1200 characters, and 2000 is the ceiling.
