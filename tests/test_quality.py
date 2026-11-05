@@ -78,10 +78,12 @@ def test_standalone_question_needs_no_context():
 
 
 def test_digest_keeps_both_sides_of_the_conversation():
-    digest = build_digest([
-        {"role": "user", "content": "我在写一个选课系统"},
-        {"role": "assistant", "content": "用 Spring Boot 还是 Django？"},
-    ])
+    digest = build_digest(
+        [
+            {"role": "user", "content": "我在写一个选课系统"},
+            {"role": "assistant", "content": "用 Spring Boot 还是 Django？"},
+        ]
+    )
 
     assert "用户" in digest and "助手" in digest
     assert "选课系统" in digest

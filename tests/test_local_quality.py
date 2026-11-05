@@ -52,7 +52,9 @@ class AlwaysEmpty:
 
 
 def test_still_empty_after_retry_is_reported_honestly():
-    agent = DreamAIAgent(provider=AlwaysEmpty(), preferences=PreferenceMemory(), system_prompt="base")
+    agent = DreamAIAgent(
+        provider=AlwaysEmpty(), preferences=PreferenceMemory(), system_prompt="base"
+    )
 
     assert "重试" in agent.chat("在吗")
 
@@ -63,6 +65,8 @@ class FencedReply:
 
 
 def test_unclosed_fence_is_repaired_on_the_way_out():
-    agent = DreamAIAgent(provider=FencedReply(), preferences=PreferenceMemory(), system_prompt="base")
+    agent = DreamAIAgent(
+        provider=FencedReply(), preferences=PreferenceMemory(), system_prompt="base"
+    )
 
     assert agent.chat("写一行").rstrip().endswith("```")

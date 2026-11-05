@@ -172,7 +172,9 @@ class DreamAIAgent:
         reply = dedupe_sentences(close_fences(limit_emoji(strip_filler(reply))))
         if looks_empty(reply):
             # One retry with an explicit nudge beats showing an empty bubble.
-            nudge = [{"role": "system", "content": "上一次没有产出可用的回答，请直接回答用户的问题。"}]
+            nudge = [
+                {"role": "system", "content": "上一次没有产出可用的回答，请直接回答用户的问题。"}
+            ]
             reply = strip_filler(self._provider.generate([*self._conversation.history(), *nudge]))
         if looks_empty(reply):
             reply = "这次没有生成有效内容，请重试或把问题说得更具体一些。"
