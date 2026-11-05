@@ -15,6 +15,7 @@ from app.quality import (  # noqa: E402
     dedupe_sentences,
     looks_empty,
     needs_context,
+    plan_generation,
     tier_params,
 )
 
@@ -136,3 +137,19 @@ def test_empty_reply_is_detected():
     assert looks_empty("   ")
     assert looks_empty("。")
     assert not looks_empty("答案是 A。")
+
+
+def test_plan_keeps_every_field_in_range():
+    plan = plan_generation("你好", 0.9, 4096)
+
+    assert plan["tier"] == "light"
+    assert 0.0 <= plan["temperature"] <= 1.5
+    assert 128 <= plan["max_tokens"] <= 8192
+
+
+def test_plan_for_a_deep_question_raises_the_budget():
+    plan = plan_generation("为什么这个查询在数据量大时变慢？", 0.3, 2048)
+
+    assert plan["tier"] == "deep"
+    assert plan["max_tokens"] > 2048
+    assert plan["hint"]
