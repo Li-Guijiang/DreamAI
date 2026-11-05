@@ -1,0 +1,66 @@
+"""Transient upstream failures are retried, but only before the first token."""
+
+from __future__ import annotations
+
+import asyncio
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "web"))
+
+from app.llm import LLMError, stream_with_retry  # noqa: E402
+
+
+def run(factory, attempts: int = 2):
+    async def collect():
+        return [item async for item in stream_with_retry(factory, attempts=attempts, delay=0)]
+
+    return asyncio.run(collect())
+
+
+def test_transient_failure_is_retried():
+    calls = {"n": 0}
+
+    async def factory():
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise LLMError("上游繁忙", 503)
+        yield "content", "好"
+
+    assert run(factory) == [("content", "好")]
+    assert calls["n"] == 2
+
+
+def test_client_error_is_not_retried():
+    calls = {"n": 0}
+
+    async def factory():
+        calls["n"] += 1
+        raise LLMError("Key 无效", 401)
+        yield  # pragma: no cover
+
+    with pytest.raises(LLMError):
+        run(factory)
+    assert calls["n"] == 1
+
+
+def test_failure_after_first_token_is_not_retried():
+    async def factory():
+        yield "content", "开头"
+        raise LLMError("断了", 502)
+
+    with pytest.raises(LLMError):
+        run(factory)
+
+
+def test_success_needs_no_retry():
+    calls = {"n": 0}
+
+    async def factory():
+        calls["n"] += 1
+        yield "content", "一次成功"
+
+    assert run(factory) == [("content", "一次成功")]
+    assert calls["n"] == 1
