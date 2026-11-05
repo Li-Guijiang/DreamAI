@@ -22,6 +22,7 @@ from ..identity import (
 from ..memory import InMemorySessionMemory, PreferenceMemory
 from ..memory.base import Memory
 from ..providers.base import LLMProvider
+from ..quality import close_fences, dedupe_sentences, looks_empty
 from ..tools import ToolCall, ToolRegistry, parse_tool_calls
 from .conversation import Conversation
 
@@ -168,7 +169,13 @@ class DreamAIAgent:
         self._conversation.add_user(user_text)
         reply = self._provider.generate(self._conversation.history())
         reply = strip_filler(reply)
-        reply = limit_emoji(strip_filler(reply))
+        reply = dedupe_sentences(close_fences(limit_emoji(strip_filler(reply))))
+        if looks_empty(reply):
+            # One retry with an explicit nudge beats showing an empty bubble.
+            nudge = [{"role": "system", "content": "上一次没有产出可用的回答，请直接回答用户的问题。"}]
+            reply = strip_filler(self._provider.generate([*self._conversation.history(), *nudge]))
+        if looks_empty(reply):
+            reply = "这次没有生成有效内容，请重试或把问题说得更具体一些。"
         if self._public_surface:
             reply = mask_contacts(reply)
         self._conversation.add_assistant(reply)
