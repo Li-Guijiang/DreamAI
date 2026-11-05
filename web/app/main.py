@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field, field_validator
 from . import llm, owner_auth, owner_store
 from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
 from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
-from .quality import compress_history
+from .quality import classify_tier, compress_history, needs_context, tier_params
 
 logging.basicConfig(
     level=logging.INFO,
@@ -732,9 +732,23 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 continue
             content = owner_store.mask_contacts(content)
         safe_history.append(ChatMessage(role=message.role, content=content))
-    messages = prepare_messages(safe_history, system_prompt)
+    messages, dropped = prepare_messages(safe_history, system_prompt)
     temperature = payload.temperature if payload.temperature is not None else settings.temperature
     temperature = min(1.5, max(0.0, temperature + STYLE_TEMPERATURE.get(style, 0.0)))
+
+    # Size the reply to the question: a greeting does not need 4k tokens, and a
+    # design question should not be cut off at 768.
+    last_user = next((m.content for m in reversed(payload.messages) if m.role == "user"), "")
+    tier = classify_tier(last_user)
+    budget = payload.maxTokens or settings.max_tokens
+    temperature, budget, tier_hint = tier_params(tier, temperature, budget)
+    temperature = min(1.5, max(0.0, temperature))
+    if tier_hint:
+        system_prompt = f"{system_prompt}\n\n{tier_hint}"
+        messages[0] = {"role": "system", "content": system_prompt}
+    if dropped and needs_context(last_user):
+        system_prompt += "\n这句话是追问，指代对象在上面的摘要里；先确认对象，再回答。"
+        messages[0] = {"role": "system", "content": system_prompt}
 
     async def event_stream() -> AsyncIterator[bytes]:
         started = time.monotonic()
@@ -751,7 +765,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     model=model,
                     messages=messages,
                     temperature=temperature,
-                    max_tokens=payload.maxTokens or settings.max_tokens,
+                    max_tokens=budget,
                 ):
                     if kind == "usage":
                         try:
