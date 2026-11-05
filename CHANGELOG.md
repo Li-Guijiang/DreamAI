@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Turn planning
+
+- Each request is rated light/standard/deep, and temperature, token budget and a
+  one-line prompt hint follow from that rating; `meta`/`done` events carry the tier.
+- History is folded, not truncated: the newest six turns stay, older ones become a
+  digest that keeps the subject of a follow-up such as 「那它呢？」.
+- One retry for 408/425/429/5xx before the first token; never after it, never for
+  401/402/403.
+
+### Answer decisions
+
+- A decision block now precedes the structure rules: classify the question type,
+  state an assumption instead of interrogating, ask at most one question, check
+  sub-question coverage, and never invent APIs or versions.
+- The CLI and desktop shell repair whole replies locally: close an unclosed code
+  fence, drop a repeated sentence, retry once when the reply is empty.
+
+## Unreleased
+
 ### Models
 
 - Bring-your-own-key now covers DeepSeek, OpenAI, Anthropic (Claude), Google
