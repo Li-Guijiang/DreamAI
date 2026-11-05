@@ -16,6 +16,7 @@ from app.quality import (  # noqa: E402
     looks_empty,
     needs_context,
     plan_generation,
+    respect_cap,
     tier_params,
 )
 
@@ -153,3 +154,15 @@ def test_plan_for_a_deep_question_raises_the_budget():
     assert plan["tier"] == "deep"
     assert plan["max_tokens"] > 2048
     assert plan["hint"]
+
+
+def test_explicit_cap_wins_over_the_tier():
+    assert respect_cap(5120, 512) == 512
+
+
+def test_no_cap_keeps_the_plan():
+    assert respect_cap(5120, None) == 5120
+
+
+def test_cap_never_goes_below_the_floor():
+    assert respect_cap(5120, 8) == 128
