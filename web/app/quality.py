@@ -216,3 +216,14 @@ def plan_generation(text: str, base_temperature: float, base_max_tokens: int) ->
         "max_tokens": max(128, min(8192, max_tokens)),
         "hint": hint,
     }
+
+
+def respect_cap(max_tokens: int, user_cap: int | None) -> int:
+    """Never exceed a token limit the caller asked for explicitly.
+
+    The deep tier raises the budget, which is right by default and wrong when the
+    user pinned maxTokens for cost or latency reasons.
+    """
+    if user_cap is None:
+        return max_tokens
+    return max(128, min(max_tokens, user_cap))

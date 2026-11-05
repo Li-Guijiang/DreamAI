@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field, field_validator
 from . import llm, owner_auth, owner_store
 from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
 from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
-from .quality import compress_history, needs_context, plan_generation
+from .quality import compress_history, needs_context, plan_generation, respect_cap
 
 logging.basicConfig(
     level=logging.INFO,
@@ -741,7 +741,10 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
     last_user = next((m.content for m in reversed(payload.messages) if m.role == "user"), "")
     plan = plan_generation(last_user, temperature, payload.maxTokens or settings.max_tokens)
     tier, temperature, budget, tier_hint = (
-        plan["tier"], plan["temperature"], plan["max_tokens"], plan["hint"]
+        plan["tier"],
+        plan["temperature"],
+        respect_cap(plan["max_tokens"], payload.maxTokens),
+        plan["hint"],
     )
     if tier_hint:
         system_prompt = f"{system_prompt}\n\n{tier_hint}"
