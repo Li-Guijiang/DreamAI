@@ -213,6 +213,9 @@ reaches the screen. Both are now explicit.
 | Streaming | 24-character delta coalescing, append-only text nodes | `web/app/llm.py`, `app.js` |
 | Thinking panel | Live reasoning, then a collapsed `已思考（用时 X 秒）` line | `app.js`, `app.css` |
 | Emoji | At most three, never inside code or a table; enforced after generation | `EMOJI_POLICY`, `limit_emoji()` |
+| Turn planning | Question is rated light/standard/deep, then temperature and budget follow | `classify_tier()`, `plan_generation()` |
+| History | Newest six turns kept, older ones folded into a digest for pronouns | `compress_history()` |
+| Resilience | One retry for 408/425/429/5xx, never after the first token | `stream_with_retry()` |
 
 The same rules exist twice: `dream_ai/identity.py` for the CLI and the desktop
 shell, and `web/app/config.py` for the service, which can run without the Python
