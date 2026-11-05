@@ -361,6 +361,7 @@ def render_quality_block() -> str:
     """
     return "\n\n".join(
         (
+            render_decision_block(),
             render_reasoning_block(),
             render_structure_block(),
             render_tone_block(),
@@ -472,3 +473,21 @@ def limit_emoji(text: str, max_emoji: int = MAX_EMOJI) -> str:
     for index, original in enumerate(protected):
         masked = masked.replace(f"\x00{index}\x00", original)
     return masked
+
+
+#: Decisions taken before writing a sentence. The point is that a small model
+#: tends to either over-ask or over-assume; these rules pick a side explicitly.
+DECISION_RULES: tuple[str, ...] = (
+    "先判断问题类型：事实问答、方案设计、代码排错、写作润色、概念解释，各用各的结构。",
+    "有歧义时先给最合理的解释并在一句话里说明假设，然后作答；只有假设会改变结论时才追问，且最多问一个问题。",
+    "复杂问题先在心里列子问题，答完逐条核对是否都覆盖；漏掉的补上，不重复已答部分。",
+    "不编造 API、参数、路径、版本号和数据；不确定就标注「待核实」并给出验证方式。",
+    "答案长度跟问题复杂度走：简单问题一两句，设计问题给方案与取舍，不为了显得认真而注水。",
+)
+
+
+def render_decision_block() -> str:
+    """How to decide what to answer, appended before the answer structure rules."""
+    lines = ["## 作答策略"]
+    lines.extend(f"- {rule}" for rule in DECISION_RULES)
+    return "\n".join(lines)
