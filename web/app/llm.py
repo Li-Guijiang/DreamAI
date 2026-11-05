@@ -7,6 +7,7 @@ OpenAI-compatible vendor needs no change here at all.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
@@ -199,3 +200,29 @@ async def _stream_raw(
     except httpx.HTTPError as exc:
         logger.warning("upstream transport error: %s", exc)
         raise LLMError("无法连接模型服务，请稍后重试。") from exc
+
+
+RETRYABLE_STATUS = {408, 425, 429, 500, 502, 503, 504}
+
+
+async def stream_with_retry(
+    factory, attempts: int = 2, delay: float = 0.6
+) -> AsyncIterator[tuple[str, str]]:
+    """Run ``factory()`` and retry a transient upstream failure once.
+
+    Only failures raised *before* the first token are retried: once text has been
+    sent, a second attempt would duplicate it in the user's bubble.
+    """
+    produced = False
+    for attempt in range(1, attempts + 1):
+        try:
+            async for item in factory():
+                produced = True
+                yield item
+            return
+        except LLMError as error:
+            retryable = error.status_code in RETRYABLE_STATUS
+            if produced or not retryable or attempt == attempts:
+                raise
+            logger.info("upstream %s, retrying (%s/%s)", error.status_code, attempt, attempts)
+            await asyncio.sleep(delay * attempt)
