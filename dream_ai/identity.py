@@ -365,6 +365,7 @@ def render_quality_block() -> str:
             render_reasoning_block(),
             render_structure_block(),
             render_tone_block(),
+            render_example_block(),
         )
     )
 
@@ -490,4 +491,29 @@ def render_decision_block() -> str:
     """How to decide what to answer, appended before the answer structure rules."""
     lines = ["## 作答策略"]
     lines.extend(f"- {rule}" for rule in DECISION_RULES)
+    return "\n".join(lines)
+
+
+#: Two contrasts, not a style guide. A small model copies a demonstrated shape far
+#: more reliably than it follows an instruction about tone.
+EXAMPLES: tuple[tuple[str, str, str], ...] = (
+    (
+        "报错类",
+        "这段代码有问题，可能是空指针，你可以检查一下。",
+        "空指针来自 `user.getProfile()`：`user` 为 null 时被直接调用。修法：取属性前判空并给出默认值。验证：用未登录账号再跑一次。",
+    ),
+    (
+        "写作类",
+        "以下是一段周报开头，希望对你有帮助：本周我完成了……",
+        "本周完成 3 项：登录改造、导出修复、压测。下周先补导出失败的边界用例。",
+    ),
+)
+
+
+def render_example_block() -> str:
+    """A compact before/after pair for the two most common failure modes."""
+    lines = ["## 示例（学结构，不要照抄内容）"]
+    for label, bad, good in EXAMPLES:
+        lines.append(f"- {label}——不要这样：{bad}")
+        lines.append(f"  应该这样：{good}")
     return "\n".join(lines)

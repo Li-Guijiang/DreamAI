@@ -67,4 +67,16 @@ def test_decision_rules_come_before_the_answer_structure():
 def test_quality_block_still_fits_the_budget():
     from dream_ai.identity import render_quality_block
 
-    assert len(render_quality_block()) < 1400
+    assert len(render_quality_block()) < 1600
+
+
+def test_examples_show_a_bad_and_a_good_version():
+    from dream_ai.identity import EXAMPLES, render_quality_block
+
+    block = render_quality_block()
+
+    assert "## 示例" in block
+    assert len(EXAMPLES) >= 2
+    for label, bad, good in EXAMPLES:
+        assert bad != good
+        assert bad in block and good in block, label
