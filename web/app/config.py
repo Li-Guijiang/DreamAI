@@ -172,6 +172,17 @@ def _env_int(name: str, default: int, minimum: int = 0) -> int:
     return max(minimum, value)
 
 
+def _env_optional_float(name: str) -> float | None:
+    """Read an optional float, treating blank or unparsable values as unset."""
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
 def _env_float(name: str, default: float) -> float:
     try:
         return float(_env(name, str(default)))
@@ -217,6 +228,9 @@ class Settings:
     system_prompt: str = DEFAULT_SYSTEM_PROMPT
     temperature: float = 0.7
     max_tokens: int = 4096
+    # Optional sampling knobs; None means "let the provider default apply".
+    top_p: float | None = None
+    presence_penalty: float | None = None
 
     rate_limit: int = 30
     rate_window: int = 600
@@ -332,6 +346,8 @@ def load_settings() -> Settings:
         system_prompt=_env("DREAMAI_SYSTEM_PROMPT", DEFAULT_SYSTEM_PROMPT) or DEFAULT_SYSTEM_PROMPT,
         temperature=temperature,
         max_tokens=_env_int("DREAMAI_MAX_TOKENS", 4096, 256),
+        top_p=_env_optional_float("DREAMAI_TOP_P"),
+        presence_penalty=_env_optional_float("DREAMAI_PRESENCE_PENALTY"),
         rate_limit=_env_int("DREAMAI_RATE_LIMIT", 30, 1),
         rate_window=_env_int("DREAMAI_RATE_WINDOW", 600, 30),
         daily_limit=_env_int("DREAMAI_DAILY_LIMIT", 2000, 0),
