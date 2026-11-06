@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Answer shape
+
+- Each turn is classified as error / design / code / writing / explain / chat, and
+  the matching outline is appended to the prompt for that turn only.
+- A pasted log is trimmed to its head, its error lines and its tail before it
+  reaches the model.
+- A rephrased question is detected and answered from a different angle instead of
+  repeated.
+- `top_p` is supported by all three wire dialects and `presence_penalty` by
+  OpenAI-compatible ones; both stay unset unless configured.
+
+## Unreleased
+
 ### Turn planning
 
 - Each request is rated light/standard/deep, and temperature, token budget and a
