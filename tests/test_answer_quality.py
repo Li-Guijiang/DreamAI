@@ -80,3 +80,9 @@ def test_examples_show_a_bad_and_a_good_version():
     for label, bad, good in EXAMPLES:
         assert bad != good
         assert bad in block and good in block, label
+
+
+def test_language_rule_is_stated_in_the_persona():
+    from dream_ai.identity import render_tone_block
+
+    assert "跟随用户的语言" in render_tone_block()

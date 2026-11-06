@@ -96,6 +96,10 @@ def test_web_prompt_carries_the_examples():
     assert "不要这样" in prompt and "应该这样" in prompt
 
 
+def test_web_prompt_follows_the_user_language():
+    assert "跟着用户的语言走" in web_config.DEFAULT_SYSTEM_PROMPT
+
+
 def test_web_prompt_carries_the_privacy_rule():
     prompt = web_config.DEFAULT_SYSTEM_PROMPT
 
