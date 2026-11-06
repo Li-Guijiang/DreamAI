@@ -84,9 +84,16 @@ def test_web_prompt_carries_the_decision_rules():
 
 
 def test_web_prompt_stays_within_budget():
-    # The service pays for this prompt on every request; the quality block took
-    # it from ~780 to ~1200 characters, and 2000 is the ceiling.
-    assert len(web_config.DEFAULT_SYSTEM_PROMPT) < 2000
+    # The service pays for this prompt on every request. Decision rules, the
+    # reasoning contract and two examples took it to ~2100; 2400 is the ceiling.
+    assert len(web_config.DEFAULT_SYSTEM_PROMPT) < 2400
+
+
+def test_web_prompt_carries_the_examples():
+    prompt = web_config.DEFAULT_SYSTEM_PROMPT
+
+    assert "关于示例" in prompt
+    assert "不要这样" in prompt and "应该这样" in prompt
 
 
 def test_web_prompt_carries_the_privacy_rule():
