@@ -23,8 +23,15 @@ def build_request(
     messages: list[dict[str, str]],
     temperature: float,
     max_tokens: int,
+    top_p: float | None = None,
+    presence_penalty: float | None = None,
 ) -> tuple[str, dict[str, str], dict]:
-    """Return ``(url, headers, payload)`` for a streaming request."""
+    """Return ``(url, headers, payload)`` for a streaming request.
+
+    Sampling knobs are optional and provider-specific: OpenAI-compatible endpoints
+    take both, Anthropic takes ``top_p`` only, Gemini spells it ``topP`` inside
+    ``generationConfig``.
+    """
     if provider.kind == "anthropic":
         system = "\n\n".join(m["content"] for m in messages if m["role"] == "system")
         chat = [m for m in messages if m["role"] != "system"]
@@ -37,6 +44,8 @@ def build_request(
         }
         if system:
             payload["system"] = system
+        if top_p is not None:
+            payload["top_p"] = top_p
         headers = {
             "x-api-key": api_key,
             "anthropic-version": ANTHROPIC_VERSION,
@@ -61,6 +70,8 @@ def build_request(
         }
         if system:
             payload["systemInstruction"] = {"parts": [{"text": system}]}
+        if top_p is not None:
+            payload["generationConfig"]["topP"] = top_p
         url = (
             f"{provider.base_url.rstrip('/')}/models/{quote(model, safe='')}"
             f":streamGenerateContent?alt=sse&key={quote(api_key, safe='')}"
@@ -74,6 +85,10 @@ def build_request(
         "max_tokens": max_tokens,
         "stream": True,
     }
+    if top_p is not None:
+        payload["top_p"] = top_p
+    if presence_penalty is not None:
+        payload["presence_penalty"] = presence_penalty
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",

@@ -127,6 +127,8 @@ async def stream_completion(
     messages: list[dict[str, str]],
     temperature: float = 0.7,
     max_tokens: int = 4096,
+    top_p: float | None = None,
+    presence_penalty: float | None = None,
 ) -> AsyncIterator[tuple[str, str]]:
     """Yield coalesced ``(kind, text)`` where kind is ``content`` or ``reasoning``."""
     async for item in coalesce(
@@ -137,6 +139,8 @@ async def stream_completion(
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
+            top_p=top_p,
+            presence_penalty=presence_penalty,
         )
     ):
         yield item
@@ -150,6 +154,8 @@ async def _stream_raw(
     messages: list[dict[str, str]],
     temperature: float = 0.7,
     max_tokens: int = 4096,
+    top_p: float | None = None,
+    presence_penalty: float | None = None,
 ) -> AsyncIterator[tuple[str, str]]:
     """Parse the provider stream into per-token items."""
     url, headers, payload = build_request(
@@ -159,6 +165,8 @@ async def _stream_raw(
         messages=messages,
         temperature=temperature,
         max_tokens=max_tokens,
+        top_p=top_p,
+        presence_penalty=presence_penalty,
     )
     headers["User-Agent"] = "DreamAI-Web/1.0 (+https://liguijiang.com)"
 
