@@ -783,7 +783,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         failed = False
         cancelled = False
         usage_payload: dict | None = None
-        yield sse("meta", {"model": model, "version": VERSION, "tier": tier})
+        yield sse("meta", {"model": model, "version": VERSION, "tier": tier, "intent": intent})
         try:
             async with _semaphore:
                 async def _primary() -> AsyncIterator[tuple[str, str]]:
@@ -835,6 +835,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             if not failed and not cancelled:
                 done_payload = {
                     "tier": tier,
+                    "intent": intent,
                     "chars": produced,
                     "elapsed": round(time.monotonic() - started, 2),
                     "model": model,
