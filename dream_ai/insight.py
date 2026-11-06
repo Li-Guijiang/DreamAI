@@ -25,9 +25,30 @@ INTENT_PROMPTS: dict[str, str] = {
     INTENT_CHAT: "",
 }
 
-_ERROR_WORDS = ("报错", "错误", "异常", "exception", "traceback", "failed", "失败", "跑不起来", "npe")
+_ERROR_WORDS = (
+    "报错",
+    "错误",
+    "异常",
+    "exception",
+    "traceback",
+    "failed",
+    "失败",
+    "跑不起来",
+    "npe",
+)
 _DESIGN_WORDS = ("方案", "架构", "设计", "选型", "对比", "权衡", "如何实现", "规划")
-_WRITE_WORDS = ("写一段", "写一篇", "润色", "改写", "文案", "通知", "总结", "简历", "周报", "演讲稿")
+_WRITE_WORDS = (
+    "写一段",
+    "写一篇",
+    "润色",
+    "改写",
+    "文案",
+    "通知",
+    "总结",
+    "简历",
+    "周报",
+    "演讲稿",
+)
 _EXPLAIN_WORDS = ("是什么", "什么是", "原理", "区别", "为什么", "解释", "含义")
 
 _LOG_LINE = re.compile(

@@ -17,7 +17,9 @@ class Capture:
 
 def make():
     provider = Capture()
-    return DreamAIAgent(provider=provider, preferences=PreferenceMemory(), system_prompt="BASE"), provider
+    return DreamAIAgent(
+        provider=provider, preferences=PreferenceMemory(), system_prompt="BASE"
+    ), provider
 
 
 def test_error_turn_adds_the_error_shape():
