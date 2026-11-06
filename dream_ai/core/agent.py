@@ -19,6 +19,7 @@ from ..identity import (
     render_profile_block,
     strip_filler,
 )
+from ..insight import classify_intent, intent_prompt, is_repeat, trim_long_input
 from ..memory import InMemorySessionMemory, PreferenceMemory
 from ..memory.base import Memory
 from ..providers.base import LLMProvider
@@ -166,8 +167,19 @@ class DreamAIAgent:
             self._conversation.add_assistant(local)
             return local
 
-        self._conversation.add_user(user_text)
-        reply = self._provider.generate(self._conversation.history())
+        self._conversation.add_user(trim_long_input(user_text))
+        history = list(self._conversation.history())
+
+        hints = [intent_prompt(classify_intent(user_text))]
+        user_turns = [m["content"] for m in history if m.get("role") == "user"]
+        if len(user_turns) >= 2 and is_repeat(user_turns[-1], user_turns[-2]):
+            hints.append("用户重复问了同一件事：换一个角度或给出更具体的一步，不要原样复述上次的答案。")
+        hints = [hint for hint in hints if hint]
+        if hints and history and history[0].get("role") == "system":
+            joined = "\n".join(hints)
+            history[0] = {**history[0], "content": history[0]["content"] + "\n\n" + joined}
+
+        reply = self._provider.generate(history)
         reply = strip_filler(reply)
         reply = dedupe_sentences(close_fences(limit_emoji(strip_filler(reply))))
         if looks_empty(reply):
