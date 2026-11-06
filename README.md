@@ -216,6 +216,10 @@ reaches the screen. Both are now explicit.
 | Turn planning | Question is rated light/standard/deep, then temperature and budget follow | `classify_tier()`, `plan_generation()` |
 | History | Newest six turns kept, older ones folded into a digest for pronouns | `compress_history()` |
 | Resilience | One retry for 408/425/429/5xx, never after the first token | `stream_with_retry()` |
+| Answer shape | Six intents, each with its own outline appended for that turn | `classify_intent()` |
+| Input hygiene | A huge paste is cut to head + error lines + tail | `trim_long_input()` |
+| Repeats | A rephrased question is asked for a different angle, not the same answer | `is_repeat()` |
+| Sampling | `DREAMAI_TOP_P` / `DREAMAI_PRESENCE_PENALTY`, unset by default | `web/app/config.py` |
 
 The same rules exist twice: `dream_ai/identity.py` for the CLI and the desktop
 shell, and `web/app/config.py` for the service, which can run without the Python
