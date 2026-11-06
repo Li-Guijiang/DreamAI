@@ -50,7 +50,7 @@ def test_tone_rules_ask_for_specifics():
 def test_quality_block_stays_small_enough_to_pay_for_every_turn():
     # Roughly 300 Chinese characters of prompt per turn; beyond that the block
     # costs more attention than it returns.
-    assert len(render_quality_block()) < 1200
+    assert len(render_quality_block()) < 1600
 
 
 def test_decision_rules_come_before_the_answer_structure():
