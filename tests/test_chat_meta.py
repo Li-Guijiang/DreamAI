@@ -17,12 +17,17 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 @pytest.fixture()
 def client(monkeypatch):
-    monkeypatch.syspath_prepend("web")
-    monkeypatch.setenv("DREAMAI_FREE_API_KEY", "test-key")
+    # Import once and reuse: reloading the module would create a second
+    # UpstreamError class and break isinstance checks in other test modules.
+    # A free key is injected on the settings object instead of the environment,
+    # so the module can be shared no matter which test imported it first.
+    import dataclasses
     import importlib
 
+    monkeypatch.syspath_prepend("web")
     main = importlib.import_module("app.main")
-    importlib.reload(main)
+    if not main.settings.free_configured:
+        main.settings = dataclasses.replace(main.settings, free_api_key="test-key")
     return TestClient(main.app)
 
 
