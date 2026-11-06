@@ -28,6 +28,14 @@ from pydantic import BaseModel, Field, field_validator
 
 from . import llm, owner_auth, owner_store
 from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
+from .insight import (
+    classify_intent,
+    detect_language,
+    intent_prompt,
+    is_repeat,
+    language_prompt,
+    trim_long_input,
+)
 from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
 from .quality import compress_history, needs_context, plan_generation, respect_cap
 
@@ -731,6 +739,9 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             if "## 主人档案" in content or "## 追加记忆" in content:
                 continue
             content = owner_store.mask_contacts(content)
+        # A pasted log can be thousands of lines of noise; keep the head, the
+        # error lines and the tail.
+        content = trim_long_input(content)
         safe_history.append(ChatMessage(role=message.role, content=content))
     messages, dropped = prepare_messages(safe_history, system_prompt)
     temperature = payload.temperature if payload.temperature is not None else settings.temperature
@@ -753,6 +764,19 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         system_prompt += "\n这句话是追问，指代对象在上面的摘要里；先确认对象，再回答。"
         messages[0] = {"role": "system", "content": system_prompt}
 
+    # Shape the answer to the kind of question, and notice a repeated one.
+    intent = classify_intent(last_user)
+    hints = [intent_prompt(intent)]
+    if detect_language(last_user) == "en":
+        hints.append(language_prompt("en"))
+    user_turns = [m.content for m in payload.messages if m.role == "user"]
+    if len(user_turns) >= 2 and is_repeat(user_turns[-1], user_turns[-2]):
+        hints.append("用户重复问了同一件事：换一个角度或给出更具体的一步，不要原样复述上次的答案。")
+    hints = [hint for hint in hints if hint]
+    if hints:
+        system_prompt += "\n\n" + "\n".join(hints)
+        messages[0] = {"role": "system", "content": system_prompt}
+
     async def event_stream() -> AsyncIterator[bytes]:
         started = time.monotonic()
         produced = 0
@@ -770,6 +794,8 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                         messages=messages,
                         temperature=temperature,
                         max_tokens=budget,
+                        top_p=settings.top_p,
+                        presence_penalty=settings.presence_penalty,
                     ):
                         yield item
 
