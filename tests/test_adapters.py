@@ -92,3 +92,59 @@ def test_upstream_error_is_raised_for_the_route_to_map():
 
     with pytest.raises(ValueError, match="余额不足"):
         parse_chunk("openai", "", data)
+
+
+def build_with(**extra):
+    return build_request(
+        PROVIDERS["openai"],
+        api_key="k" * 40,
+        model="m",
+        messages=MESSAGES,
+        temperature=0.5,
+        max_tokens=256,
+        **extra,
+    )
+
+
+def test_sampling_knobs_are_optional():
+    _, _, payload = build_with()
+
+    assert "top_p" not in payload
+    assert "presence_penalty" not in payload
+
+
+def test_openai_accepts_both_sampling_knobs():
+    _, _, payload = build_with(top_p=0.9, presence_penalty=0.2)
+
+    assert payload["top_p"] == 0.9
+    assert payload["presence_penalty"] == 0.2
+
+
+def test_anthropic_takes_top_p_only():
+    url, _, payload = build_request(
+        PROVIDERS["anthropic"],
+        api_key="k" * 40,
+        model="m",
+        messages=MESSAGES,
+        temperature=0.5,
+        max_tokens=256,
+        top_p=0.7,
+        presence_penalty=0.3,
+    )
+
+    assert payload["top_p"] == 0.7
+    assert "presence_penalty" not in payload
+
+
+def test_google_spells_top_p_inside_generation_config():
+    _, _, payload = build_request(
+        PROVIDERS["google"],
+        api_key="k" * 40,
+        model="m",
+        messages=MESSAGES,
+        temperature=0.5,
+        max_tokens=256,
+        top_p=0.6,
+    )
+
+    assert payload["generationConfig"]["topP"] == 0.6
