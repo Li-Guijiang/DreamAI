@@ -49,7 +49,7 @@ def test_repeat_turn_asks_for_a_different_angle():
 
 def test_long_paste_is_trimmed_before_the_provider():
     agent, provider = make()
-    body = "run\n" + ("noise\n" * 300) + "ERROR: boom\n"
+    body = "run\n" + ("noise line\n" * 900) + "ERROR: boom\n"
 
     agent.chat(body)
 
