@@ -940,6 +940,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             "Cache-Control": "no-cache, no-transform",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
+            "X-Request-Id": request_id,
         },
     )
 
