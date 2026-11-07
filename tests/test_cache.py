@@ -67,7 +67,7 @@ def test_least_recently_used_is_evicted():
     cache = ResponseCache(max_items=2)
     cache.put("a", "1")
     cache.put("b", "2")
-    cache.get("a")          # a becomes most recent
+    cache.get("a")  # a becomes most recent
     cache.put("c", "3")
 
     assert cache.get("a") == "1"

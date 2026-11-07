@@ -11,9 +11,8 @@ import pytest
 pytest.importorskip("fastapi", reason="web dependencies are not installed")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "web"))
 
-from fastapi.testclient import TestClient  # noqa: E402
-
 from app.guard import CircuitBreaker  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
 
 
 @pytest.fixture()
@@ -37,9 +36,7 @@ def test_open_breaker_returns_a_short_error_and_a_done_marker(main_module):
         "/api/chat", json={"messages": [{"role": "user", "content": "在吗"}]}
     )
     events = [
-        json.loads(line[6:])
-        for line in response.text.splitlines()
-        if line.startswith("data: ")
+        json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")
     ]
     errors = [event for event in events if "message" in event]
     done = [event for event in events if event.get("blocked")]

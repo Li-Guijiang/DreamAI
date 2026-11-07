@@ -32,8 +32,14 @@ def test_line_carries_every_field_in_a_fixed_order():
 
 def test_outcome_can_mark_a_failure():
     line = format_turn_log(
-        "req_x", tier="light", intent="chat", ttft=0.0, total=1.5, chars=0,
-        model="m", outcome="failed",
+        "req_x",
+        tier="light",
+        intent="chat",
+        ttft=0.0,
+        total=1.5,
+        chars=0,
+        model="m",
+        outcome="failed",
     )
 
     assert line.startswith("chat failed ")
