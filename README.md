@@ -220,6 +220,11 @@ reaches the screen. Both are now explicit.
 | Input hygiene | A huge paste is cut to head + error lines + tail | `trim_long_input()` |
 | Repeats | A rephrased question is asked for a different angle, not the same answer | `is_repeat()` |
 | Sampling | `DREAMAI_TOP_P` / `DREAMAI_PRESENCE_PENALTY`, unset by default | `web/app/config.py` |
+| Breaker | Opens after N failures, one probe after cooldown, refuses before the first byte | `guard.py` |
+| Cache | Exact-match, TTL + LRU, only at temperature ≤ 0.3 | `cache.py` |
+| Keep-alive | `: ping` every 12 s while the upstream is silent | `main.py` |
+| Tracing | `req_xxxxxxxx` in header and body, one TTFT line per turn | `telemetry.py` |
+| Injection | Override attempts harden the prompt and land in the log | `safety.py` |
 
 The same rules exist twice: `dream_ai/identity.py` for the CLI and the desktop
 shell, and `web/app/config.py` for the service, which can run without the Python
