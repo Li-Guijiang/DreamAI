@@ -13,6 +13,7 @@ import logging
 import re
 import socket
 import time
+import uuid
 from collections import defaultdict, deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -782,6 +783,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         system_prompt += "\n\n" + "\n".join(hints)
         messages[0] = {"role": "system", "content": system_prompt}
 
+    request_id = f"req_{uuid.uuid4().hex[:8]}"
     cache_key = None
     if temperature <= 0.3:
         cache_key = make_key(upstream.provider.id, model, messages, temperature, budget)
@@ -796,19 +798,20 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         cached_text = _cache.get(cache_key) if cache_key else None
         yield sse("meta", {
             "model": model, "version": VERSION, "tier": tier, "intent": intent,
+            "requestId": request_id,
             "cache": "hit" if cached_text else "miss",
         })
         if cached_text:
             for index in range(0, len(cached_text), 48):
                 yield sse("delta", {"t": cached_text[index : index + 48]})
             yield sse("done", {
-                "tier": tier, "intent": intent, "chars": len(cached_text),
+                "tier": tier, "intent": intent, "requestId": request_id, "chars": len(cached_text),
                 "elapsed": 0.0, "model": model, "cache": "hit",
             })
             _stats["requests"] += 1
             return
         if not _breaker.allow():
-            logger.warning("circuit open, rejecting ip=%s", ip)
+            logger.warning("circuit open, rejecting ip=%s id=%s", ip, request_id)
             _stats["requests"] += 1
             _stats["failures"] += 1
             yield sse("error", {"message": "上游连续失败，已暂停约 30 秒，请稍后再试。"})
@@ -896,6 +899,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 done_payload = {
                     "tier": tier,
                     "intent": intent,
+                    "requestId": request_id,
                     "chars": produced,
                     "elapsed": round(time.monotonic() - started, 2),
                     "model": model,
