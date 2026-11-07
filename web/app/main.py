@@ -114,8 +114,8 @@ _semaphore = asyncio.Semaphore(settings.max_concurrency)
 _daily_lock = asyncio.Lock()
 _daily_state = {"date": time.strftime("%Y-%m-%d"), "count": 0}
 
-_breaker = CircuitBreaker(threshold=3, cooldown=30.0)
-_cache = ResponseCache(max_items=128, ttl=300.0)
+_breaker = CircuitBreaker(threshold=settings.breaker_threshold, cooldown=settings.breaker_cooldown)
+_cache = ResponseCache(max_items=settings.cache_max_items, ttl=settings.cache_ttl)
 
 _stats = {
     "requests": 0,

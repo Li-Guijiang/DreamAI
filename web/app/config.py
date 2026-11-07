@@ -231,6 +231,11 @@ class Settings:
     # Optional sampling knobs; None means "let the provider default apply".
     top_p: float | None = None
     presence_penalty: float | None = None
+    # Resilience and caching, tunable without a code change.
+    breaker_threshold: int = 3
+    breaker_cooldown: float = 30.0
+    cache_ttl: float = 300.0
+    cache_max_items: int = 128
 
     rate_limit: int = 30
     rate_window: int = 600
@@ -348,6 +353,10 @@ def load_settings() -> Settings:
         max_tokens=_env_int("DREAMAI_MAX_TOKENS", 4096, 256),
         top_p=_env_optional_float("DREAMAI_TOP_P"),
         presence_penalty=_env_optional_float("DREAMAI_PRESENCE_PENALTY"),
+        breaker_threshold=_env_int("DREAMAI_BREAKER_THRESHOLD", 3, 1),
+        breaker_cooldown=_env_float("DREAMAI_BREAKER_COOLDOWN", 30.0),
+        cache_ttl=_env_float("DREAMAI_CACHE_TTL", 300.0),
+        cache_max_items=_env_int("DREAMAI_CACHE_MAX_ITEMS", 128, 1),
         rate_limit=_env_int("DREAMAI_RATE_LIMIT", 30, 1),
         rate_window=_env_int("DREAMAI_RATE_WINDOW", 600, 30),
         daily_limit=_env_int("DREAMAI_DAILY_LIMIT", 2000, 0),
