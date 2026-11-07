@@ -27,7 +27,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from . import llm, owner_auth, owner_store
+from .cache import ResponseCache, make_key
 from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
+from .guard import CircuitBreaker
 from .insight import (
     classify_intent,
     detect_language,
@@ -109,6 +111,9 @@ _semaphore = asyncio.Semaphore(settings.max_concurrency)
 
 _daily_lock = asyncio.Lock()
 _daily_state = {"date": time.strftime("%Y-%m-%d"), "count": 0}
+
+_breaker = CircuitBreaker(threshold=3, cooldown=30.0)
+_cache = ResponseCache(max_items=128, ttl=300.0)
 
 _stats = {
     "requests": 0,
@@ -777,13 +782,38 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         system_prompt += "\n\n" + "\n".join(hints)
         messages[0] = {"role": "system", "content": system_prompt}
 
+    cache_key = None
+    if temperature <= 0.3:
+        cache_key = make_key(upstream.provider.id, model, messages, temperature, budget)
+
     async def event_stream() -> AsyncIterator[bytes]:
         started = time.monotonic()
         produced = 0
         failed = False
         cancelled = False
         usage_payload: dict | None = None
-        yield sse("meta", {"model": model, "version": VERSION, "tier": tier, "intent": intent})
+        answered: list[str] = []
+        cached_text = _cache.get(cache_key) if cache_key else None
+        yield sse("meta", {
+            "model": model, "version": VERSION, "tier": tier, "intent": intent,
+            "cache": "hit" if cached_text else "miss",
+        })
+        if cached_text:
+            for index in range(0, len(cached_text), 48):
+                yield sse("delta", {"t": cached_text[index : index + 48]})
+            yield sse("done", {
+                "tier": tier, "intent": intent, "chars": len(cached_text),
+                "elapsed": 0.0, "model": model, "cache": "hit",
+            })
+            _stats["requests"] += 1
+            return
+        if not _breaker.allow():
+            logger.warning("circuit open, rejecting ip=%s", ip)
+            _stats["requests"] += 1
+            _stats["failures"] += 1
+            yield sse("error", {"message": "上游连续失败，已暂停约 30 秒，请稍后再试。"})
+            yield sse("done", {"tier": tier, "intent": intent, "chars": 0, "elapsed": 0.0, "model": model, "blocked": True})
+            return
         try:
             async with _semaphore:
                 async def _primary() -> AsyncIterator[tuple[str, str]]:
@@ -799,19 +829,46 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     ):
                         yield item
 
-                async for kind, text in llm.stream_with_retry(_primary):
-                    if kind == "usage":
+                # A queue and a pump, so a silent upstream can be covered by a
+                # comment line every few seconds instead of leaving the browser
+                # staring at a stalled connection behind a proxy.
+                queue: asyncio.Queue = asyncio.Queue()
+
+                async def _pump() -> None:
+                    try:
+                        async for item in llm.stream_with_retry(_primary):
+                            await queue.put(item)
+                    finally:
+                        await queue.put(None)
+
+                pump = asyncio.create_task(_pump())
+                try:
+                    while True:
                         try:
-                            usage_payload = json.loads(text)
-                        except ValueError:
-                            usage_payload = None
-                        if isinstance(usage_payload, dict):
-                            yield sse("usage", usage_payload)
-                        continue
-                    produced += len(text)
-                    yield sse("reasoning" if kind == "reasoning" else "delta", {"t": text})
+                            item = await asyncio.wait_for(queue.get(), timeout=12)
+                        except TimeoutError:
+                            yield b": ping\n\n"
+                            continue
+                        if item is None:
+                            break
+                        kind, text = item
+                        if kind == "usage":
+                            try:
+                                usage_payload = json.loads(text)
+                            except ValueError:
+                                usage_payload = None
+                            if isinstance(usage_payload, dict):
+                                yield sse("usage", usage_payload)
+                            continue
+                        produced += len(text)
+                        if kind != "reasoning":
+                            answered.append(text)
+                        yield sse("reasoning" if kind == "reasoning" else "delta", {"t": text})
+                finally:
+                    pump.cancel()
         except llm.LLMError as exc:
             failed = True
+            _breaker.record_failure()
             logger.info("chat failed ip=%s kind=%s: %s", ip, upstream.kind, exc)
             message = exc.message
             if upstream.provider.id != "free" and exc.status_code in (401, 402, 403):
@@ -833,6 +890,9 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 _stats["prompt_tokens"] += int(usage_payload.get("prompt_tokens") or 0)
                 _stats["completion_tokens"] += int(usage_payload.get("completion_tokens") or 0)
             if not failed and not cancelled:
+                _breaker.record_success()
+                if cache_key and answered:
+                    _cache.put(cache_key, "".join(answered))
                 done_payload = {
                     "tier": tier,
                     "intent": intent,
