@@ -41,6 +41,7 @@ from .insight import (
 )
 from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
 from .quality import compress_history, needs_context, plan_generation, respect_cap
+from .safety import detect_injection, harden_system_prompt
 from .telemetry import format_turn_log
 
 logging.basicConfig(
@@ -789,6 +790,11 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         messages[0] = {"role": "system", "content": system_prompt}
 
     request_id = f"req_{uuid.uuid4().hex[:8]}"
+    injection = detect_injection(last_user)
+    if injection:
+        system_prompt = harden_system_prompt(system_prompt)
+        messages[0] = {"role": "system", "content": system_prompt}
+        logger.warning("possible injection id=%s hit=%r", request_id, injection[:40])
     cache_key = None
     if temperature <= 0.3:
         cache_key = make_key(upstream.provider.id, model, messages, temperature, budget)
