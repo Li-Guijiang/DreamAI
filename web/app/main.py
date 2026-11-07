@@ -41,6 +41,7 @@ from .insight import (
 )
 from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
 from .quality import compress_history, needs_context, plan_generation, respect_cap
+from .telemetry import format_turn_log
 
 logging.basicConfig(
     level=logging.INFO,
@@ -795,6 +796,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         cancelled = False
         usage_payload: dict | None = None
         answered: list[str] = []
+        first_token_at = 0.0
         cached_text = _cache.get(cache_key) if cache_key else None
         yield sse("meta", {
             "model": model, "version": VERSION, "tier": tier, "intent": intent,
@@ -863,6 +865,8 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                             if isinstance(usage_payload, dict):
                                 yield sse("usage", usage_payload)
                             continue
+                        if not first_token_at:
+                            first_token_at = time.monotonic()
                         produced += len(text)
                         if kind != "reasoning":
                             answered.append(text)
@@ -873,6 +877,12 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             failed = True
             _breaker.record_failure()
             logger.info("chat failed ip=%s kind=%s: %s", ip, upstream.kind, exc)
+            logger.info(format_turn_log(
+                request_id, tier=tier, intent=intent,
+                ttft=(first_token_at - started) if first_token_at else 0.0,
+                total=time.monotonic() - started, chars=produced,
+                model=model, outcome="failed",
+            ))
             message = exc.message
             if upstream.provider.id != "free" and exc.status_code in (401, 402, 403):
                 message = f"{upstream.label} 拒绝了这次请求：Key 无效、无权限或余额不足，请在设置中更新后重试。"
@@ -906,6 +916,11 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 }
                 if usage_payload:
                     done_payload["usage"] = usage_payload
+                logger.info(format_turn_log(
+                    request_id, tier=tier, intent=intent,
+                    ttft=(first_token_at - started) if first_token_at else 0.0,
+                    total=time.monotonic() - started, chars=produced, model=model,
+                ))
                 yield sse("done", done_payload)
 
     return StreamingResponse(
