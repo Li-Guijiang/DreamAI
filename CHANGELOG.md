@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Serving behaviour
+
+- Circuit breaker per upstream: opens after repeated failures, probes once after a
+  cooldown, refuses before the first token instead of after a timeout.
+- Exact-match response cache (TTL + LRU, temperature ≤ 0.3); cached turns replay as
+  normal deltas and report `cache: hit`.
+- SSE heartbeat every 12 seconds of upstream silence, so proxies stop dropping long
+  reasoning turns.
+- Request id on every turn (`X-Request-Id` and body) plus one structured log line
+  with TTFT, total, characters and model.
+- Prompt-injection detection hardens the system prompt for that turn and logs it.
+- `/api/health` now reports breaker state and cache counters.
+
+## Unreleased
+
 ### Answer shape
 
 - Each turn is classified as error / design / code / writing / explain / chat, and
