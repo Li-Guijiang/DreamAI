@@ -53,3 +53,18 @@ def test_writing_question_reports_the_writing_intent(client):
     meta = _meta(client, "帮我写一段周报开头，说明本周做了登录改造")
 
     assert meta["intent"] == "writing"
+
+
+def test_response_header_carries_the_same_request_id(client):
+    response = client.post("/api/chat", json={"messages": [{"role": "user", "content": "你好"}]})
+    header = response.headers.get("x-request-id", "")
+    body_id = ""
+    for line in response.text.splitlines():
+        if line.startswith("data: "):
+            event = json.loads(line[6:])
+            if event.get("requestId"):
+                body_id = event["requestId"]
+                break
+
+    assert header.startswith("req_")
+    assert body_id == header
