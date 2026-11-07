@@ -1,0 +1,102 @@
+"""The breaker must open on repeated failure and close again after a probe."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "web"))
+
+from app.guard import CLOSED, HALF_OPEN, OPEN, CircuitBreaker  # noqa: E402
+
+
+class FakeClock:
+    def __init__(self) -> None:
+        self.t = 1000.0
+
+    def __call__(self) -> float:
+        return self.t
+
+    def advance(self, seconds: float) -> None:
+        self.t += seconds
+
+
+def make(threshold: int = 3, cooldown: float = 30.0):
+    clock = FakeClock()
+    return CircuitBreaker(threshold=threshold, cooldown=cooldown, clock=clock), clock
+
+
+def test_closed_breaker_allows_traffic():
+    breaker, _ = make()
+
+    assert breaker.state == CLOSED
+    assert breaker.allow()
+
+
+def test_opens_after_threshold_failures():
+    breaker, _ = make(threshold=2)
+
+    breaker.record_failure()
+    assert breaker.allow()
+    breaker.record_failure()
+
+    assert breaker.state == OPEN
+    assert not breaker.allow()
+
+
+def test_a_success_resets_the_count():
+    breaker, _ = make(threshold=2)
+
+    breaker.record_failure()
+    breaker.record_success()
+    breaker.record_failure()
+
+    assert breaker.state == CLOSED
+
+
+def test_open_turns_half_open_after_cooldown():
+    breaker, clock = make(threshold=1, cooldown=30)
+
+    breaker.record_failure()
+    assert breaker.state == OPEN
+    clock.advance(31)
+
+    assert breaker.state == HALF_OPEN
+    assert breaker.allow()
+
+
+def test_half_open_allows_only_one_probe():
+    breaker, clock = make(threshold=1, cooldown=5)
+    breaker.record_failure()
+    clock.advance(6)
+
+    assert breaker.allow()
+    assert not breaker.allow(), "a second probe would flood a recovering provider"
+
+
+def test_probe_success_closes_the_breaker():
+    breaker, clock = make(threshold=1, cooldown=5)
+    breaker.record_failure()
+    clock.advance(6)
+
+    breaker.allow()
+    breaker.record_success()
+
+    assert breaker.state == CLOSED
+    assert breaker.allow()
+
+
+def test_probe_failure_reopens_with_a_fresh_cooldown():
+    breaker, clock = make(threshold=1, cooldown=5)
+    breaker.record_failure()
+    opened_at = clock.t
+    clock.advance(6)
+    breaker.allow()
+
+    breaker.record_failure()
+    assert breaker.state == OPEN
+    clock.advance(4)
+    assert breaker.state == OPEN, "cooldown must restart from the failed probe"
+    clock.advance(2)
+    assert breaker.state == HALF_OPEN
+    assert clock.t > opened_at
