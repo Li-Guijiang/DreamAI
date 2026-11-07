@@ -552,6 +552,8 @@ async def health() -> JSONResponse:
             "byok": list(settings.byok_ids),
             "version": VERSION,
             "uptime": int(time.time() - STARTED_AT),
+            "upstream": _breaker.state,
+            "cache": {"items": len(_cache), "hits": _cache.hits, "misses": _cache.misses},
             "dailyLimit": settings.daily_limit,
             "freeRemaining": max(0, settings.daily_limit - _daily_state["count"])
             if settings.daily_limit > 0
@@ -569,6 +571,8 @@ async def usage() -> JSONResponse:
     return JSONResponse(
         {
             "uptime": int(time.time() - STARTED_AT),
+            "upstream": _breaker.state,
+            "cache": {"items": len(_cache), "hits": _cache.hits, "misses": _cache.misses},
             "version": VERSION,
             "requests": _stats["requests"],
             "failures": _stats["failures"],
