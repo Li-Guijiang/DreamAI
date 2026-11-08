@@ -39,6 +39,7 @@ from .insight import (
     language_prompt,
     trim_long_input,
 )
+from .pricing import estimate_cost, format_cost
 from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
 from .quality import compress_history, needs_context, plan_generation, respect_cap
 from .safety import detect_injection, harden_system_prompt
@@ -123,6 +124,8 @@ _stats = {
     "failures": 0,
     "prompt_tokens": 0,
     "completion_tokens": 0,
+    "cost_usd": 0.0,
+    "known_cost": True,
     "by_model": defaultdict(int),
     "started_at": STARTED_AT,
 }
@@ -579,6 +582,11 @@ async def usage() -> JSONResponse:
             "failures": _stats["failures"],
             "promptTokens": _stats["prompt_tokens"],
             "completionTokens": _stats["completion_tokens"],
+            "costUsd": round(_stats["cost_usd"], 4),
+            "costKnown": _stats["known_cost"],
+            "cacheHitRate": round(
+                _cache.hits / max(1, _cache.hits + _cache.misses), 3
+            ),
             "byModel": dict(_stats["by_model"]),
             "daily": _daily_state,
             "dailyLimit": settings.daily_limit,
@@ -926,6 +934,16 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 }
                 if usage_payload:
                     done_payload["usage"] = usage_payload
+                    cost = estimate_cost(
+                        model,
+                        int(usage_payload.get("prompt_tokens") or 0),
+                        int(usage_payload.get("completion_tokens") or 0),
+                    )
+                    if cost is None:
+                        _stats["known_cost"] = False
+                    else:
+                        _stats["cost_usd"] += cost
+                        done_payload["cost"] = {"usd": cost, "text": format_cost(cost)}
                 logger.info(format_turn_log(
                     request_id, tier=tier, intent=intent,
                     ttft=(first_token_at - started) if first_token_at else 0.0,
