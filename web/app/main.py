@@ -30,6 +30,7 @@ from pydantic import BaseModel, Field, field_validator
 from . import llm, owner_auth, owner_store
 from .cache import ResponseCache, make_key
 from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
+from .errors import user_message
 from .guard import CircuitBreaker
 from .insight import (
     classify_intent,
@@ -903,9 +904,9 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 total=time.monotonic() - started, chars=produced,
                 model=model, outcome="failed",
             ))
-            message = exc.message
-            if upstream.provider.id != "free" and exc.status_code in (401, 402, 403):
-                message = f"{upstream.label} 拒绝了这次请求：Key 无效、无权限或余额不足，请在设置中更新后重试。"
+            message = user_message(exc.status_code, upstream.label)
+            if exc.status_code not in (401, 402, 403, 408, 429) and exc.status_code < 500:
+                message = exc.message
             yield sse("error", {"message": message})
         except asyncio.CancelledError:
             cancelled = True

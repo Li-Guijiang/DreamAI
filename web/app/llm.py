@@ -15,6 +15,7 @@ from collections.abc import AsyncIterator
 import httpx
 
 from .adapters import build_request, parse_chunk
+from .errors import is_retryable
 
 logger = logging.getLogger("dreamai.llm")
 
@@ -210,9 +211,6 @@ async def _stream_raw(
         raise LLMError("无法连接模型服务，请稍后重试。") from exc
 
 
-RETRYABLE_STATUS = {408, 425, 429, 500, 502, 503, 504}
-
-
 async def stream_with_retry(
     factory, attempts: int = 2, delay: float = 0.6
 ) -> AsyncIterator[tuple[str, str]]:
@@ -229,7 +227,7 @@ async def stream_with_retry(
                 yield item
             return
         except LLMError as error:
-            retryable = error.status_code in RETRYABLE_STATUS
+            retryable = is_retryable(error.status_code)
             if produced or not retryable or attempt == attempts:
                 raise
             logger.info("upstream %s, retrying (%s/%s)", error.status_code, attempt, attempts)
