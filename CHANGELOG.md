@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Routing and money
+
+- Model can be chosen per question tier via `DREAMAI_MODEL_BY_TIER`; an unmapped
+  tier falls back to the site default.
+- Per-turn USD cost from a dated price table, exposed on the turn log, the done
+  event and `/api/usage` (with `costKnown` when a model has no price).
+- Cache hit rate in `/api/usage`; cache hits are logged with the request id.
+
+### Reliability
+
+- Optional second upstream (`DREAMAI_FALLBACK_*`), used only before the first token.
+- One status policy for retry eligibility and user-facing wording.
+
+### Quality
+
+- Consecutive duplicate turns are collapsed before the model sees them.
+- Both prompts now ask where the uncertainty is and how to check it.
+
+## Unreleased
+
 ### Serving behaviour
 
 - Circuit breaker per upstream: opens after repeated failures, probes once after a
