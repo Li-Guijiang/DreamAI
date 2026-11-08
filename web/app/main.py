@@ -842,6 +842,10 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 "elapsed": 0.0, "model": model, "cache": "hit",
             })
             _stats["requests"] += 1
+            logger.info(
+                "chat cache id=%s tier=%s intent=%s chars=%s",
+                request_id, tier, intent, len(cached_text),
+            )
             return
         if not _breaker.allow():
             logger.warning("circuit open, rejecting ip=%s id=%s", ip, request_id)
