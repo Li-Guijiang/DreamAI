@@ -51,7 +51,13 @@ def test_cost_is_appended_only_when_known():
         "req_x", tier="light", intent="chat", ttft=0.1, total=0.2, chars=3, model="m"
     )
     with_cost = format_turn_log(
-        "req_x", tier="light", intent="chat", ttft=0.1, total=0.2, chars=3, model="m",
+        "req_x",
+        tier="light",
+        intent="chat",
+        ttft=0.1,
+        total=0.2,
+        chars=3,
+        model="m",
         cost=0.0012,
     )
 
