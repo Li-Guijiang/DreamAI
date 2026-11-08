@@ -68,3 +68,9 @@ def test_response_header_carries_the_same_request_id(client):
 
     assert header.startswith("req_")
     assert body_id == header
+
+
+def test_uncached_response_is_marked_as_a_miss(client):
+    response = client.post("/api/chat", json={"messages": [{"role": "user", "content": "你好"}]})
+
+    assert response.headers.get("x-cache") == "MISS"
