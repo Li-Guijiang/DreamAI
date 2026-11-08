@@ -14,8 +14,10 @@ file at the project root. Real environment variables always win.
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+
+from .routing import parse_tier_map
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = BASE_DIR / "web"
@@ -236,6 +238,8 @@ class Settings:
     breaker_cooldown: float = 30.0
     cache_ttl: float = 300.0
     cache_max_items: int = 128
+    # tier -> model, parsed from DREAMAI_MODEL_BY_TIER.
+    model_by_tier: dict[str, str] = field(default_factory=dict)
 
     rate_limit: int = 30
     rate_window: int = 600
@@ -357,6 +361,7 @@ def load_settings() -> Settings:
         breaker_cooldown=_env_float("DREAMAI_BREAKER_COOLDOWN", 30.0),
         cache_ttl=_env_float("DREAMAI_CACHE_TTL", 300.0),
         cache_max_items=_env_int("DREAMAI_CACHE_MAX_ITEMS", 128, 1),
+        model_by_tier=parse_tier_map(_env("DREAMAI_MODEL_BY_TIER", "")),
         rate_limit=_env_int("DREAMAI_RATE_LIMIT", 30, 1),
         rate_window=_env_int("DREAMAI_RATE_WINDOW", 600, 30),
         daily_limit=_env_int("DREAMAI_DAILY_LIMIT", 2000, 0),

@@ -42,6 +42,7 @@ from .insight import (
 from .pricing import estimate_cost, format_cost
 from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
 from .quality import compress_history, needs_context, plan_generation, respect_cap
+from .routing import choose_model
 from .safety import detect_injection, harden_system_prompt
 from .telemetry import format_turn_log
 
@@ -777,6 +778,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         respect_cap(plan["max_tokens"], payload.maxTokens),
         plan["hint"],
     )
+    model = choose_model(tier, model, settings.model_by_tier)
     if tier_hint:
         system_prompt = f"{system_prompt}\n\n{tier_hint}"
         messages[0] = {"role": "system", "content": system_prompt}
