@@ -86,3 +86,12 @@ def test_language_rule_is_stated_in_the_persona():
     from dream_ai.identity import render_tone_block
 
     assert "跟随用户的语言" in render_tone_block()
+
+
+def test_uncertainty_rule_is_actionable():
+    from dream_ai.identity import render_decision_block
+
+    block = render_decision_block()
+
+    assert "不确定" in block
+    assert "怎样验证" in block
