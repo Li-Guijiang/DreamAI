@@ -976,6 +976,11 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     request_id, tier=tier, intent=intent,
                     ttft=(first_token_at - started) if first_token_at else 0.0,
                     total=time.monotonic() - started, chars=produced, model=model,
+                    cost=estimate_cost(
+                        model,
+                        int((usage_payload or {}).get("prompt_tokens") or 0),
+                        int((usage_payload or {}).get("completion_tokens") or 0),
+                    ) if usage_payload else None,
                 ))
                 yield sse("done", done_payload)
 
@@ -987,6 +992,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
             "X-Request-Id": request_id,
+            "X-Cache": "MISS",
         },
     )
 
