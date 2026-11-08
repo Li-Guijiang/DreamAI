@@ -22,9 +22,11 @@ def format_turn_log(
     chars: int,
     model: str,
     outcome: str = "done",
+    cost: float | None = None,
 ) -> str:
     """Render the single line written when a turn finishes."""
     return (
         f"chat {outcome} id={request_id} tier={tier} intent={intent} "
         f"ttft={ttft:.2f}s total={total:.2f}s chars={chars} model={model}"
+        + (f" cost=${cost:.4f}" if cost is not None else "")
     )
