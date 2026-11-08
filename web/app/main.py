@@ -813,6 +813,12 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
     if temperature <= 0.3:
         cache_key = make_key(upstream.provider.id, model, messages, temperature, budget)
 
+    class _FallbackProvider:
+        id = "fallback"
+        label = "备用模型"
+        kind = "openai"
+        base_url = settings.fallback_base_url
+
     async def event_stream() -> AsyncIterator[bytes]:
         started = time.monotonic()
         produced = 0
@@ -863,9 +869,25 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 # staring at a stalled connection behind a proxy.
                 queue: asyncio.Queue = asyncio.Queue()
 
+                async def _secondary() -> AsyncIterator[tuple[str, str]]:
+                    async for item in llm.stream_completion(
+                        _FallbackProvider(),
+                        api_key=settings.fallback_api_key,
+                        model=settings.fallback_model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_tokens=budget,
+                    ):
+                        yield item
+
+                def _chain():
+                    if settings.fallback_configured:
+                        return llm.stream_with_fallback(_primary, _secondary)
+                    return llm.stream_with_retry(_primary)
+
                 async def _pump() -> None:
                     try:
-                        async for item in llm.stream_with_retry(_primary):
+                        async for item in _chain():
                             await queue.put(item)
                     finally:
                         await queue.put(None)
