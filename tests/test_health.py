@@ -27,5 +27,7 @@ def test_health_reports_breaker_state_and_cache_counters(client):
 
     assert body["ok"] is True
     assert body["upstream"] in {"closed", "open", "half-open"}
-    assert set(body["cache"]) == {"items", "hits", "misses"}
+    assert body["breaker"]["state"] == body["upstream"]
+    assert body["breaker"]["threshold"] >= 1
+    assert {"items", "capacity", "ttl", "hits", "misses"} <= set(body["cache"])
     assert body["cache"]["items"] >= 0
