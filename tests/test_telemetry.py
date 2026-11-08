@@ -44,3 +44,16 @@ def test_outcome_can_mark_a_failure():
 
     assert line.startswith("chat failed ")
     assert "ttft=0.00s" in line
+
+
+def test_cost_is_appended_only_when_known():
+    without = format_turn_log(
+        "req_x", tier="light", intent="chat", ttft=0.1, total=0.2, chars=3, model="m"
+    )
+    with_cost = format_turn_log(
+        "req_x", tier="light", intent="chat", ttft=0.1, total=0.2, chars=3, model="m",
+        cost=0.0012,
+    )
+
+    assert "cost=" not in without
+    assert "cost=$0.0012" in with_cost
