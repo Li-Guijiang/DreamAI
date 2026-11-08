@@ -17,8 +17,6 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .routing import parse_tier_map
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = BASE_DIR / "web"
 
@@ -173,6 +171,25 @@ def _env_int(name: str, default: int, minimum: int = 0) -> int:
     except ValueError:
         return default
     return max(minimum, value)
+
+
+def _parse_tier_map(raw: str) -> dict[str, str]:
+    """Local copy of routing.parse_tier_map.
+
+    Importing the module at load time makes config.py unloadable on its own, which
+    the prompt-budget test does. Keeping the parser here costs six lines and keeps
+    the module self-contained.
+    """
+    mapping: dict[str, str] = {}
+    for item in (raw or "").split(","):
+        item = item.strip()
+        if not item or "=" not in item:
+            continue
+        tier, model = item.split("=", 1)
+        tier, model = tier.strip().lower(), model.strip()
+        if tier and model:
+            mapping[tier] = model
+    return mapping
 
 
 def _env_optional_float(name: str) -> float | None:
@@ -370,7 +387,7 @@ def load_settings() -> Settings:
         breaker_cooldown=_env_float("DREAMAI_BREAKER_COOLDOWN", 30.0),
         cache_ttl=_env_float("DREAMAI_CACHE_TTL", 300.0),
         cache_max_items=_env_int("DREAMAI_CACHE_MAX_ITEMS", 128, 1),
-        model_by_tier=parse_tier_map(_env("DREAMAI_MODEL_BY_TIER", "")),
+        model_by_tier=_parse_tier_map(_env("DREAMAI_MODEL_BY_TIER", "")),
         fallback_base_url=_env("DREAMAI_FALLBACK_BASE_URL", ""),
         fallback_api_key=_env("DREAMAI_FALLBACK_API_KEY", ""),
         fallback_model=_env("DREAMAI_FALLBACK_MODEL", ""),

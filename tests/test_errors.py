@@ -8,7 +8,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "web"))
 
 import pytest
-
 from app.errors import BYOK_STATUS, RETRYABLE_STATUS, is_retryable, user_message  # noqa: E402
 
 
