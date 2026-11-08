@@ -225,6 +225,10 @@ reaches the screen. Both are now explicit.
 | Keep-alive | `: ping` every 12 s while the upstream is silent | `main.py` |
 | Tracing | `req_xxxxxxxx` in header and body, one TTFT line per turn | `telemetry.py` |
 | Injection | Override attempts harden the prompt and land in the log | `safety.py` |
+| Routing | `DREAMAI_MODEL_BY_TIER=light=...,deep=...`, default on a miss | `routing.py` |
+| Cost | Per-turn USD from a dated price table; unknown models stay unknown | `pricing.py` |
+| Failover | Second upstream, used only before the first token | `DREAMAI_FALLBACK_*` |
+| Errors | One retry policy and one user-facing wording per status | `errors.py` |
 
 The same rules exist twice: `dream_ai/identity.py` for the CLI and the desktop
 shell, and `web/app/config.py` for the service, which can run without the Python
