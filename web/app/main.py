@@ -42,7 +42,7 @@ from .insight import (
 )
 from .pricing import estimate_cost, format_cost
 from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
-from .quality import compress_history, needs_context, plan_generation, respect_cap
+from .quality import compress_history, dedupe_messages, needs_context, plan_generation, respect_cap
 from .routing import choose_model
 from .safety import detect_injection, harden_system_prompt
 from .telemetry import format_turn_log
@@ -765,6 +765,9 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         # error lines and the tail.
         content = trim_long_input(content)
         safe_history.append(ChatMessage(role=message.role, content=content))
+    safe_history = [ChatMessage(role=m["role"], content=m["content"]) for m in dedupe_messages(
+        [{"role": m.role, "content": m.content} for m in safe_history]
+    )]
     messages, dropped = prepare_messages(safe_history, system_prompt)
     temperature = payload.temperature if payload.temperature is not None else settings.temperature
     temperature = min(1.5, max(0.0, temperature + STYLE_TEMPERATURE.get(style, 0.0)))

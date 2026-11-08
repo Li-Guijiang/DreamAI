@@ -227,3 +227,20 @@ def respect_cap(max_tokens: int, user_cap: int | None) -> int:
     if user_cap is None:
         return max_tokens
     return max(128, min(max_tokens, user_cap))
+
+
+def dedupe_messages(messages: Sequence[dict[str, str]]) -> list[dict[str, str]]:
+    """Drop consecutive messages that repeat the same role and text.
+
+    A client that retries after a dropped connection, or a user who presses send
+    twice, sends the same turn twice; the model then answers as if it were asked
+    twice, which doubles the budget for no extra information.
+    """
+    result: list[dict[str, str]] = []
+    for message in messages:
+        if result and result[-1].get("role") == message.get("role") and (
+            result[-1].get("content") or ""
+        ).strip() == (message.get("content") or "").strip():
+            continue
+        result.append(dict(message))
+    return result
