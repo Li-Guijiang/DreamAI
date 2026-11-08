@@ -232,3 +232,22 @@ async def stream_with_retry(
                 raise
             logger.info("upstream %s, retrying (%s/%s)", error.status_code, attempt, attempts)
             await asyncio.sleep(delay * attempt)
+
+
+async def stream_with_fallback(primary, fallback) -> AsyncIterator[tuple[str, str]]:
+    """Use the fallback only when the primary fails before producing anything.
+
+    Once a token has been shown to the user, switching providers would splice two
+    answers together, so the failure is reported instead.
+    """
+    produced = False
+    try:
+        async for item in primary():
+            produced = True
+            yield item
+        return
+    except LLMError:
+        if produced or fallback is None:
+            raise
+    async for item in fallback():
+        yield item

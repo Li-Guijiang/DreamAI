@@ -238,6 +238,10 @@ class Settings:
     breaker_cooldown: float = 30.0
     cache_ttl: float = 300.0
     cache_max_items: int = 128
+    # Optional second upstream, used only when the first fails before any token.
+    fallback_base_url: str = ""
+    fallback_api_key: str = ""
+    fallback_model: str = ""
     # tier -> model, parsed from DREAMAI_MODEL_BY_TIER.
     model_by_tier: dict[str, str] = field(default_factory=dict)
 
@@ -252,6 +256,10 @@ class Settings:
     site_title: str = "Dream AI"
     site_tagline: str = "让每一个想法，都被认真对待"
     repo_url: str = "https://github.com/Li-Guijiang/DreamAI"
+
+    @property
+    def fallback_configured(self) -> bool:
+        return bool(self.fallback_base_url and self.fallback_api_key and self.fallback_model)
 
     @property
     def free_configured(self) -> bool:
@@ -362,6 +370,9 @@ def load_settings() -> Settings:
         cache_ttl=_env_float("DREAMAI_CACHE_TTL", 300.0),
         cache_max_items=_env_int("DREAMAI_CACHE_MAX_ITEMS", 128, 1),
         model_by_tier=parse_tier_map(_env("DREAMAI_MODEL_BY_TIER", "")),
+        fallback_base_url=_env("DREAMAI_FALLBACK_BASE_URL", ""),
+        fallback_api_key=_env("DREAMAI_FALLBACK_API_KEY", ""),
+        fallback_model=_env("DREAMAI_FALLBACK_MODEL", ""),
         rate_limit=_env_int("DREAMAI_RATE_LIMIT", 30, 1),
         rate_window=_env_int("DREAMAI_RATE_WINDOW", 600, 30),
         daily_limit=_env_int("DREAMAI_DAILY_LIMIT", 2000, 0),
