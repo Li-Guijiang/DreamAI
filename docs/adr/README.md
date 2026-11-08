@@ -15,3 +15,4 @@ New decisions should be added as numbered Markdown files, e.g. `0001-pluggable-p
 | [0005](./0005-reply-planning-and-resilience.md) | Reply quality: plan the turn, keep the context, survive a bad minute |
 | [0006](./0006-answer-shape-and-input-hygiene.md) | Answer shape: classify the question, clean the input, notice repeats |
 | [0007](./0007-serving-behaviour.md) | Serving behaviour: fail fast, repeat free, stay connected |
+| [0008](./0008-routing-cost-and-failover.md) | Routing, money and the second upstream |
