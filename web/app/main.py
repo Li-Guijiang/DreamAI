@@ -810,8 +810,10 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         messages[0] = {"role": "system", "content": system_prompt}
         logger.warning("possible injection id=%s hit=%r", request_id, injection[:40])
     cache_key = None
+    cached_text: str | None = None
     if temperature <= 0.3:
         cache_key = make_key(upstream.provider.id, model, messages, temperature, budget)
+        cached_text = _cache.get(cache_key)
 
     class _FallbackProvider:
         id = "fallback"
@@ -827,7 +829,6 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         usage_payload: dict | None = None
         answered: list[str] = []
         first_token_at = 0.0
-        cached_text = _cache.get(cache_key) if cache_key else None
         yield sse("meta", {
             "model": model, "version": VERSION, "tier": tier, "intent": intent,
             "requestId": request_id,
@@ -992,7 +993,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
             "X-Request-Id": request_id,
-            "X-Cache": "MISS",
+            "X-Cache": "HIT" if cached_text else "MISS",
         },
     )
 
