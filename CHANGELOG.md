@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### Counting and wording
+
+- Counters moved out of `main.py` into `web/app/stats.py`; each model keeps its own
+  row of requests, failures, tokens and cost.
+- `/api/usage` also reports average TTFT (with its sample count), turns per tier,
+  and the traffic that never reached a model (`local`, `blocked`).
+- Cache misses are split into aged-out and evicted; the breaker reports a cooldown
+  countdown and a lifetime opening count, and writes one log line when it opens.
+- `errors.final_message` chooses between our sentence and the provider's: ours for
+  the key, the quota, the address and the length, the provider's for a rejected
+  parameter, and never JSON, HTML or a traceback. A network failure without a
+  status code no longer turns into a 500 with no message.
+- `DREAMAI_MODEL_BY_TIER` accepts a `default=` entry, tier lookup is
+  case-insensitive, and the effective table is printed at startup with a warning
+  for entries naming a model the site does not serve.
+
+### Local surfaces
+
+- The CLI and the desktop shell rate each question and pass a token budget to the
+  provider: light turns are capped at 768, deep turns get 1024 more than the
+  configured maximum, up to 8192.
+- `OpenAICompatProvider` forwards `max_tokens`; a provider written against the
+  older one-argument signature still works.
+
 ### Routing and money
 
 - Model can be chosen per question tier via `DREAMAI_MODEL_BY_TIER`; an unmapped
