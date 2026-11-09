@@ -55,6 +55,11 @@ class ResponseCache:
         self._items: OrderedDict[str, tuple[str, float]] = OrderedDict()
         self.hits = 0
         self.misses = 0
+        # A miss because nobody asked yet, a miss because the entry aged out and
+        # a capacity eviction mean different things; only the last two say the
+        # cache is too small or the TTL too short.
+        self.expired = 0
+        self.evictions = 0
 
     def get(self, key: str) -> str | None:
         entry = self._items.get(key)
@@ -65,6 +70,7 @@ class ResponseCache:
         if self._clock() >= expires_at:
             del self._items[key]
             self.misses += 1
+            self.expired += 1
             return None
         self._items.move_to_end(key)
         self.hits += 1
@@ -77,6 +83,7 @@ class ResponseCache:
         self._items.move_to_end(key)
         while len(self._items) > self.max_items:
             self._items.popitem(last=False)
+            self.evictions += 1
 
     def clear(self) -> None:
         self._items.clear()

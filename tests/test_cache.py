@@ -80,3 +80,30 @@ def test_empty_answer_is_not_cached():
     cache.put("k", "")
 
     assert len(cache) == 0
+
+
+def test_capacity_evictions_are_counted_separately_from_misses():
+    from app.cache import ResponseCache
+
+    cache = ResponseCache(max_items=2, ttl=60.0)
+    cache.put("a", "1")
+    cache.put("b", "2")
+    cache.put("c", "3")
+
+    assert cache.evictions == 1
+    assert cache.misses == 0
+    assert len(cache) == 2
+
+
+def test_an_expired_entry_is_a_miss_and_an_expiry():
+    from app.cache import ResponseCache
+
+    now = [0.0]
+    cache = ResponseCache(max_items=2, ttl=10.0, clock=lambda: now[0])
+    cache.put("a", "1")
+    now[0] = 11.0
+
+    assert cache.get("a") is None
+    assert cache.expired == 1
+    assert cache.misses == 1
+    assert cache.evictions == 0
