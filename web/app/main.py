@@ -628,6 +628,7 @@ def _local_chat(text: str, *, extra_headers: dict[str, str] | None = None) -> St
 
     async def stream() -> AsyncIterator[bytes]:
         started = time.monotonic()
+        _stats.record_local()
         yield sse("meta", {"model": "local", "version": VERSION})
         yield sse("delta", {"t": text})
         yield sse(

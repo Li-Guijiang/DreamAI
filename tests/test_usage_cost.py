@@ -56,3 +56,18 @@ def test_usage_by_model_rows_carry_cost_and_tokens(client):
     assert row["costUsd"] == pytest.approx(0.0004)
     assert body["byTier"]["light"] == 1
     assert body["ttftSamples"] == 1
+
+
+def test_an_identity_answer_is_counted_as_local_traffic(client):
+    import importlib
+
+    main = importlib.import_module("app.main")
+    before = main._stats.local_answers
+
+    response = client.post(
+        "/api/chat", json={"messages": [{"role": "user", "content": "你的主人是谁"}]}
+    )
+
+    assert response.status_code == 200
+    assert main._stats.local_answers == before + 1
+    assert main._stats.snapshot()["byModel"]["local"]["requests"] >= 1
