@@ -31,4 +31,8 @@ def user_message(status: int, label: str = "") -> str:
         return "上游服务暂时不可用，稍后重试；已经生成的回答不会重复计费。"
     if status == 408:
         return "等上游响应超时了，请重试或把问题缩短一些。"
+    if status == 404:
+        # A 404 from an OpenAI-compatible endpoint is almost never a missing
+        # page: it is a wrong path (a base_url without /v1) or a wrong model.
+        return f"{who}没有找到这个接口或模型：请检查 base_url 是否需要以 /v1 结尾，以及模型名是否拼写正确。"
     return "请求没有成功，请稍后重试。"

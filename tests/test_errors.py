@@ -41,3 +41,13 @@ def test_server_error_does_not_blame_the_user():
 
     assert "上游" in message
     assert "Key" not in message
+
+
+def test_not_found_points_at_the_address_and_the_model_name():
+    message = user_message(404, "DeepSeek")
+
+    assert "DeepSeek" in message
+    assert "模型" in message
+    # The two mistakes that actually produce a 404 here.
+    assert "/v1" in message
+    assert "稍后重试" not in message
