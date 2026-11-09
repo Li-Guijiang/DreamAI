@@ -16,6 +16,7 @@ All project documentation lives here. The repository ships three runnable forms 
 | [GUIDE.md](./GUIDE.md) | Guided walkthrough: environment setup, every command, common errors | First-time users |
 | [SETUP.md](./SETUP.md) | Local installation (Windows first, macOS / Linux notes) | Users running it locally |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Layers, module responsibilities, both data flows | Developers reading or extending the code |
+| [KNOWLEDGE-MAP.md](./KNOWLEDGE-MAP.md) | The networking, protocol and engineering knowledge under the code, with one experiment per topic | Anyone who wants to understand why it works, not just what it does |
 | [ROADMAP.md](./ROADMAP.md) | Phase plan, task lists, acceptance criteria | Anyone tracking progress |
 | [CONTAINER.md](./CONTAINER.md) | Image path, tag scheme, triggers, and how to verify an image is current | Anyone pulling the container |
 | [adr/](./adr/) | Architecture Decision Records: what was decided, why, what was rejected | Developers who need the trade-offs |
