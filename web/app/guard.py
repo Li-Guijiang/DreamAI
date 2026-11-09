@@ -58,6 +58,12 @@ class CircuitBreaker:
         self._probe_in_flight = True
         return True
 
+    def remaining(self) -> float:
+        """Seconds until the breaker will let a probe through; 0 while it is not open."""
+        if self._state != OPEN:
+            return 0.0
+        return max(0.0, self.cooldown - (self._clock() - self._opened_at))
+
     def record_success(self) -> None:
         self._failures = 0
         self._state = CLOSED

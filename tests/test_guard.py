@@ -5,6 +5,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "web"))
 
 from app.guard import CLOSED, HALF_OPEN, OPEN, CircuitBreaker  # noqa: E402
@@ -100,3 +102,19 @@ def test_probe_failure_reopens_with_a_fresh_cooldown():
     clock.advance(2)
     assert breaker.state == HALF_OPEN
     assert clock.t > opened_at
+
+
+def test_an_open_breaker_counts_down_to_its_probe():
+    now = [0.0]
+    breaker = CircuitBreaker(threshold=1, cooldown=30.0, clock=lambda: now[0])
+    breaker.record_failure()
+
+    assert breaker.remaining() == pytest.approx(30.0)
+    now[0] = 12.0
+    assert breaker.remaining() == pytest.approx(18.0)
+    now[0] = 45.0
+    assert breaker.remaining() == 0.0
+
+
+def test_a_closed_breaker_has_nothing_to_wait_for():
+    assert CircuitBreaker().remaining() == 0.0
