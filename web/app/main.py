@@ -982,13 +982,19 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     "elapsed": round(time.monotonic() - started, 2),
                     "model": model,
                 }
-                if usage_payload:
-                    done_payload["usage"] = usage_payload
-                    cost = estimate_cost(
+                # One estimate, used by the reply, the counters and the log: three
+                # computations could disagree after a price change.
+                cost = (
+                    estimate_cost(
                         model,
                         int(usage_payload.get("prompt_tokens") or 0),
                         int(usage_payload.get("completion_tokens") or 0),
                     )
+                    if usage_payload
+                    else None
+                )
+                if usage_payload:
+                    done_payload["usage"] = usage_payload
                     if cost is None:
                         _stats.known_cost = False
                     else:
@@ -999,11 +1005,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     ttft=(first_token_at - started) if first_token_at else 0.0,
                     total=time.monotonic() - started, chars=produced, model=model,
                     cache="miss",
-                    cost=estimate_cost(
-                        model,
-                        int((usage_payload or {}).get("prompt_tokens") or 0),
-                        int((usage_payload or {}).get("completion_tokens") or 0),
-                    ) if usage_payload else None,
+                    cost=cost,
                 ))
                 yield sse("done", done_payload)
 
