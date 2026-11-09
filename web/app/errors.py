@@ -14,6 +14,9 @@ RETRYABLE_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504})
 
 BYOK_STATUS = frozenset({401, 402, 403})
 
+# The request itself is the problem: no retry will fix it, and the visitor can.
+PAYLOAD_STATUS = frozenset({400, 413, 422})
+
 
 def is_retryable(status: int) -> bool:
     """Transient failures worth one more attempt before giving up."""
@@ -31,6 +34,13 @@ def user_message(status: int, label: str = "") -> str:
         return "上游服务暂时不可用，稍后重试；已经生成的回答不会重复计费。"
     if status == 408:
         return "等上游响应超时了，请重试或把问题缩短一些。"
+    if status == 413:
+        return "这次请求的内容太长了，上游拒绝接收：请缩短问题，或开启一个新对话。"
+    if status in PAYLOAD_STATUS:
+        return (
+            "上游认为请求的格式不对：多半是这个模型不支持某个参数，"
+            "或 max_tokens 超过了它的上限。"
+        )
     if status == 404:
         # A 404 from an OpenAI-compatible endpoint is almost never a missing
         # page: it is a wrong path (a base_url without /v1) or a wrong model.

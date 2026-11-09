@@ -51,3 +51,24 @@ def test_not_found_points_at_the_address_and_the_model_name():
     # The two mistakes that actually produce a 404 here.
     assert "/v1" in message
     assert "稍后重试" not in message
+
+
+def test_oversized_input_talks_about_length_not_about_keys():
+    message = user_message(413)
+
+    assert "长" in message
+    assert "Key" not in message
+    assert "稍后重试" not in message
+
+
+def test_a_rejected_payload_names_the_parameters_too():
+    for status in (400, 422):
+        message = user_message(status)
+        assert "参数" in message or "max_tokens" in message, status
+
+
+def test_a_payload_problem_is_never_worth_retrying():
+    from app.errors import PAYLOAD_STATUS
+
+    assert not (PAYLOAD_STATUS & RETRYABLE_STATUS)
+    assert not (PAYLOAD_STATUS & BYOK_STATUS)
