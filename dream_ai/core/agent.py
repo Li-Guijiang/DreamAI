@@ -23,7 +23,7 @@ from ..insight import classify_intent, intent_prompt, is_repeat, trim_long_input
 from ..memory import InMemorySessionMemory, PreferenceMemory
 from ..memory.base import Memory
 from ..providers.base import LLMProvider
-from ..quality import close_fences, dedupe_sentences, looks_empty
+from ..quality import classify_tier, close_fences, dedupe_sentences, looks_empty, reply_budget
 from ..tools import ToolCall, ToolRegistry, parse_tool_calls
 from .conversation import Conversation
 
@@ -42,6 +42,7 @@ class DreamAIAgent:
         autonomy_enabled: bool = True,
         autonomy_max_steps: int = 10,
         autonomy_max_retries: int = 2,
+        max_tokens: int = 4096,
     ) -> None:
         self._provider = provider
         self._preferences = preferences or PreferenceMemory()
@@ -60,6 +61,7 @@ class DreamAIAgent:
         self._autonomy_enabled = autonomy_enabled
         self._autonomy_max_steps = max(1, int(autonomy_max_steps))
         self._autonomy_max_retries = max(0, int(autonomy_max_retries))
+        self._max_tokens = max(1, int(max_tokens))
         self._last_execution: ExecutionResult | None = None
 
     @property
@@ -181,7 +183,8 @@ class DreamAIAgent:
             joined = "\n".join(hints)
             history[0] = {**history[0], "content": history[0]["content"] + "\n\n" + joined}
 
-        reply = self._provider.generate(history)
+        budget = reply_budget(classify_tier(user_text), self._max_tokens)
+        reply = self._generate(history, budget)
         reply = strip_filler(reply)
         reply = dedupe_sentences(close_fences(limit_emoji(strip_filler(reply))))
         if looks_empty(reply):
@@ -189,7 +192,9 @@ class DreamAIAgent:
             nudge = [
                 {"role": "system", "content": "上一次没有产出可用的回答，请直接回答用户的问题。"}
             ]
-            reply = strip_filler(self._provider.generate([*self._conversation.history(), *nudge]))
+            reply = strip_filler(
+                self._generate([*self._conversation.history(), *nudge], budget)
+            )
         if looks_empty(reply):
             reply = "这次没有生成有效内容，请重试或把问题说得更具体一些。"
         if self._public_surface:
@@ -283,6 +288,20 @@ class DreamAIAgent:
         return result
 
     # --- Internals ---------------------------------------------------------
+
+    def _generate(self, messages: list[dict[str, str]], budget: int) -> str:
+        """Ask the provider for a reply of at most ``budget`` tokens.
+
+        A provider written against the older one-argument signature is still
+        usable: only the TypeError that names the new keyword is swallowed, so a
+        genuine failure inside generate() is not mistaken for an API mismatch.
+        """
+        try:
+            return self._provider.generate(messages, max_tokens=budget)
+        except TypeError as exc:
+            if "max_tokens" not in str(exc):
+                raise
+            return self._provider.generate(messages)
 
     def _sync_system_prompt(self) -> None:
         """Push the effective system prompt into the memory backend."""
