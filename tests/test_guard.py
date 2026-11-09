@@ -118,3 +118,29 @@ def test_an_open_breaker_counts_down_to_its_probe():
 
 def test_a_closed_breaker_has_nothing_to_wait_for():
     assert CircuitBreaker().remaining() == 0.0
+
+
+def test_opening_the_breaker_is_counted_each_time():
+    now = [0.0]
+    breaker = CircuitBreaker(threshold=1, cooldown=10.0, clock=lambda: now[0])
+
+    breaker.record_failure()
+    assert breaker.stats()["openings"] == 1
+
+    now[0] = 11.0
+    assert breaker.allow() is True
+    breaker.record_failure()
+    assert breaker.stats()["openings"] == 2
+
+
+def test_the_snapshot_reads_the_breaker_without_touching_it():
+    now = [0.0]
+    breaker = CircuitBreaker(threshold=2, cooldown=30.0, clock=lambda: now[0])
+    breaker.record_failure()
+
+    snapshot = breaker.stats()
+
+    assert snapshot["state"] == CLOSED
+    assert snapshot["failures"] == 1
+    assert snapshot["retryIn"] == 0.0
+    assert snapshot["threshold"] == 2

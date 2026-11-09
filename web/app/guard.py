@@ -38,6 +38,9 @@ class CircuitBreaker:
         self._state = CLOSED
         self._opened_at = 0.0
         self._probe_in_flight = False
+        # Counted for the life of the process: a breaker that has opened nine
+        # times today is a different situation from one that opened once.
+        self.openings = 0
 
     @property
     def state(self) -> str:
@@ -75,6 +78,18 @@ class CircuitBreaker:
         if self._state == HALF_OPEN or self._failures >= self.threshold:
             self._state = OPEN
             self._opened_at = self._clock()
+            self.openings += 1
+
+    def stats(self) -> dict:
+        """Everything an operator needs to read the breaker's current mood."""
+        return {
+            "state": self.state,
+            "threshold": self.threshold,
+            "cooldown": self.cooldown,
+            "failures": self._failures,
+            "retryIn": round(self.remaining(), 1),
+            "openings": self.openings,
+        }
 
     def reset(self) -> None:
         self._failures = 0
