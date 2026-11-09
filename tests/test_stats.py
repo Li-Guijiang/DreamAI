@@ -136,3 +136,26 @@ def test_a_turn_without_a_tier_is_not_filed_under_empty():
     stats.record_turn("local")
 
     assert stats.snapshot()["byTier"] == {}
+
+
+def test_local_answers_are_counted_but_carry_no_tokens():
+    stats = UsageStats()
+    stats.record_local()
+
+    snapshot = stats.snapshot()
+
+    assert snapshot["local"] == 1
+    assert snapshot["requests"] == 1
+    assert snapshot["promptTokens"] == 0
+    assert snapshot["byModel"]["local"]["requests"] == 1
+
+
+def test_a_blocked_turn_is_a_request_and_a_failure():
+    stats = UsageStats()
+    stats.record_blocked()
+
+    snapshot = stats.snapshot()
+
+    assert snapshot["blocked"] == 1
+    assert snapshot["requests"] == 1
+    assert snapshot["failures"] == 1

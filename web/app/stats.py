@@ -36,6 +36,10 @@ class UsageStats:
         # Tier is the only thing that explains a model mix: light turns should
         # far outnumber deep ones, or the router is not earning its keep.
         self._by_tier: dict[str, int] = {}
+        # Two kinds of turn that never reach a model and would otherwise look
+        # like traffic: answered locally, and refused by the breaker.
+        self.local_answers = 0
+        self.blocked = 0
 
     def _slot(self, model: str) -> dict[str, float]:
         return self._by_model.setdefault(
@@ -63,6 +67,20 @@ class UsageStats:
         if ttft > 0:
             self._ttft_total += float(ttft)
             self._ttft_count += 1
+
+    def record_local(self, tier: str = "") -> None:
+        """Count a turn answered without calling a model."""
+        self.local_answers += 1
+        self.requests += 1
+        if tier:
+            self._by_tier[tier] = self._by_tier.get(tier, 0) + 1
+        self._slot("local")["requests"] += 1
+
+    def record_blocked(self) -> None:
+        """Count a turn the breaker refused before any work was done."""
+        self.blocked += 1
+        self.requests += 1
+        self.failures += 1
 
     def avg_ttft(self) -> float:
         """Seconds to first token, averaged over the turns that produced one.
@@ -108,6 +126,8 @@ class UsageStats:
             "costKnown": self.known_cost,
             "avgTtft": round(self.avg_ttft(), 2),
             "ttftSamples": self._ttft_count,
+            "local": self.local_answers,
+            "blocked": self.blocked,
             "byTier": dict(self._by_tier),
             "byModel": {
                 model: {
