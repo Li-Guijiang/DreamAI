@@ -8,7 +8,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "web"))
 
 import pytest
-from app.errors import BYOK_STATUS, RETRYABLE_STATUS, is_retryable, user_message  # noqa: E402
+from app.errors import (  # noqa: E402
+    BYOK_STATUS,
+    RETRYABLE_STATUS,
+    final_message,
+    is_retryable,
+    usable_detail,
+    user_message,
+)
 
 
 @pytest.mark.parametrize("status", [408, 425, 429, 500, 502, 503, 504])
@@ -72,3 +79,36 @@ def test_a_payload_problem_is_never_worth_retrying():
 
     assert not (PAYLOAD_STATUS & RETRYABLE_STATUS)
     assert not (PAYLOAD_STATUS & BYOK_STATUS)
+
+
+def test_a_key_failure_hides_whatever_the_provider_wrote():
+    message = final_message(401, "OpenAI", "Incorrect API key provided: sk-abc")
+
+    assert "OpenAI" in message
+    assert "sk-abc" not in message
+
+
+def test_a_parameter_detail_is_kept_when_the_provider_explains_it():
+    detail = "maximum context length is 8192 tokens, you sent 9000"
+
+    assert final_message(400, "DeepSeek", detail) == detail
+
+
+def test_json_and_html_are_never_shown_to_a_visitor():
+    assert not usable_detail('{"error": {"message": "bad"}}')
+    assert not usable_detail("<html><body>502 Bad Gateway</body></html>")
+    assert final_message(400, "x", '{"error": "oops"}') == user_message(400, "x")
+
+
+def test_a_long_detail_is_replaced_by_our_sentence():
+    assert final_message(422, "", "x" * 400) == user_message(422)
+
+
+def test_a_request_that_never_arrived_keeps_its_own_explanation():
+    message = final_message(None, "DeepSeek", "无法连接模型服务，请稍后重试。")
+
+    assert "无法连接" in message
+
+
+def test_a_missing_status_with_nothing_to_say_still_answers():
+    assert final_message(None, "DeepSeek", "") == "请求没有成功，请稍后重试。"
