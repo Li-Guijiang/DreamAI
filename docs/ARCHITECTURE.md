@@ -147,9 +147,34 @@ POST /api/chat
 
 - `pricing.py` 按模型单价（美元/百万 token）估算；未知模型返回 `None`，
   `/api/usage` 用 `costKnown=false` 明说“有模型没价”；
-- 每轮一行日志：`chat done id=req_xxx tier=deep intent=error ttft=0.84s total=6.21s chars=812 model=... cost=$0.0012`；
+- 每轮一行日志：`chat done id=req_xxx tier=deep intent=error ttft=0.84s total=6.21s chars=812 model=... cache=miss cost=$0.0012`；
 - `X-Request-Id` 与事件体同值，用户截图即可定位日志；
 - `/api/health` 暴露熔断状态与缓存计数，`/api/usage` 暴露 token、成本、命中率。
+
+### 计数落在哪里
+
+计数不再散在 `main.py` 的字符串键里，而是集中在 `web/app/stats.py`：
+
+| 方法 | 何时调用 | 记的是什么 |
+|---|---|---|
+| `record_turn` | 每轮结束（含失败） | 请求数、失败数、按模型分行、按难度分级、首 token 时间 |
+| `record_usage` | 上游回了 usage 字段 | 提示/补全 token、成本；无价模型清 `costKnown` |
+| `record_local` | 身份问答、主人指令 | 不经过模型的回答，另记 `local` 行 |
+| `record_blocked` | 熔断拒绝 | 一次请求 + 一次失败，单列 `blocked` |
+
+`snapshot()` 是唯一对外形状，两个状态接口共用它，所以加一个数字只改一处。
+
+几个刻意的选择：
+
+1. **按模型分行**带 token 与成本，账单可以解释“这 900 个 token 是推理模型花的”；
+2. **平均 TTFT 只统计真的产出首 token 的轮次**，缓存命中与早期失败不计入，
+   否则慢下来的那一周看起来很快；样本数 `ttftSamples` 一并给出，避免用一条样本当趋势；
+3. **缓存未命中拆成三种**：从没问过、过期、被容量挤掉（`expired` / `evictions`），
+   只有后两种说明 TTL 太短或容量太小；
+4. **熔断的 `openings` 是进程级累计**，失败计数会被下一次成功清零，看不出“反复抖”。
+
+`/api/usage` 因此回答四个问题：用了多少（requests）、花了多少（costUsd / byModel）、
+快不快（avgTtft）、多少没走模型（local / blocked）。
 
 ## 模型接入的分层
 
