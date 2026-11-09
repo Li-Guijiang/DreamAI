@@ -45,6 +45,7 @@ from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_mod
 from .quality import compress_history, dedupe_messages, needs_context, plan_generation, respect_cap
 from .routing import choose_model
 from .safety import detect_injection, harden_system_prompt
+from .stats import UsageStats
 from .telemetry import format_turn_log
 
 logging.basicConfig(
@@ -121,16 +122,7 @@ _daily_state = {"date": time.strftime("%Y-%m-%d"), "count": 0}
 _breaker = CircuitBreaker(threshold=settings.breaker_threshold, cooldown=settings.breaker_cooldown)
 _cache = ResponseCache(max_items=settings.cache_max_items, ttl=settings.cache_ttl)
 
-_stats = {
-    "requests": 0,
-    "failures": 0,
-    "prompt_tokens": 0,
-    "completion_tokens": 0,
-    "cost_usd": 0.0,
-    "known_cost": True,
-    "by_model": defaultdict(int),
-    "started_at": STARTED_AT,
-}
+_stats = UsageStats(started_at=STARTED_AT)
 
 
 async def consume_daily_budget() -> bool:
@@ -585,6 +577,7 @@ async def health() -> JSONResponse:
 
 @app.get("/api/usage")
 async def usage() -> JSONResponse:
+    totals = _stats.snapshot()
     return JSONResponse(
         {
             "uptime": int(time.time() - STARTED_AT),
@@ -602,16 +595,16 @@ async def usage() -> JSONResponse:
                 "misses": _cache.misses,
             },
             "version": VERSION,
-            "requests": _stats["requests"],
-            "failures": _stats["failures"],
-            "promptTokens": _stats["prompt_tokens"],
-            "completionTokens": _stats["completion_tokens"],
-            "costUsd": round(_stats["cost_usd"], 4),
-            "costKnown": _stats["known_cost"],
+            "requests": totals["requests"],
+            "failures": totals["failures"],
+            "promptTokens": totals["promptTokens"],
+            "completionTokens": totals["completionTokens"],
+            "costUsd": totals["costUsd"],
+            "costKnown": totals["costKnown"],
             "cacheHitRate": round(
                 _cache.hits / max(1, _cache.hits + _cache.misses), 3
             ),
-            "byModel": dict(_stats["by_model"]),
+            "byModel": totals["byModel"],
             "daily": _daily_state,
             "dailyLimit": settings.daily_limit,
         }
@@ -863,7 +856,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 "tier": tier, "intent": intent, "requestId": request_id, "chars": len(cached_text),
                 "elapsed": 0.0, "model": model, "cache": "hit",
             })
-            _stats["requests"] += 1
+            _stats.record_turn(model, tier=tier)
             logger.info(
                 "chat cache id=%s tier=%s intent=%s chars=%s",
                 request_id, tier, intent, len(cached_text),
@@ -871,8 +864,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             return
         if not _breaker.allow():
             logger.warning("circuit open, rejecting ip=%s id=%s", ip, request_id)
-            _stats["requests"] += 1
-            _stats["failures"] += 1
+            _stats.record_blocked()
             yield sse("error", {"message": "上游连续失败，已暂停约 30 秒，请稍后再试。"})
             yield sse("done", {"tier": tier, "intent": intent, "chars": 0, "elapsed": 0.0, "model": model, "blocked": True})
             return
@@ -968,13 +960,18 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             logger.exception("unexpected chat error ip=%s", ip)
             yield sse("error", {"message": "服务出现了一点意外，请稍后重试。"})
         finally:
-            _stats["requests"] += 1
-            _stats["by_model"][model] += 1
-            if failed:
-                _stats["failures"] += 1
+            _stats.record_turn(
+                model,
+                tier=tier,
+                failed=failed,
+                ttft=(first_token_at - started) if first_token_at else 0.0,
+            )
             if isinstance(usage_payload, dict):
-                _stats["prompt_tokens"] += int(usage_payload.get("prompt_tokens") or 0)
-                _stats["completion_tokens"] += int(usage_payload.get("completion_tokens") or 0)
+                _stats.record_usage(
+                    model,
+                    int(usage_payload.get("prompt_tokens") or 0),
+                    int(usage_payload.get("completion_tokens") or 0),
+                )
             if not failed and not cancelled:
                 _breaker.record_success()
                 if cache_key and answered:
@@ -995,9 +992,9 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                         int(usage_payload.get("completion_tokens") or 0),
                     )
                     if cost is None:
-                        _stats["known_cost"] = False
+                        _stats.known_cost = False
                     else:
-                        _stats["cost_usd"] += cost
+                        _stats.cost_usd += cost
                         done_payload["cost"] = {"usd": cost, "text": format_cost(cost)}
                 logger.info(format_turn_log(
                     request_id, tier=tier, intent=intent,
