@@ -43,7 +43,7 @@ from .insight import (
 from .pricing import estimate_cost, format_cost
 from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
 from .quality import compress_history, dedupe_messages, needs_context, plan_generation, respect_cap
-from .routing import choose_model
+from .routing import choose_model, describe_routing, unknown_targets
 from .safety import detect_injection, harden_system_prompt
 from .stats import UsageStats
 from .telemetry import format_turn_log
@@ -71,6 +71,13 @@ async def lifespan(app: FastAPI):
     )
     if not settings.free_configured:
         logger.warning("DREAMAI_FREE_API_KEY is empty — free chat returns 503 until it is set.")
+    logger.info(describe_routing(settings.model_by_tier, settings.free_model))
+    unknown = unknown_targets(settings.model_by_tier, {m.id for m in settings.models})
+    if unknown:
+        logger.warning(
+            "tier map names models this site does not serve: %s",
+            ", ".join(f"{tier}={model}" for tier, model in sorted(unknown.items())),
+        )
     yield
     await llm.close_client()
 
