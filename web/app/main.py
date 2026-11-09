@@ -541,6 +541,7 @@ async def read_link(request: Request, url: str = "") -> JSONResponse:
 
 @app.get("/api/health")
 async def health() -> JSONResponse:
+    breaker = _breaker.stats()
     return JSONResponse(
         {
             "ok": True,
@@ -550,12 +551,8 @@ async def health() -> JSONResponse:
             "byok": list(settings.byok_ids),
             "version": VERSION,
             "uptime": int(time.time() - STARTED_AT),
-            "upstream": _breaker.state,
-            "breaker": {
-                "state": _breaker.state,
-                "threshold": _breaker.threshold,
-                "cooldown": _breaker.cooldown,
-            },
+            "upstream": breaker["state"],
+            "breaker": breaker,
             "cache": _cache.stats(),
             "dailyLimit": settings.daily_limit,
             "freeRemaining": max(0, settings.daily_limit - _daily_state["count"])
@@ -573,15 +570,12 @@ async def health() -> JSONResponse:
 async def usage() -> JSONResponse:
     totals = _stats.snapshot()
     cache = _cache.stats()
+    breaker = _breaker.stats()
     return JSONResponse(
         {
             "uptime": int(time.time() - STARTED_AT),
-            "upstream": _breaker.state,
-            "breaker": {
-                "state": _breaker.state,
-                "threshold": _breaker.threshold,
-                "cooldown": _breaker.cooldown,
-            },
+            "upstream": breaker["state"],
+            "breaker": breaker,
             "cache": cache,
             "version": VERSION,
             "requests": totals["requests"],
