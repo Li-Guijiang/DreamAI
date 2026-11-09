@@ -67,8 +67,15 @@ def test_cost_is_appended_only_when_known():
 
 def test_the_cache_outcome_sits_between_the_numbers_and_the_cost():
     line = format_turn_log(
-        "req_1", tier="light", intent="chat", ttft=0.1, total=0.2, chars=10,
-        model="m", cost=0.001, cache="hit",
+        "req_1",
+        tier="light",
+        intent="chat",
+        ttft=0.1,
+        total=0.2,
+        chars=10,
+        model="m",
+        cost=0.001,
+        cache="hit",
     )
 
     assert "cache=hit" in line
@@ -86,9 +93,7 @@ def test_a_turn_without_cache_or_cost_ends_at_the_model():
 def test_the_breaker_line_reports_the_numbers_that_explain_it():
     from app.telemetry import format_breaker_log
 
-    line = format_breaker_log(
-        {"state": "open", "failures": 3, "openings": 1, "cooldown": 30.0}
-    )
+    line = format_breaker_log({"state": "open", "failures": 3, "openings": 1, "cooldown": 30.0})
 
     assert line.startswith("breaker open")
     assert "failures=3" in line
