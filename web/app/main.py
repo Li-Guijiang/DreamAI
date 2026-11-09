@@ -604,7 +604,12 @@ async def usage() -> JSONResponse:
             "cacheHitRate": round(
                 _cache.hits / max(1, _cache.hits + _cache.misses), 3
             ),
+            "avgTtft": totals["avgTtft"],
+            "ttftSamples": totals["ttftSamples"],
+            "byTier": totals["byTier"],
             "byModel": totals["byModel"],
+            "local": totals["local"],
+            "blocked": totals["blocked"],
             "daily": _daily_state,
             "dailyLimit": settings.daily_limit,
         }

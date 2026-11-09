@@ -28,3 +28,31 @@ def test_usage_carries_cost_and_cache_fields(client):
     assert isinstance(body["costKnown"], bool)
     assert 0.0 <= body["cacheHitRate"] <= 1.0
     assert body["promptTokens"] >= 0
+
+
+def test_usage_reports_latency_tier_and_local_traffic(client):
+    body = client.get("/api/usage").json()
+
+    assert body["avgTtft"] >= 0.0
+    assert body["ttftSamples"] >= 0
+    assert isinstance(body["byTier"], dict)
+    assert body["local"] >= 0
+    assert body["blocked"] >= 0
+
+
+def test_usage_by_model_rows_carry_cost_and_tokens(client):
+    import importlib
+
+    main = importlib.import_module("app.main")
+    main._stats.record_turn("probe-model", tier="light", ttft=0.5)
+    main._stats.record_usage("probe-model", 12, 8, 0.0004)
+
+    body = client.get("/api/usage").json()
+    row = body["byModel"]["probe-model"]
+
+    assert row["requests"] == 1
+    assert row["promptTokens"] == 12
+    assert row["completionTokens"] == 8
+    assert row["costUsd"] == pytest.approx(0.0004)
+    assert body["byTier"]["light"] == 1
+    assert body["ttftSamples"] == 1
