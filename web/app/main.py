@@ -556,13 +556,7 @@ async def health() -> JSONResponse:
                 "threshold": _breaker.threshold,
                 "cooldown": _breaker.cooldown,
             },
-            "cache": {
-                "items": len(_cache),
-                "capacity": _cache.max_items,
-                "ttl": _cache.ttl,
-                "hits": _cache.hits,
-                "misses": _cache.misses,
-            },
+            "cache": _cache.stats(),
             "dailyLimit": settings.daily_limit,
             "freeRemaining": max(0, settings.daily_limit - _daily_state["count"])
             if settings.daily_limit > 0
@@ -578,6 +572,7 @@ async def health() -> JSONResponse:
 @app.get("/api/usage")
 async def usage() -> JSONResponse:
     totals = _stats.snapshot()
+    cache = _cache.stats()
     return JSONResponse(
         {
             "uptime": int(time.time() - STARTED_AT),
@@ -587,13 +582,7 @@ async def usage() -> JSONResponse:
                 "threshold": _breaker.threshold,
                 "cooldown": _breaker.cooldown,
             },
-            "cache": {
-                "items": len(_cache),
-                "capacity": _cache.max_items,
-                "ttl": _cache.ttl,
-                "hits": _cache.hits,
-                "misses": _cache.misses,
-            },
+            "cache": cache,
             "version": VERSION,
             "requests": totals["requests"],
             "failures": totals["failures"],
@@ -601,9 +590,7 @@ async def usage() -> JSONResponse:
             "completionTokens": totals["completionTokens"],
             "costUsd": totals["costUsd"],
             "costKnown": totals["costKnown"],
-            "cacheHitRate": round(
-                _cache.hits / max(1, _cache.hits + _cache.misses), 3
-            ),
+            "cacheHitRate": cache["hitRate"],
             "avgTtft": totals["avgTtft"],
             "ttftSamples": totals["ttftSamples"],
             "byTier": totals["byTier"],
