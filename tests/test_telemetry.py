@@ -81,3 +81,22 @@ def test_a_turn_without_cache_or_cost_ends_at_the_model():
     )
 
     assert line.endswith("model=m")
+
+
+def test_the_breaker_line_reports_the_numbers_that_explain_it():
+    from app.telemetry import format_breaker_log
+
+    line = format_breaker_log(
+        {"state": "open", "failures": 3, "openings": 1, "cooldown": 30.0}
+    )
+
+    assert line.startswith("breaker open")
+    assert "failures=3" in line
+    assert "openings=1" in line
+    assert "cooldown=30.0s" in line
+
+
+def test_the_breaker_line_survives_an_empty_snapshot():
+    from app.telemetry import format_breaker_log
+
+    assert "failures=0" in format_breaker_log({})

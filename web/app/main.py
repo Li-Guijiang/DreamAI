@@ -46,7 +46,7 @@ from .quality import compress_history, dedupe_messages, needs_context, plan_gene
 from .routing import choose_model, describe_routing, unknown_targets
 from .safety import detect_injection, harden_system_prompt
 from .stats import UsageStats
-from .telemetry import format_turn_log
+from .telemetry import format_breaker_log, format_turn_log
 
 logging.basicConfig(
     level=logging.INFO,
@@ -934,7 +934,10 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     pump.cancel()
         except llm.LLMError as exc:
             failed = True
+            openings_before = _breaker.openings
             _breaker.record_failure()
+            if _breaker.openings > openings_before:
+                logger.warning(format_breaker_log(_breaker.stats()))
             logger.info("chat failed ip=%s kind=%s: %s", ip, upstream.kind, exc)
             logger.info(format_turn_log(
                 request_id, tier=tier, intent=intent,

@@ -34,3 +34,12 @@ def format_turn_log(
         + (f" cache={cache}" if cache else "")
         + (f" cost=${cost:.4f}" if cost is not None else "")
     )
+
+
+def format_breaker_log(stats: dict) -> str:
+    """One line when the breaker opens: how bad, how often, and for how long."""
+    return (
+        f"breaker open state={stats.get('state', 'open')} "
+        f"failures={stats.get('failures', 0)} openings={stats.get('openings', 0)} "
+        f"cooldown={stats.get('cooldown', 0)}s"
+    )
