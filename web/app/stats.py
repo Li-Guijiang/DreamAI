@@ -29,6 +29,10 @@ class UsageStats:
         # lower bound and `/api/usage` has to say so instead of rounding to 0.
         self.known_cost = True
         self._by_model: dict[str, dict[str, float]] = {}
+        # TTFT is the number a visitor feels; total time is the number on the
+        # bill. They are not proportional, so both are kept.
+        self._ttft_total = 0.0
+        self._ttft_count = 0
 
     def _slot(self, model: str) -> dict[str, float]:
         return self._by_model.setdefault(
@@ -36,7 +40,7 @@ class UsageStats:
             {"requests": 0, "failures": 0, "promptTokens": 0, "completionTokens": 0, "costUsd": 0.0},
         )
 
-    def record_turn(self, model: str, *, failed: bool = False) -> None:
+    def record_turn(self, model: str, *, failed: bool = False, ttft: float = 0.0) -> None:
         """Count one finished turn, however it ended."""
         self.requests += 1
         slot = self._slot(model)
@@ -44,6 +48,19 @@ class UsageStats:
         if failed:
             self.failures += 1
             slot["failures"] += 1
+        if ttft > 0:
+            self._ttft_total += float(ttft)
+            self._ttft_count += 1
+
+    def avg_ttft(self) -> float:
+        """Seconds to first token, averaged over the turns that produced one.
+
+        A cache hit and an early failure both produce no first token, so they are
+        left out; including them as zero would flatter a slow service.
+        """
+        if not self._ttft_count:
+            return 0.0
+        return self._ttft_total / self._ttft_count
 
     def record_usage(
         self,
@@ -77,6 +94,8 @@ class UsageStats:
             "completionTokens": self.completion_tokens,
             "costUsd": round(self.cost_usd, 4),
             "costKnown": self.known_cost,
+            "avgTtft": round(self.avg_ttft(), 2),
+            "ttftSamples": self._ttft_count,
             "byModel": {
                 model: {
                     **slot,

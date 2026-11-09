@@ -94,3 +94,29 @@ def test_a_failed_turn_is_attributed_to_its_model():
     stats.record_turn("deep-model", failed=True)
 
     assert stats.snapshot()["byModel"]["deep-model"]["failures"] == 1
+
+
+def test_first_token_time_averages_over_the_turns_that_had_one():
+    stats = UsageStats()
+    stats.record_turn("deep-model", ttft=0.4)
+    stats.record_turn("deep-model", ttft=0.8)
+
+    assert stats.avg_ttft() == pytest.approx(0.6)
+    assert stats.snapshot()["avgTtft"] == pytest.approx(0.6)
+    assert stats.snapshot()["ttftSamples"] == 2
+
+
+def test_a_cache_hit_does_not_pull_the_average_down():
+    stats = UsageStats()
+    stats.record_turn("deep-model", ttft=1.0)
+    stats.record_turn("deep-model")
+
+    assert stats.avg_ttft() == pytest.approx(1.0)
+    assert stats.snapshot()["requests"] == 2
+
+
+def test_no_first_token_yet_means_no_average_rather_than_zero():
+    stats = UsageStats()
+
+    assert stats.avg_ttft() == 0.0
+    assert stats.snapshot()["ttftSamples"] == 0
