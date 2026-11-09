@@ -229,6 +229,9 @@ reaches the screen. Both are now explicit.
 | Cost | Per-turn USD from a dated price table; unknown models stay unknown | `pricing.py` |
 | Failover | Second upstream, used only before the first token | `DREAMAI_FALLBACK_*` |
 | Errors | One retry policy and one user-facing wording per status | `errors.py` |
+| Error wording | Key, quota, address and length problems get their own sentence; JSON never reaches the bubble | `final_message()` |
+| Local budget | The CLI and the desktop shell size a reply to the question too, via the same tiers | `dream_ai/quality.py` |
+| Usage | Requests, per-model tokens and cost, average TTFT, local and blocked traffic | `stats.py`, `/api/usage` |
 
 The same rules exist twice: `dream_ai/identity.py` for the CLI and the desktop
 shell, and `web/app/config.py` for the service, which can run without the Python
