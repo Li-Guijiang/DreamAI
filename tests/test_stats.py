@@ -120,3 +120,19 @@ def test_no_first_token_yet_means_no_average_rather_than_zero():
 
     assert stats.avg_ttft() == 0.0
     assert stats.snapshot()["ttftSamples"] == 0
+
+
+def test_turns_are_tallied_per_tier():
+    stats = UsageStats()
+    stats.record_turn("light-model", tier="light")
+    stats.record_turn("light-model", tier="light")
+    stats.record_turn("deep-model", tier="deep")
+
+    assert stats.snapshot()["byTier"] == {"light": 2, "deep": 1}
+
+
+def test_a_turn_without_a_tier_is_not_filed_under_empty():
+    stats = UsageStats()
+    stats.record_turn("local")
+
+    assert stats.snapshot()["byTier"] == {}

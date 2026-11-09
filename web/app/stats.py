@@ -33,6 +33,9 @@ class UsageStats:
         # bill. They are not proportional, so both are kept.
         self._ttft_total = 0.0
         self._ttft_count = 0
+        # Tier is the only thing that explains a model mix: light turns should
+        # far outnumber deep ones, or the router is not earning its keep.
+        self._by_tier: dict[str, int] = {}
 
     def _slot(self, model: str) -> dict[str, float]:
         return self._by_model.setdefault(
@@ -40,11 +43,20 @@ class UsageStats:
             {"requests": 0, "failures": 0, "promptTokens": 0, "completionTokens": 0, "costUsd": 0.0},
         )
 
-    def record_turn(self, model: str, *, failed: bool = False, ttft: float = 0.0) -> None:
+    def record_turn(
+        self,
+        model: str,
+        *,
+        tier: str = "",
+        failed: bool = False,
+        ttft: float = 0.0,
+    ) -> None:
         """Count one finished turn, however it ended."""
         self.requests += 1
         slot = self._slot(model)
         slot["requests"] += 1
+        if tier:
+            self._by_tier[tier] = self._by_tier.get(tier, 0) + 1
         if failed:
             self.failures += 1
             slot["failures"] += 1
@@ -96,6 +108,7 @@ class UsageStats:
             "costKnown": self.known_cost,
             "avgTtft": round(self.avg_ttft(), 2),
             "ttftSamples": self._ttft_count,
+            "byTier": dict(self._by_tier),
             "byModel": {
                 model: {
                     **slot,
