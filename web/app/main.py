@@ -995,6 +995,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     request_id, tier=tier, intent=intent,
                     ttft=(first_token_at - started) if first_token_at else 0.0,
                     total=time.monotonic() - started, chars=produced, model=model,
+                    cache="miss",
                     cost=estimate_cost(
                         model,
                         int((usage_payload or {}).get("prompt_tokens") or 0),

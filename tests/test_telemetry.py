@@ -63,3 +63,21 @@ def test_cost_is_appended_only_when_known():
 
     assert "cost=" not in without
     assert "cost=$0.0012" in with_cost
+
+
+def test_the_cache_outcome_sits_between_the_numbers_and_the_cost():
+    line = format_turn_log(
+        "req_1", tier="light", intent="chat", ttft=0.1, total=0.2, chars=10,
+        model="m", cost=0.001, cache="hit",
+    )
+
+    assert "cache=hit" in line
+    assert line.index("cache=hit") < line.index("cost=")
+
+
+def test_a_turn_without_cache_or_cost_ends_at_the_model():
+    line = format_turn_log(
+        "req_2", tier="deep", intent="design", ttft=1.2, total=4.0, chars=300, model="m"
+    )
+
+    assert line.endswith("model=m")

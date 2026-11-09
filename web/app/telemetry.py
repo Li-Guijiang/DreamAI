@@ -6,7 +6,9 @@ explain a slow or truncated answer.
 
     chat done id=req_1a2b3c4d tier=deep intent=error ttft=0.84s total=6.21s chars=812 model=...
 
-TTFT is the number users feel; total is the number that shows up in a bill.
+TTFT is the number users feel; total is the number that shows up in a bill. The
+optional tail fields are appended in a fixed order so two lines can be compared
+by eye without reading the labels.
 """
 
 from __future__ import annotations
@@ -23,10 +25,12 @@ def format_turn_log(
     model: str,
     outcome: str = "done",
     cost: float | None = None,
+    cache: str = "",
 ) -> str:
     """Render the single line written when a turn finishes."""
     return (
         f"chat {outcome} id={request_id} tier={tier} intent={intent} "
         f"ttft={ttft:.2f}s total={total:.2f}s chars={chars} model={model}"
+        + (f" cache={cache}" if cache else "")
         + (f" cost=${cost:.4f}" if cost is not None else "")
     )
