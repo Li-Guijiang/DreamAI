@@ -176,6 +176,24 @@ POST /api/chat
 `/api/usage` 因此回答四个问题：用了多少（requests）、花了多少（costUsd / byModel）、
 快不快（avgTtft）、多少没走模型（local / blocked）。
 
+## 本地端（CLI / 桌面）一轮的路径
+
+网页版是流式的，本地端不是：本地端拿到整段回答，因此能改写、能重试、能补代码块闭合。
+`dream_ai/core/agent.py` 的 `chat()` 顺序如下：
+
+1. `capture_preference` / `handle_owner_command`：`记住：…`、`【更新档案】…` 直接本地回答，不掉模型；
+2. `trim_long_input`：长粘贴只留头、关键行、尾，再进历史；
+3. `classify_tier` + `reply_budget`：判定难度并折算 token 预算（light 封顶 768，deep 在配置值上加 1024，
+   再封顶 8192），**预算相对配置值收放，不是替换配置**；
+4. `tier_hint` + `intent_prompt` + 重复检测：三条提示拼进 system prompt 末尾；
+5. 调 provider（带上 `max_tokens`）。老式一参签名仍可用：只吞掉指名 `max_tokens` 的 `TypeError`；
+6. 后处理：`strip_filler` → `limit_emoji` → `close_fences` → `dedupe_sentences`；
+7. `looks_empty`：空回答重试一次，仍空则明说“没生成有效内容”；
+8. `mask_contacts`（公开面）→ 写入会话历史。
+
+与网页版的差别值得记住：网页版在流式过程中无法改写已发出的字，所以它把力气花在
+“发之前”（提示词、预算、缓存、熔断）；本地端能改全文，所以把力气花在“收之后”（去套话、闭代码块、去重复）。
+
 ## 模型接入的分层
 
 ```
