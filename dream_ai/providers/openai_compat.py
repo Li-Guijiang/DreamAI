@@ -58,13 +58,19 @@ class OpenAICompatProvider(LLMProvider):
             payload_messages.insert(0, {"role": "system", "content": self._system_prompt})
 
         temperature = kwargs.get("temperature", self._temperature)
+        # A budget is optional: when the caller does not ask for one, the
+        # provider's own default applies and nothing is sent.
+        max_tokens = kwargs.get("max_tokens")
+        options: dict[str, Any] = {
+            "model": self._model,
+            "messages": payload_messages,
+            "temperature": temperature,
+        }
+        if isinstance(max_tokens, int) and max_tokens > 0:
+            options["max_tokens"] = max_tokens
 
         try:
-            response = client.chat.completions.create(
-                model=self._model,
-                messages=payload_messages,
-                temperature=temperature,
-            )
+            response = client.chat.completions.create(**options)
         except Exception as exc:  # normalise every client/network failure
             raise ProviderError(f"LLM request failed: {exc}") from exc
 
