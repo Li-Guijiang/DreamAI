@@ -28,26 +28,45 @@ class UsageStats:
         # A price list goes stale; when a model is not in it, the total is a
         # lower bound and `/api/usage` has to say so instead of rounding to 0.
         self.known_cost = True
+        self._by_model: dict[str, dict[str, float]] = {}
 
-    def record_turn(self, *, failed: bool = False) -> None:
+    def _slot(self, model: str) -> dict[str, float]:
+        return self._by_model.setdefault(
+            model or "unknown",
+            {"requests": 0, "failures": 0, "promptTokens": 0, "completionTokens": 0, "costUsd": 0.0},
+        )
+
+    def record_turn(self, model: str, *, failed: bool = False) -> None:
         """Count one finished turn, however it ended."""
         self.requests += 1
+        slot = self._slot(model)
+        slot["requests"] += 1
         if failed:
             self.failures += 1
+            slot["failures"] += 1
 
     def record_usage(
         self,
+        model: str,
         prompt_tokens: int,
         completion_tokens: int,
         cost: float | None = None,
     ) -> None:
         """Add the provider's own token counts for one turn."""
-        self.prompt_tokens += max(0, int(prompt_tokens or 0))
-        self.completion_tokens += max(0, int(completion_tokens or 0))
+        prompt_tokens = max(0, int(prompt_tokens or 0))
+        completion_tokens = max(0, int(completion_tokens or 0))
+        self.prompt_tokens += prompt_tokens
+        self.completion_tokens += completion_tokens
+        slot = self._slot(model)
+        slot["promptTokens"] += prompt_tokens
+        slot["completionTokens"] += completion_tokens
         if cost is None:
+            # The model has no price here, so its share stays at zero; the
+            # per-model table still shows the tokens that were spent.
             self.known_cost = False
         else:
             self.cost_usd += float(cost)
+            slot["costUsd"] += float(cost)
 
     def snapshot(self) -> dict:
         """The numbers `/api/usage` reports, in its own spelling."""
@@ -58,4 +77,11 @@ class UsageStats:
             "completionTokens": self.completion_tokens,
             "costUsd": round(self.cost_usd, 4),
             "costKnown": self.known_cost,
+            "byModel": {
+                model: {
+                    **slot,
+                    "costUsd": round(slot["costUsd"], 4),
+                }
+                for model, slot in self._by_model.items()
+            },
         }

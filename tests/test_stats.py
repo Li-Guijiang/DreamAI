@@ -24,8 +24,8 @@ def test_a_fresh_counter_reports_zeroes():
 
 def test_turns_and_failures_are_counted_separately():
     stats = UsageStats()
-    stats.record_turn()
-    stats.record_turn(failed=True)
+    stats.record_turn("deepseek-chat")
+    stats.record_turn("deepseek-chat", failed=True)
 
     assert stats.requests == 2
     assert stats.failures == 1
@@ -33,8 +33,8 @@ def test_turns_and_failures_are_counted_separately():
 
 def test_tokens_and_cost_accumulate_across_turns():
     stats = UsageStats()
-    stats.record_usage(120, 80, 0.0012)
-    stats.record_usage(30, 20, 0.0003)
+    stats.record_usage("deepseek-chat", 120, 80, 0.0012)
+    stats.record_usage("deepseek-chat", 30, 20, 0.0003)
 
     assert stats.prompt_tokens == 150
     assert stats.completion_tokens == 100
@@ -44,8 +44,8 @@ def test_tokens_and_cost_accumulate_across_turns():
 
 def test_an_unknown_price_marks_the_total_but_keeps_counting_tokens():
     stats = UsageStats()
-    stats.record_usage(10, 10, 0.002)
-    stats.record_usage(10, 10, None)
+    stats.record_usage("deepseek-chat", 10, 10, 0.002)
+    stats.record_usage("mystery-model", 10, 10, None)
 
     assert stats.prompt_tokens == 20
     assert stats.cost_usd == pytest.approx(0.002)
@@ -54,7 +54,43 @@ def test_an_unknown_price_marks_the_total_but_keeps_counting_tokens():
 
 def test_negative_token_counts_cannot_shrink_the_total():
     stats = UsageStats()
-    stats.record_usage(-5, -5, None)
+    stats.record_usage("deepseek-chat", -5, -5, None)
 
     assert stats.prompt_tokens == 0
     assert stats.completion_tokens == 0
+
+
+def test_each_model_keeps_its_own_row():
+    stats = UsageStats()
+    stats.record_turn("light-model")
+    stats.record_turn("deep-model")
+    stats.record_usage("light-model", 10, 5, 0.0001)
+    stats.record_usage("deep-model", 900, 700, 0.03)
+
+    rows = stats.snapshot()["byModel"]
+
+    assert rows["light-model"]["requests"] == 1
+    assert rows["light-model"]["promptTokens"] == 10
+    assert rows["deep-model"]["promptTokens"] == 900
+    assert rows["deep-model"]["costUsd"] == pytest.approx(0.03)
+    assert rows["light-model"]["costUsd"] == pytest.approx(0.0001)
+
+
+def test_an_unpriced_model_still_shows_its_tokens():
+    stats = UsageStats()
+    stats.record_turn("brand-new-model")
+    stats.record_usage("brand-new-model", 40, 60, None)
+
+    row = stats.snapshot()["byModel"]["brand-new-model"]
+
+    assert row["promptTokens"] == 40
+    assert row["completionTokens"] == 60
+    assert row["costUsd"] == 0.0
+    assert stats.known_cost is False
+
+
+def test_a_failed_turn_is_attributed_to_its_model():
+    stats = UsageStats()
+    stats.record_turn("deep-model", failed=True)
+
+    assert stats.snapshot()["byModel"]["deep-model"]["failures"] == 1
