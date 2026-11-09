@@ -107,3 +107,27 @@ def test_an_expired_entry_is_a_miss_and_an_expiry():
     assert cache.expired == 1
     assert cache.misses == 1
     assert cache.evictions == 0
+
+
+def test_the_snapshot_says_how_full_the_cache_is():
+    from app.cache import ResponseCache
+
+    cache = ResponseCache(max_items=2, ttl=60.0)
+    cache.put("a", "1")
+    cache.put("b", "2")
+    cache.put("a", "1")
+    cache.get("a")
+
+    snapshot = cache.stats()
+
+    assert snapshot["items"] == 2
+    assert snapshot["capacity"] == 2
+    assert snapshot["full"] is True
+    assert snapshot["hits"] == 1
+    assert snapshot["hitRate"] == 1.0
+
+
+def test_an_empty_cache_reports_a_zero_hit_rate_rather_than_dividing_by_zero():
+    from app.cache import ResponseCache
+
+    assert ResponseCache().stats()["hitRate"] == 0.0

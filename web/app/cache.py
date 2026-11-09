@@ -85,6 +85,22 @@ class ResponseCache:
             self._items.popitem(last=False)
             self.evictions += 1
 
+    def stats(self) -> dict:
+        """What both status endpoints report about the cache."""
+        asked = self.hits + self.misses
+        return {
+            "items": len(self._items),
+            "capacity": self.max_items,
+            "ttl": self.ttl,
+            "hits": self.hits,
+            "misses": self.misses,
+            "expired": self.expired,
+            "evictions": self.evictions,
+            # Share of answers that cost nothing; 0.0 before anything is asked.
+            "hitRate": round(self.hits / asked, 3) if asked else 0.0,
+            "full": len(self._items) >= self.max_items,
+        }
+
     def clear(self) -> None:
         self._items.clear()
 
