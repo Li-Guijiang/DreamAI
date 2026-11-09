@@ -17,3 +17,4 @@ New decisions should be added as numbered Markdown files, e.g. `0001-pluggable-p
 | [0007](./0007-serving-behaviour.md) | Serving behaviour: fail fast, repeat free, stay connected |
 | [0008](./0008-routing-cost-and-failover.md) | Routing, money and the second upstream |
 | [0009](./0009-usage-accounting.md) | Counting the service: what each number means |
+| [0010](./0010-local-reply-sizing.md) | Local reply sizing: the same question gets the same room |
