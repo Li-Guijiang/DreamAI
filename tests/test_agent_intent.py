@@ -32,12 +32,17 @@ def test_error_turn_adds_the_error_shape():
     assert system.startswith("BASE")
 
 
-def test_chat_turn_leaves_the_prompt_alone():
+def test_chat_turn_adds_no_intent_shape():
     agent, provider = make()
 
     agent.chat("你好")
 
-    assert provider.seen[-1][0]["content"] == "BASE"
+    system = provider.seen[-1][0]["content"]
+    # The tier hint is allowed - a greeting has a budget like any other turn -
+    # but no answer shape is imposed on a chat turn.
+    assert "现象→最可能的原因→修复步骤→如何验证" not in system
+    assert "重复问了同一件事" not in system
+    assert system.startswith("BASE")
 
 
 def test_repeat_turn_asks_for_a_different_angle():

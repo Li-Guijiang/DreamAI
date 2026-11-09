@@ -23,7 +23,14 @@ from ..insight import classify_intent, intent_prompt, is_repeat, trim_long_input
 from ..memory import InMemorySessionMemory, PreferenceMemory
 from ..memory.base import Memory
 from ..providers.base import LLMProvider
-from ..quality import classify_tier, close_fences, dedupe_sentences, looks_empty, reply_budget
+from ..quality import (
+    classify_tier,
+    close_fences,
+    dedupe_sentences,
+    looks_empty,
+    reply_budget,
+    tier_hint,
+)
 from ..tools import ToolCall, ToolRegistry, parse_tool_calls
 from .conversation import Conversation
 
@@ -62,6 +69,7 @@ class DreamAIAgent:
         self._autonomy_max_steps = max(1, int(autonomy_max_steps))
         self._autonomy_max_retries = max(0, int(autonomy_max_retries))
         self._max_tokens = max(1, int(max_tokens))
+        self._last_tier = ""
         self._last_execution: ExecutionResult | None = None
 
     @property
@@ -88,6 +96,11 @@ class DreamAIAgent:
     def tool_names(self) -> list[str]:
         """Names of the currently registered tools."""
         return self.tools.names()
+
+    @property
+    def last_tier(self) -> str:
+        """How the most recent question was rated: light, standard or deep."""
+        return self._last_tier
 
     @property
     def autonomy_enabled(self) -> bool:
@@ -172,7 +185,9 @@ class DreamAIAgent:
         self._conversation.add_user(trim_long_input(user_text))
         history = list(self._conversation.history())
 
-        hints = [intent_prompt(classify_intent(user_text))]
+        tier = classify_tier(user_text)
+        self._last_tier = tier
+        hints = [tier_hint(tier), intent_prompt(classify_intent(user_text))]
         user_turns = [m["content"] for m in history if m.get("role") == "user"]
         if len(user_turns) >= 2 and is_repeat(user_turns[-1], user_turns[-2]):
             hints.append(
@@ -183,7 +198,7 @@ class DreamAIAgent:
             joined = "\n".join(hints)
             history[0] = {**history[0], "content": history[0]["content"] + "\n\n" + joined}
 
-        budget = reply_budget(classify_tier(user_text), self._max_tokens)
+        budget = reply_budget(tier, self._max_tokens)
         reply = self._generate(history, budget)
         reply = strip_filler(reply)
         reply = dedupe_sentences(close_fences(limit_emoji(strip_filler(reply))))

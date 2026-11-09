@@ -81,3 +81,44 @@ def test_a_provider_with_the_old_signature_is_still_usable():
 def test_an_unrelated_type_error_is_not_swallowed():
     with pytest.raises(TypeError):
         _agent(BrokenProvider()).chat("在吗")
+
+
+def test_the_agent_remembers_how_the_last_question_was_rated():
+    agent = _agent(RecordingProvider())
+
+    agent.chat("在吗")
+    assert agent.last_tier == "light"
+
+    agent.chat("为什么要把缓存做成两层，架构上怎么权衡")
+    assert agent.last_tier == "deep"
+
+
+def test_a_deep_turn_tells_the_model_it_has_room_to_reason():
+    class Capture:
+        def __init__(self) -> None:
+            self.seen: list[str] = []
+
+        def generate(self, messages, **kwargs):  # noqa: ANN001, ANN003
+            self.seen.append(messages[0]["content"])
+            return "先给结论。"
+
+    provider = Capture()
+    _agent(provider).chat("为什么要把缓存做成两层，架构上怎么权衡")
+
+    assert "推演" in provider.seen[0]
+
+
+def test_a_light_turn_does_not_get_the_deep_instruction():
+    class Capture:
+        def __init__(self) -> None:
+            self.seen: list[str] = []
+
+        def generate(self, messages, **kwargs):  # noqa: ANN001, ANN003
+            self.seen.append(messages[0]["content"])
+            return "在的。"
+
+    provider = Capture()
+    _agent(provider).chat("在吗")
+
+    assert "一两句话" in provider.seen[0]
+    assert "推演" not in provider.seen[0]
