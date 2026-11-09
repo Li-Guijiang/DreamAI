@@ -58,3 +58,27 @@ def test_a_tier_is_matched_regardless_of_capitalisation():
     from app.routing import choose_model
 
     assert choose_model("DEEP", "site", {"deep": "expensive"}) == "expensive"
+
+
+def test_the_startup_line_names_the_default_and_the_overrides():
+    from app.routing import describe_routing
+
+    line = describe_routing({"light": "cheap", "deep": "expensive"}, "site")
+
+    assert "site" in line
+    assert "light=cheap" in line
+    assert "deep=expensive" in line
+
+
+def test_an_empty_map_says_every_tier_uses_one_model():
+    from app.routing import describe_routing
+
+    assert describe_routing({}, "site") == "routing: every tier uses site"
+
+
+def test_a_typo_in_the_map_is_found_before_it_is_used():
+    from app.routing import unknown_targets
+
+    mapping = {"light": "glm-4-flash", "deep": "deepsek-reasoner"}
+
+    assert unknown_targets(mapping, {"glm-4-flash"}) == {"deep": "deepsek-reasoner"}

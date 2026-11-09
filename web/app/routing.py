@@ -38,3 +38,20 @@ def choose_model(tier: str, default: str, mapping: dict[str, str]) -> str:
     key = (tier or "").strip().lower()
     chosen = mapping.get(key) or mapping.get(DEFAULT_KEY) or default
     return chosen or default
+
+
+def describe_routing(mapping: dict[str, str], default: str) -> str:
+    """One line for the startup log: what will actually be called, and for what."""
+    if not mapping:
+        return f"routing: every tier uses {default}"
+    pairs = " ".join(f"{tier}={model}" for tier, model in sorted(mapping.items()))
+    return f"routing: {default} unless overridden ({pairs})"
+
+
+def unknown_targets(mapping: dict[str, str], known: set[str]) -> dict[str, str]:
+    """Tier entries naming a model this site does not serve.
+
+    Caught at startup rather than at the first deep question: a typo in the map
+    only shows up when that tier is chosen, which may be hours later.
+    """
+    return {tier: model for tier, model in mapping.items() if model not in known}
