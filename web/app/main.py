@@ -958,12 +958,15 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             logger.exception("unexpected chat error ip=%s", ip)
             yield sse("error", {"message": "服务出现了一点意外，请稍后重试。"})
         finally:
-            _stats.record_turn(
-                model,
-                tier=tier,
-                failed=failed,
-                ttft=(first_token_at - started) if first_token_at else 0.0,
-            )
+            if cancelled:
+                _stats.record_cancelled(model)
+            else:
+                _stats.record_turn(
+                    model,
+                    tier=tier,
+                    failed=failed,
+                    ttft=(first_token_at - started) if first_token_at else 0.0,
+                )
             if isinstance(usage_payload, dict):
                 _stats.record_usage(
                     model,

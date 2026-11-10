@@ -159,3 +159,16 @@ def test_a_blocked_turn_is_a_request_and_a_failure():
     assert snapshot["blocked"] == 1
     assert snapshot["requests"] == 1
     assert snapshot["failures"] == 1
+
+
+def test_a_cancelled_turn_is_counted_without_blaming_the_model():
+    stats = UsageStats()
+    stats.record_cancelled("deepseek-chat")
+
+    snapshot = stats.snapshot()
+
+    assert snapshot["cancelled"] == 1
+    assert snapshot["requests"] == 1
+    assert snapshot["failures"] == 0
+    assert snapshot["byModel"]["deepseek-chat"]["requests"] == 1
+    assert snapshot["byModel"]["deepseek-chat"]["failures"] == 0

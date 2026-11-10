@@ -40,6 +40,9 @@ class UsageStats:
         # like traffic: answered locally, and refused by the breaker.
         self.local_answers = 0
         self.blocked = 0
+        # A client that hung up mid-stream: tokens were spent, nothing failed,
+        # and nothing was delivered either.
+        self.cancelled = 0
 
     def _slot(self, model: str) -> dict[str, float]:
         return self._by_model.setdefault(
@@ -81,6 +84,17 @@ class UsageStats:
         self.blocked += 1
         self.requests += 1
         self.failures += 1
+
+    def record_cancelled(self, model: str) -> None:
+        """Count a turn whose client hung up before the answer finished.
+
+        It is not a failure - the model did nothing wrong - and it is not a
+        finished answer either, so it carries its own counter instead of
+        flattering either of the other two.
+        """
+        self.requests += 1
+        self.cancelled += 1
+        self._slot(model)["requests"] += 1
 
     def avg_ttft(self) -> float:
         """Seconds to first token, averaged over the turns that produced one.
@@ -128,6 +142,7 @@ class UsageStats:
             "ttftSamples": self._ttft_count,
             "local": self.local_answers,
             "blocked": self.blocked,
+            "cancelled": self.cancelled,
             "byTier": dict(self._by_tier),
             "byModel": {
                 model: {
