@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+### Honest counting
+
+- A turn whose client hung up mid-stream is counted as `cancelled`, not as a
+  finished answer; the tokens still count.
+- `/api/usage` reports the intent mix (`byIntent`), the worst first-token time
+  (`ttftMax`) next to the average, and a failure rate inside each model row.
+- The rate limiter reports how many clients it is watching (count only, never IPs)
+  and publishes `X-RateLimit-Limit` / `X-RateLimit-Remaining` on every chat reply,
+  including the 429.
+- The daily budget writes one warning per day when it runs out; the breaker logs
+  the moment it opens and records a wall-clock `lastOpenedAt`.
+
+### Errors and validation
+
+- A body that fails validation is answered with a 400 and one sentence naming the
+  offending field, instead of a 422 containing a list of pydantic dictionaries.
+
+### Local surfaces
+
+- A long CLI session folds its history: newest turns travel whole, older turns
+  become a labelled digest, and a follow-up is told where the subject lives.
+  What is stored is untouched.
+- The CLI follows the user's language and notices follow-ups like the web service
+  does; both intent copies now classify translation requests the same way.
+- `/stats` shows model turns, provider, last tier and history length.
+
+### Configuration
+
+- `DREAMAI_CACHE_TTL=0` turns the cache off; misses are not counted as traffic
+  while it is disabled.
+
 ### Counting and wording
 
 - Counters moved out of `main.py` into `web/app/stats.py`; each model keeps its own
