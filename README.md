@@ -232,6 +232,11 @@ reaches the screen. Both are now explicit.
 | Error wording | Key, quota, address and length problems get their own sentence; JSON never reaches the bubble | `final_message()` |
 | Local budget | The CLI and the desktop shell size a reply to the question too, via the same tiers | `dream_ai/quality.py` |
 | Usage | Requests, per-model tokens and cost, average TTFT, local and blocked traffic | `stats.py`, `/api/usage` |
+| Intent mix | Turn counts per question type, so the site's use is visible, not guessed | `byIntent` in `/api/usage` |
+| Rate limit contract | `X-RateLimit-Remaining` on every reply, so a client slows down before being refused | `RateLimiter.hit()` |
+| Cache off switch | `DREAMAI_CACHE_TTL=0` disables the cache without deleting code | `cache.py` |
+| Local folding | Long CLI sessions fold old turns into a digest instead of losing the subject | `compress_history()` |
+| Session spend | `/stats` in the CLI: model turns, provider, last tier | `agent.turn_count` |
 
 The same rules exist twice: `dream_ai/identity.py` for the CLI and the desktop
 shell, and `web/app/config.py` for the service, which can run without the Python
