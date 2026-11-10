@@ -595,6 +595,7 @@ async def usage() -> JSONResponse:
             "avgTtft": totals["avgTtft"],
             "ttftSamples": totals["ttftSamples"],
             "byTier": totals["byTier"],
+            "byIntent": totals["byIntent"],
             "byModel": totals["byModel"],
             "local": totals["local"],
             "blocked": totals["blocked"],

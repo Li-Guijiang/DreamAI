@@ -71,3 +71,14 @@ def test_an_identity_answer_is_counted_as_local_traffic(client):
     assert response.status_code == 200
     assert main._stats.local_answers == before + 1
     assert main._stats.snapshot()["byModel"]["local"]["requests"] >= 1
+
+
+def test_usage_reports_the_intent_mix(client):
+    import importlib
+
+    main = importlib.import_module("app.main")
+    main._stats.record_turn("probe-model", intent="error")
+
+    body = client.get("/api/usage").json()
+
+    assert body["byIntent"]["error"] == 1
