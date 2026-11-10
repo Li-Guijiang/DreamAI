@@ -81,6 +81,8 @@ class DreamAIAgent:
         self._max_tokens = max(1, int(max_tokens))
         self._max_history_chars = max(200, int(max_history_chars))
         self._last_tier = ""
+        # Model turns only: owner commands and captured preferences are free.
+        self._turn_count = 0
         self._last_execution: ExecutionResult | None = None
 
     @property
@@ -107,6 +109,11 @@ class DreamAIAgent:
     def tool_names(self) -> list[str]:
         """Names of the currently registered tools."""
         return self.tools.names()
+
+    @property
+    def turn_count(self) -> int:
+        """How many model calls this session has made."""
+        return self._turn_count
 
     @property
     def last_tier(self) -> str:
@@ -228,6 +235,7 @@ class DreamAIAgent:
 
         budget = reply_budget(tier, self._max_tokens)
         reply = self._generate(history, budget)
+        self._turn_count += 1
         reply = strip_filler(reply)
         reply = dedupe_sentences(close_fences(limit_emoji(strip_filler(reply))))
         if looks_empty(reply):

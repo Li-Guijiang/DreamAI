@@ -122,3 +122,16 @@ def test_a_light_turn_does_not_get_the_deep_instruction():
 
     assert "一两句话" in provider.seen[0]
     assert "推演" not in provider.seen[0]
+
+
+def test_only_model_turns_are_counted():
+    agent = _agent(RecordingProvider())
+
+    agent.chat("记住：我喜欢简短的回答")
+    assert agent.turn_count == 0
+
+    agent.chat("在吗")
+    assert agent.turn_count == 1
+
+    agent.chat("为什么要把缓存做成两层")
+    assert agent.turn_count == 2
