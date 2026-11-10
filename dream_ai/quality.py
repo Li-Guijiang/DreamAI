@@ -140,3 +140,45 @@ def needs_context(text: str) -> bool:
     if len(body) <= 20 and any(word in body for word in _PRONOUNS):
         return True
     return len(body) <= 6 and not re.search(r"[，。！？,.!?]", body)
+
+
+def build_digest(messages: list[dict[str, str]], max_chars: int = 600) -> str:
+    """Fold earlier turns into a short labelled digest, newest last.
+
+    Only role, order and a clipped opening of each message survive, which is what
+    a follow-up needs in order to know what "it" refers to. Mirrors
+    ``web/app/quality.py``.
+    """
+    lines: list[str] = []
+    budget = max_chars
+    for message in messages:
+        if budget <= 0:
+            break
+        role = "用户" if message.get("role") == "user" else "助手"
+        content = re.sub(r"\s+", " ", message.get("content") or "").strip()
+        if not content:
+            continue
+        clip = content[: max(40, min(120, budget // 2))]
+        line = f"- {role}：{clip}"
+        lines.append(line)
+        budget -= len(line)
+    return "\n".join(lines)
+
+
+def compress_history(
+    messages: list[dict[str, str]], max_chars: int, keep_turns: int = 6
+) -> tuple[list[dict[str, str]], str]:
+    """Keep the newest ``keep_turns`` messages, digest the rest.
+
+    Returns the kept messages and a digest of what was folded away. The digest is
+    empty when nothing was dropped.
+    """
+    if len(messages) <= keep_turns:
+        return list(messages), ""
+
+    tail = list(messages)[-keep_turns:]
+    head = list(messages)[: -keep_turns]
+    total = sum(len(m.get("content") or "") for m in tail)
+    if total <= max_chars:
+        return list(messages), ""
+    return tail, build_digest(head)
