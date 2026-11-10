@@ -108,3 +108,21 @@ def is_repeat(text: str, previous: str, threshold: float = 0.75) -> bool:
     if not a or not b:
         return False
     return len(a & b) / min(len(a), len(b)) >= threshold
+
+
+def detect_language(text: str) -> str:
+    """Return ``zh`` or ``en`` from the character mix of the message.
+
+    Mirrors ``web/app/insight.py``; the web copy is the reference.
+    """
+    body = text or ""
+    han = len(re.findall(r"[\u4e00-\u9fa5]", body))
+    latin = len(re.findall(r"[A-Za-z]", body))
+    return "zh" if han >= latin else "en"
+
+
+def language_prompt(language: str) -> str:
+    """Keep the reply in the language the user wrote in."""
+    if language == "en":
+        return "Reply in English; keep code, commands and identifiers unchanged."
+    return "用中文回答；代码、命令、专有名词保持原样。"
