@@ -693,7 +693,8 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
 
     def _local(text: str, extra: dict[str, str] | None = None) -> StreamingResponse:
         # Local replies consume rate budget too, so they carry the same headers.
-        return _local(text, extra_headers={**rate_headers, **(extra or {})})
+        return _local_chat(text, extra_headers={**rate_headers, **(extra or {})})
+
     if not allowed:
         return JSONResponse(
             {
@@ -731,7 +732,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         cookie = owner_auth.cookie_header(request)
         return _local(
             "主人验证通过。私有档案已解锁 30 天，可以发送【查看我的全部档案】。",
-            extra_headers={"Set-Cookie": cookie} if cookie else None,
+            extra={"Set-Cookie": cookie} if cookie else None,
         )
 
     if owner and last_text.startswith(("记住：", "记住:", "请记住：", "请记住:")):
@@ -814,9 +815,10 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         # error lines and the tail.
         content = trim_long_input(content)
         safe_history.append(ChatMessage(role=message.role, content=content))
-    safe_history = [ChatMessage(role=m["role"], content=m["content"]) for m in dedupe_messages(
-        [{"role": m.role, "content": m.content} for m in safe_history]
-    )]
+    safe_history = [
+        ChatMessage(role=m["role"], content=m["content"])
+        for m in dedupe_messages([{"role": m.role, "content": m.content} for m in safe_history])
+    ]
     messages, dropped = prepare_messages(safe_history, system_prompt)
     temperature = payload.temperature if payload.temperature is not None else settings.temperature
     temperature = min(1.5, max(0.0, temperature + STYLE_TEMPERATURE.get(style, 0.0)))
@@ -878,32 +880,60 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         usage_payload: dict | None = None
         answered: list[str] = []
         first_token_at = 0.0
-        yield sse("meta", {
-            "model": model, "version": VERSION, "tier": tier, "intent": intent,
-            "requestId": request_id,
-            "cache": "hit" if cached_text else "miss",
-        })
+        yield sse(
+            "meta",
+            {
+                "model": model,
+                "version": VERSION,
+                "tier": tier,
+                "intent": intent,
+                "requestId": request_id,
+                "cache": "hit" if cached_text else "miss",
+            },
+        )
         if cached_text:
             for index in range(0, len(cached_text), 48):
                 yield sse("delta", {"t": cached_text[index : index + 48]})
-            yield sse("done", {
-                "tier": tier, "intent": intent, "requestId": request_id, "chars": len(cached_text),
-                "elapsed": 0.0, "model": model, "cache": "hit",
-            })
+            yield sse(
+                "done",
+                {
+                    "tier": tier,
+                    "intent": intent,
+                    "requestId": request_id,
+                    "chars": len(cached_text),
+                    "elapsed": 0.0,
+                    "model": model,
+                    "cache": "hit",
+                },
+            )
             _stats.record_turn(model, tier=tier)
             logger.info(
                 "chat cache id=%s tier=%s intent=%s chars=%s",
-                request_id, tier, intent, len(cached_text),
+                request_id,
+                tier,
+                intent,
+                len(cached_text),
             )
             return
         if not _breaker.allow():
             logger.warning("circuit open, rejecting ip=%s id=%s", ip, request_id)
             _stats.record_blocked()
             yield sse("error", {"message": "上游连续失败，已暂停约 30 秒，请稍后再试。"})
-            yield sse("done", {"tier": tier, "intent": intent, "chars": 0, "elapsed": 0.0, "model": model, "blocked": True})
+            yield sse(
+                "done",
+                {
+                    "tier": tier,
+                    "intent": intent,
+                    "chars": 0,
+                    "elapsed": 0.0,
+                    "model": model,
+                    "blocked": True,
+                },
+            )
             return
         try:
             async with _semaphore:
+
                 async def _primary() -> AsyncIterator[tuple[str, str]]:
                     async for item in llm.stream_completion(
                         upstream.provider,
@@ -979,12 +1009,18 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             if _breaker.openings > openings_before:
                 logger.warning(format_breaker_log(_breaker.stats()))
             logger.info("chat failed ip=%s kind=%s: %s", ip, upstream.kind, exc)
-            logger.info(format_turn_log(
-                request_id, tier=tier, intent=intent,
-                ttft=(first_token_at - started) if first_token_at else 0.0,
-                total=time.monotonic() - started, chars=produced,
-                model=model, outcome="failed",
-            ))
+            logger.info(
+                format_turn_log(
+                    request_id,
+                    tier=tier,
+                    intent=intent,
+                    ttft=(first_token_at - started) if first_token_at else 0.0,
+                    total=time.monotonic() - started,
+                    chars=produced,
+                    model=model,
+                    outcome="failed",
+                )
+            )
             # status_code is None when the request never reached a server, so
             # this comparison used to raise and turn a network failure into a
             # 500 with no explanation.
@@ -1044,13 +1080,19 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     else:
                         _stats.cost_usd += cost
                         done_payload["cost"] = {"usd": cost, "text": format_cost(cost)}
-                logger.info(format_turn_log(
-                    request_id, tier=tier, intent=intent,
-                    ttft=(first_token_at - started) if first_token_at else 0.0,
-                    total=time.monotonic() - started, chars=produced, model=model,
-                    cache="miss",
-                    cost=cost,
-                ))
+                logger.info(
+                    format_turn_log(
+                        request_id,
+                        tier=tier,
+                        intent=intent,
+                        ttft=(first_token_at - started) if first_token_at else 0.0,
+                        total=time.monotonic() - started,
+                        chars=produced,
+                        model=model,
+                        cache="miss",
+                        cost=cost,
+                    )
+                )
                 yield sse("done", done_payload)
 
     return StreamingResponse(
