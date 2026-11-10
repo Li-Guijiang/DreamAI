@@ -12,7 +12,15 @@ def test_same_classification_as_the_web_copy():
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "web"))
     from app.insight import classify_intent as web_classify
 
-    for text in ("启动报错：NPE", "帮我写一段周报", "给选课系统做方案", "什么是脏读", "你好"):
+    for text in (
+        "启动报错：NPE",
+        "帮我写一段周报",
+        "给选课系统做方案",
+        "什么是脏读",
+        "把这段 README 翻译成英文",
+        "翻译这段报错信息：Connection refused",
+        "你好",
+    ):
         assert classify_intent(text) == web_classify(text), text
 
 
