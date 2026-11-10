@@ -33,8 +33,10 @@ from ..providers.base import LLMProvider
 from ..quality import (
     classify_tier,
     close_fences,
+    compress_history,
     dedupe_sentences,
     looks_empty,
+    needs_context,
     reply_budget,
     tier_hint,
 )
@@ -57,6 +59,7 @@ class DreamAIAgent:
         autonomy_max_steps: int = 10,
         autonomy_max_retries: int = 2,
         max_tokens: int = 4096,
+        max_history_chars: int = 12000,
     ) -> None:
         self._provider = provider
         self._preferences = preferences or PreferenceMemory()
@@ -76,6 +79,7 @@ class DreamAIAgent:
         self._autonomy_max_steps = max(1, int(autonomy_max_steps))
         self._autonomy_max_retries = max(0, int(autonomy_max_retries))
         self._max_tokens = max(1, int(max_tokens))
+        self._max_history_chars = max(200, int(max_history_chars))
         self._last_tier = ""
         self._last_execution: ExecutionResult | None = None
 
@@ -190,7 +194,20 @@ class DreamAIAgent:
             return local
 
         self._conversation.add_user(trim_long_input(user_text))
-        history = list(self._conversation.history())
+        history, digest = compress_history(
+            list(self._conversation.history()), self._max_history_chars
+        )
+        if digest:
+            # The folded turns are gone from this request; without the note, a
+            # follow-up loses its subject.
+            note = {
+                "role": "system",
+                "content": "以下是本轮之前的对话摘要（更早的轮次已折叠）：\n" + digest,
+            }
+            if history and history[0].get("role") == "system":
+                history.insert(1, note)
+            else:
+                history.insert(0, note)
 
         tier = classify_tier(user_text)
         self._last_tier = tier
@@ -202,6 +219,8 @@ class DreamAIAgent:
             hints.append(
                 "用户重复问了同一件事：换一个角度或给出更具体的一步，不要原样复述上次的答案。"
             )
+        if digest and needs_context(user_text):
+            hints.append("这句话是追问，指代对象在上面的摘要里；先确认对象，再回答。")
         hints = [hint for hint in hints if hint]
         if hints and history and history[0].get("role") == "system":
             joined = "\n".join(hints)
