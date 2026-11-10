@@ -120,3 +120,23 @@ def tier_hint(tier: str) -> str:
     if tier == TIER_DEEP:
         return "本轮问题需要推演：先给结论，再给依据与取舍；复杂处用分步或表格，避免大段散文。"
     return ""
+
+
+#: Short fragments built around one of these cannot be answered on their own;
+#: the subject lives in an earlier turn.
+_PRONOUNS = ("它", "他", "她", "这个", "那个", "上面", "前面", "刚才", "这样", "上述", "此")
+
+
+def needs_context(text: str) -> bool:
+    """True when the message is a follow-up that cannot stand on its own.
+
+    Short messages with a pronoun, or fragments with no punctuation and no verb,
+    are the two shapes that fail without the previous turn; both are cheap to
+    detect. Mirrors ``web/app/quality.py``.
+    """
+    body = (text or "").strip()
+    if not body:
+        return False
+    if len(body) <= 20 and any(word in body for word in _PRONOUNS):
+        return True
+    return len(body) <= 6 and not re.search(r"[，。！？,.!?]", body)
