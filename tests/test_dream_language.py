@@ -30,3 +30,42 @@ def test_the_hint_keeps_code_and_identifiers_untouched():
 
 def test_the_chinese_hint_says_the_same_thing_in_chinese():
     assert "代码" in language_prompt("zh")
+
+
+def test_an_english_question_adds_the_language_hint_to_the_prompt():
+    from dream_ai.core.agent import DreamAIAgent
+    from dream_ai.memory import PreferenceMemory
+
+    class Capture:
+        def __init__(self) -> None:
+            self.seen: list[str] = []
+
+        def generate(self, messages, **kwargs):  # noqa: ANN001, ANN003
+            self.seen.append(messages[0]["content"])
+            return "Sure."
+
+    provider = Capture()
+    agent = DreamAIAgent(provider=provider, preferences=PreferenceMemory(), system_prompt="BASE")
+    agent.chat("how do I reset the cache TTL?")
+
+    assert "Reply in English" in provider.seen[0]
+
+
+def test_a_chinese_question_adds_no_language_hint():
+    from dream_ai.core.agent import DreamAIAgent
+    from dream_ai.memory import PreferenceMemory
+
+    class Capture:
+        def __init__(self) -> None:
+            self.seen: list[str] = []
+
+        def generate(self, messages, **kwargs):  # noqa: ANN001, ANN003
+            self.seen.append(messages[0]["content"])
+            return "好的。"
+
+    provider = Capture()
+    agent = DreamAIAgent(provider=provider, preferences=PreferenceMemory(), system_prompt="BASE")
+    agent.chat("帮我看看这段报错")
+
+    assert "Reply in English" not in provider.seen[0]
+    assert "用中文回答" not in provider.seen[0]

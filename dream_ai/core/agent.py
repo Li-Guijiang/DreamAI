@@ -19,7 +19,14 @@ from ..identity import (
     render_profile_block,
     strip_filler,
 )
-from ..insight import classify_intent, intent_prompt, is_repeat, trim_long_input
+from ..insight import (
+    classify_intent,
+    detect_language,
+    intent_prompt,
+    is_repeat,
+    language_prompt,
+    trim_long_input,
+)
 from ..memory import InMemorySessionMemory, PreferenceMemory
 from ..memory.base import Memory
 from ..providers.base import LLMProvider
@@ -188,6 +195,8 @@ class DreamAIAgent:
         tier = classify_tier(user_text)
         self._last_tier = tier
         hints = [tier_hint(tier), intent_prompt(classify_intent(user_text))]
+        if detect_language(user_text) == "en":
+            hints.append(language_prompt("en"))
         user_turns = [m["content"] for m in history if m.get("role") == "user"]
         if len(user_turns) >= 2 and is_repeat(user_turns[-1], user_turns[-2]):
             hints.append(
