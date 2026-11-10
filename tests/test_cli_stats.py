@@ -29,9 +29,7 @@ class Recording:
 
 
 def test_the_stats_block_reports_turns_tier_and_history():
-    agent = DreamAIAgent(
-        provider=Recording(), preferences=PreferenceMemory(), system_prompt="BASE"
-    )
+    agent = DreamAIAgent(provider=Recording(), preferences=PreferenceMemory(), system_prompt="BASE")
     agent.chat("在吗")
     agent.chat("记住：我喜欢简短的回答")
 
@@ -46,9 +44,7 @@ def test_the_stats_block_reports_turns_tier_and_history():
 
 
 def test_a_fresh_session_reports_no_tier_yet():
-    agent = DreamAIAgent(
-        provider=Recording(), preferences=PreferenceMemory(), system_prompt="BASE"
-    )
+    agent = DreamAIAgent(provider=Recording(), preferences=PreferenceMemory(), system_prompt="BASE")
 
     console = PlainConsole()
     _print_stats(agent, console)

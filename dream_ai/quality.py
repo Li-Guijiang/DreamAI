@@ -177,7 +177,7 @@ def compress_history(
         return list(messages), ""
 
     tail = list(messages)[-keep_turns:]
-    head = list(messages)[: -keep_turns]
+    head = list(messages)[:-keep_turns]
     total = sum(len(m.get("content") or "") for m in tail)
     if total <= max_chars:
         return list(messages), ""
