@@ -131,3 +131,24 @@ def test_an_empty_cache_reports_a_zero_hit_rate_rather_than_dividing_by_zero():
     from app.cache import ResponseCache
 
     assert ResponseCache().stats()["hitRate"] == 0.0
+
+
+def test_a_zero_ttl_turns_the_cache_off():
+    from app.cache import ResponseCache
+
+    cache = ResponseCache(max_items=8, ttl=0)
+    cache.put("a", "1")
+
+    assert cache.get("a") is None
+    assert len(cache) == 0
+    assert cache.enabled is False
+    assert cache.stats()["enabled"] is False
+
+
+def test_a_disabled_cache_does_not_count_misses_as_traffic():
+    from app.cache import ResponseCache
+
+    cache = ResponseCache(max_items=8, ttl=0)
+
+    assert cache.get("a") is None
+    assert cache.misses == 0

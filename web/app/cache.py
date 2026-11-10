@@ -7,6 +7,10 @@ same key - and is only used for deterministic settings.
 
 Entries expire on a TTL and are evicted least-recently-used first, so a long-lived
 process cannot grow without bound.
+
+A TTL of zero (or less) turns the cache off entirely: gets and puts become no-ops
+that cost one attribute check. This is the documented way to disable caching when a
+provider's answers change per call - a flag beats deleting lines.
 """
 
 from __future__ import annotations
@@ -50,7 +54,8 @@ class ResponseCache:
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.max_items = max(1, max_items)
-        self.ttl = max(1.0, ttl)
+        self.ttl = max(0.0, ttl)
+        self.enabled = self.ttl > 0
         self._clock = clock
         self._items: OrderedDict[str, tuple[str, float]] = OrderedDict()
         self.hits = 0
@@ -62,6 +67,8 @@ class ResponseCache:
         self.evictions = 0
 
     def get(self, key: str) -> str | None:
+        if not self.enabled:
+            return None
         entry = self._items.get(key)
         if entry is None:
             self.misses += 1
@@ -77,7 +84,7 @@ class ResponseCache:
         return value
 
     def put(self, key: str, value: str) -> None:
-        if not value:
+        if not self.enabled or not value:
             return
         self._items[key] = (value, self._clock() + self.ttl)
         self._items.move_to_end(key)
@@ -89,6 +96,7 @@ class ResponseCache:
         """What both status endpoints report about the cache."""
         asked = self.hits + self.misses
         return {
+            "enabled": self.enabled,
             "items": len(self._items),
             "capacity": self.max_items,
             "ttl": self.ttl,

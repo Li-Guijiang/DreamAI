@@ -837,7 +837,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         logger.warning("possible injection id=%s hit=%r", request_id, injection[:40])
     cache_key = None
     cached_text: str | None = None
-    if temperature <= 0.3:
+    if _cache.enabled and temperature <= 0.3:
         cache_key = make_key(upstream.provider.id, model, messages, temperature, budget)
         cached_text = _cache.get(cache_key)
 
