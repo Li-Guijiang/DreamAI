@@ -199,3 +199,15 @@ def test_the_worst_first_token_time_is_kept_separately():
 
     assert snapshot["avgTtft"] == pytest.approx((0.4 + 2.8 + 0.9) / 3, abs=0.01)
     assert snapshot["ttftMax"] == pytest.approx(2.8)
+
+
+def test_each_model_row_carries_its_own_failure_rate():
+    stats = UsageStats()
+    stats.record_turn("a", failed=True)
+    stats.record_turn("a")
+    stats.record_turn("b")
+
+    rows = stats.snapshot()["byModel"]
+
+    assert rows["a"]["failureRate"] == pytest.approx(0.5)
+    assert rows["b"]["failureRate"] == 0.0

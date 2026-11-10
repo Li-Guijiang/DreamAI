@@ -167,6 +167,11 @@ class UsageStats:
                 model: {
                     **slot,
                     "costUsd": round(slot["costUsd"], 4),
+                    # A ratio in the row itself, so 'which model is failing' does
+                    # not need a division on the page.
+                    "failureRate": round(slot["failures"] / slot["requests"], 3)
+                    if slot["requests"]
+                    else 0.0,
                 }
                 for model, slot in self._by_model.items()
             },
