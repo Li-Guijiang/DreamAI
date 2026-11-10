@@ -36,6 +36,10 @@ class UsageStats:
         # Tier is the only thing that explains a model mix: light turns should
         # far outnumber deep ones, or the router is not earning its keep.
         self._by_tier: dict[str, int] = {}
+        # The intent mix explains what the site is actually used for, which the
+        # tier mix cannot: both are chat, but one is debugging and one is small
+        # talk.
+        self._by_intent: dict[str, int] = {}
         # Two kinds of turn that never reach a model and would otherwise look
         # like traffic: answered locally, and refused by the breaker.
         self.local_answers = 0
@@ -47,7 +51,13 @@ class UsageStats:
     def _slot(self, model: str) -> dict[str, float]:
         return self._by_model.setdefault(
             model or "unknown",
-            {"requests": 0, "failures": 0, "promptTokens": 0, "completionTokens": 0, "costUsd": 0.0},
+            {
+                "requests": 0,
+                "failures": 0,
+                "promptTokens": 0,
+                "completionTokens": 0,
+                "costUsd": 0.0,
+            },
         )
 
     def record_turn(
@@ -55,6 +65,7 @@ class UsageStats:
         model: str,
         *,
         tier: str = "",
+        intent: str = "",
         failed: bool = False,
         ttft: float = 0.0,
     ) -> None:
@@ -64,6 +75,8 @@ class UsageStats:
         slot["requests"] += 1
         if tier:
             self._by_tier[tier] = self._by_tier.get(tier, 0) + 1
+        if intent:
+            self._by_intent[intent] = self._by_intent.get(intent, 0) + 1
         if failed:
             self.failures += 1
             slot["failures"] += 1
@@ -144,6 +157,7 @@ class UsageStats:
             "blocked": self.blocked,
             "cancelled": self.cancelled,
             "byTier": dict(self._by_tier),
+            "byIntent": dict(self._by_intent),
             "byModel": {
                 model: {
                     **slot,

@@ -964,6 +964,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 _stats.record_turn(
                     model,
                     tier=tier,
+                    intent=intent,
                     failed=failed,
                     ttft=(first_token_at - started) if first_token_at else 0.0,
                 )

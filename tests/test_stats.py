@@ -172,3 +172,18 @@ def test_a_cancelled_turn_is_counted_without_blaming_the_model():
     assert snapshot["failures"] == 0
     assert snapshot["byModel"]["deepseek-chat"]["requests"] == 1
     assert snapshot["byModel"]["deepseek-chat"]["failures"] == 0
+
+
+def test_turns_are_tallied_per_intent():
+    stats = UsageStats()
+    stats.record_turn("m", intent="error")
+    stats.record_turn("m", intent="error")
+    stats.record_turn("m", intent="chat")
+
+    assert stats.snapshot()["byIntent"] == {"error": 2, "chat": 1}
+
+
+def test_a_turn_without_an_intent_is_not_filed_under_empty():
+    stats = UsageStats()
+
+    assert stats.snapshot()["byIntent"] == {}
