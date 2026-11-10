@@ -594,6 +594,7 @@ async def usage() -> JSONResponse:
             "cacheHitRate": cache["hitRate"],
             "avgTtft": totals["avgTtft"],
             "ttftSamples": totals["ttftSamples"],
+            "ttftMax": totals["ttftMax"],
             "byTier": totals["byTier"],
             "byIntent": totals["byIntent"],
             "byModel": totals["byModel"],

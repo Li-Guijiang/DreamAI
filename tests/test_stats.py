@@ -187,3 +187,15 @@ def test_a_turn_without_an_intent_is_not_filed_under_empty():
     stats = UsageStats()
 
     assert stats.snapshot()["byIntent"] == {}
+
+
+def test_the_worst_first_token_time_is_kept_separately():
+    stats = UsageStats()
+    stats.record_turn("m", ttft=0.4)
+    stats.record_turn("m", ttft=2.8)
+    stats.record_turn("m", ttft=0.9)
+
+    snapshot = stats.snapshot()
+
+    assert snapshot["avgTtft"] == pytest.approx((0.4 + 2.8 + 0.9) / 3, abs=0.01)
+    assert snapshot["ttftMax"] == pytest.approx(2.8)

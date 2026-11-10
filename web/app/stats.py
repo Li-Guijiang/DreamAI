@@ -33,6 +33,9 @@ class UsageStats:
         # bill. They are not proportional, so both are kept.
         self._ttft_total = 0.0
         self._ttft_count = 0
+        # The average hides a single 40-second turn behind a hundred fast ones;
+        # the worst case is what a visitor actually screenshots.
+        self._ttft_max = 0.0
         # Tier is the only thing that explains a model mix: light turns should
         # far outnumber deep ones, or the router is not earning its keep.
         self._by_tier: dict[str, int] = {}
@@ -83,6 +86,7 @@ class UsageStats:
         if ttft > 0:
             self._ttft_total += float(ttft)
             self._ttft_count += 1
+            self._ttft_max = max(self._ttft_max, float(ttft))
 
     def record_local(self, tier: str = "") -> None:
         """Count a turn answered without calling a model."""
@@ -153,6 +157,7 @@ class UsageStats:
             "costKnown": self.known_cost,
             "avgTtft": round(self.avg_ttft(), 2),
             "ttftSamples": self._ttft_count,
+            "ttftMax": round(self._ttft_max, 2),
             "local": self.local_answers,
             "blocked": self.blocked,
             "cancelled": self.cancelled,
