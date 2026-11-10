@@ -144,3 +144,12 @@ def test_the_snapshot_reads_the_breaker_without_touching_it():
     assert snapshot["failures"] == 1
     assert snapshot["retryIn"] == 0.0
     assert snapshot["threshold"] == 2
+
+
+def test_the_last_opening_is_recorded_as_wall_clock_time():
+    breaker = CircuitBreaker(threshold=1, cooldown=10.0, clock=lambda: 500.0)
+
+    assert breaker.stats()["lastOpenedAt"] is None
+    breaker.record_failure()
+
+    assert breaker.stats()["lastOpenedAt"] is not None

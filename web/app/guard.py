@@ -41,6 +41,8 @@ class CircuitBreaker:
         # Counted for the life of the process: a breaker that has opened nine
         # times today is a different situation from one that opened once.
         self.openings = 0
+        # Wall-clock timestamp of the most recent opening, for logs and graphs.
+        self.last_opened_at: float | None = None
 
     @property
     def state(self) -> str:
@@ -79,6 +81,7 @@ class CircuitBreaker:
             self._state = OPEN
             self._opened_at = self._clock()
             self.openings += 1
+            self.last_opened_at = time.time()
 
     def stats(self) -> dict:
         """Everything an operator needs to read the breaker's current mood."""
@@ -89,6 +92,7 @@ class CircuitBreaker:
             "failures": self._failures,
             "retryIn": round(self.remaining(), 1),
             "openings": self.openings,
+            "lastOpenedAt": self.last_opened_at,
         }
 
     def reset(self) -> None:
