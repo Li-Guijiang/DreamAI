@@ -119,6 +119,19 @@ class RateLimiter:
                 self._hits.clear()
             return True, 0
 
+    def stats(self) -> dict:
+        """What the health endpoint reports about the limiter.
+
+        Only a count, never the keys: an IP is personal data, and 'how many
+        clients are being watched' is the whole operational question.
+        """
+        return {
+            "tracked": len(self._hits),
+            "limit": self._limit,
+            "window": self._window,
+            "cap": 20000,
+        }
+
 
 limiter = RateLimiter(settings.rate_limit, settings.rate_window)
 _semaphore = asyncio.Semaphore(settings.max_concurrency)
@@ -567,6 +580,7 @@ async def health() -> JSONResponse:
             else None,
             "rateLimit": settings.rate_limit,
             "rateWindow": settings.rate_window,
+            "limiter": limiter.stats(),
             "maxConcurrency": settings.max_concurrency,
             "features": ["memory", "knowledge", "canvas", "reader"],
         }
