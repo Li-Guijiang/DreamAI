@@ -36,6 +36,7 @@ Available commands:
   /clear           Clear the conversation history
   /motion          Toggle the terminal launch / typing / spinner effects
   /about           Show provider, tools, autonomy, session info, and preferences
+  /stats           Show what this session has spent: model turns, provider, last tier
   /profile         Show the owner dossier (same as 【查看我的全部档案】)
   /quit | /exit    Leave Dream AI
 Type anything else to chat with Dream AI.
@@ -222,6 +223,16 @@ def _run_autonomous(agent: DreamAIAgent, settings: Settings, objective: str, ui:
     ui.reply(result.final_summary)
 
 
+def _print_stats(agent: DreamAIAgent, ui: Console) -> None:
+    """One short block: what this session has cost so far, in turns."""
+    ui.line(ui.muted("--- session stats ---"))
+    ui.line(f"provider        {agent.provider_name}")
+    ui.line(f"model turns     {agent.turn_count}")
+    ui.line(f"last tier       {agent.last_tier or 'n/a (no model turn yet)'}")
+    ui.line(f"preferences     {len(agent.preference_notes)}")
+    ui.line(f"history entries {len(agent.history)}")
+
+
 def _print_trace(agent: DreamAIAgent, ui: Console) -> None:
     result = agent.last_execution
     if result is None:
@@ -327,6 +338,10 @@ def main(argv: list[str] | None = None) -> int:
         if command.startswith("/run"):
             _, _, rest = user_input.partition(" ")
             _run_autonomous(agent, settings, rest.strip(), ui)
+            continue
+
+        if command == "/stats":
+            _print_stats(agent, ui)
             continue
 
         if command == "/trace":
