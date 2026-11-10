@@ -23,6 +23,7 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
@@ -1096,6 +1097,24 @@ async def sitemap() -> Response:
 
 
 app.mount("/assets", StaticFiles(directory=str(WEB_DIR / "assets")), name="assets")
+
+
+@app.exception_handler(RequestValidationError)
+async def bad_request(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """A body that failed validation, answered in the site's own words.
+
+    FastAPI's default response is a 422 whose body is a list of pydantic
+    dictionaries - correct, and unreadable to the person who sent it. One
+    sentence with the field's location is all a client needs.
+    """
+    first = exc.errors()[0] if exc.errors() else {}
+    where = ".".join(str(part) for part in first.get("loc", ()) if part != "body")
+    reason = first.get("msg") or "字段不合法"
+    detail = f"{where}: {reason}" if where else reason
+    return JSONResponse(
+        {"error": f"请求体不符合要求（{detail}）", "code": "invalid_body"},
+        status_code=400,
+    )
 
 
 @app.exception_handler(404)
