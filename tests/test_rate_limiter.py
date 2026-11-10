@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "web"))
+import pytest
+
+WEB = str(Path(__file__).resolve().parent.parent / "web")
+if WEB not in sys.path:
+    sys.path.insert(0, WEB)
 
 from app.main import RateLimiter  # noqa: E402
 
@@ -53,7 +58,7 @@ def test_an_expired_window_frees_the_client():
 
     # The limiter's own clock is monotonic, so the stored hit sits far in the
     # past and the window check drops it before enforcing the limit.
-    allowed, _ = _hit(limiter, "1.2.3.4")
+    allowed, _, _ = _hit(limiter, "1.2.3.4")
 
     assert allowed is True
 
@@ -64,3 +69,20 @@ def test_the_remaining_count_falls_as_the_window_fills():
     assert _hit(limiter, "1.2.3.4")[2] == 2
     assert _hit(limiter, "1.2.3.4")[2] == 1
     assert _hit(limiter, "1.2.3.4")[2] == 0
+
+
+def test_chat_responses_carry_the_rate_limit_headers():
+    pytest.importorskip("fastapi", reason="web dependencies are not installed")
+
+    main = importlib.import_module("app.main")
+    from fastapi.testclient import TestClient
+
+    client = TestClient(main.app)
+    response = client.post(
+        "/api/chat", json={"messages": [{"role": "user", "content": "你的主人是谁"}]}
+    )
+
+    assert response.status_code == 200
+    assert "X-RateLimit-Limit" in response.headers
+    assert "X-RateLimit-Remaining" in response.headers
+    assert int(response.headers["X-RateLimit-Remaining"]) >= 0

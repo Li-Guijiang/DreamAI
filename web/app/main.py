@@ -685,7 +685,15 @@ def _verification_token(text: str) -> str | None:
 @app.post("/api/chat")
 async def chat(payload: ChatRequest, request: Request) -> Response:
     ip = client_ip(request)
-    allowed, retry_after = await limiter.hit(ip)
+    allowed, retry_after, remaining = await limiter.hit(ip)
+    rate_headers = {
+        "X-RateLimit-Limit": str(limiter._limit),
+        "X-RateLimit-Remaining": str(remaining),
+    }
+
+    def _local(text: str, extra: dict[str, str] | None = None) -> StreamingResponse:
+        # Local replies consume rate budget too, so they carry the same headers.
+        return _local(text, extra_headers={**rate_headers, **(extra or {})})
     if not allowed:
         return JSONResponse(
             {
@@ -693,7 +701,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 "code": "rate_limited",
             },
             status_code=429,
-            headers={"Retry-After": str(retry_after)},
+            headers={"Retry-After": str(retry_after), **rate_headers},
         )
 
     total_chars = sum(len(m.content) for m in payload.messages)
@@ -717,11 +725,11 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
     token = _verification_token(last_text)
     if token is not None:
         if not owner_auth.configured():
-            return _local_chat("主人验证尚未启用。请在服务器配置私有验证口令后重试。")
+            return _local("主人验证尚未启用。请在服务器配置私有验证口令后重试。")
         if not owner_auth.verify_token(token):
-            return _local_chat("验证失败。")
+            return _local("验证失败。")
         cookie = owner_auth.cookie_header(request)
-        return _local_chat(
+        return _local(
             "主人验证通过。私有档案已解锁 30 天，可以发送【查看我的全部档案】。",
             extra_headers={"Set-Cookie": cookie} if cookie else None,
         )
@@ -729,29 +737,29 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
     if owner and last_text.startswith(("记住：", "记住:", "请记住：", "请记住:")):
         fact = last_text.split("：", 1)[-1] if "：" in last_text else last_text.split(":", 1)[-1]
         _, stored = owner_store.append_note(fact)
-        return _local_chat("已记住并写入私有档案：" + stored if stored else "内容为空，未写入。")
+        return _local("已记住并写入私有档案：" + stored if stored else "内容为空，未写入。")
 
     command = owner_store.parse_command(last_text)
     if command is not None:
         if not owner:
-            return _local_chat("该指令仅主人可用。请先完成主人验证。")
+            return _local("该指令仅主人可用。请先完成主人验证。")
         kind, argument = command
         if kind == "show":
-            return _local_chat(owner_store.render_profile(owner_store.load_profile()))
+            return _local(owner_store.render_profile(owner_store.load_profile()))
         if kind == "update":
             if not argument:
-                return _local_chat("用法：【更新档案】要追加的内容")
+                return _local("用法：【更新档案】要追加的内容")
             _, fact = owner_store.append_note(argument)
             if not fact:
-                return _local_chat("内容为空，未追加。")
-            return _local_chat(f"已追加档案：{fact}")
+                return _local("内容为空，未追加。")
+            return _local(f"已追加档案：{fact}")
         owner_store.clear_profile()
-        return _local_chat("已清空私有档案；公开身份规则不会被删除。")
+        return _local("已清空私有档案；公开身份规则不会被删除。")
 
     # Identity questions and owner commands are handled before the provider
     # call: a weak model must not be able to paraphrase the owner away.
     if is_identity_question(last_text):
-        return _local_chat(IDENTITY_ANSWER)
+        return _local(IDENTITY_ANSWER)
 
     try:
         upstream = resolve_upstream(payload)
@@ -1054,6 +1062,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             "X-Accel-Buffering": "no",
             "X-Request-Id": request_id,
             "X-Cache": "HIT" if cached_text else "MISS",
+            **rate_headers,
         },
     )
 
