@@ -89,3 +89,22 @@ def test_language_follows_the_text():
     assert detect_language("please review this patch") == "en"
     assert language_prompt("en").startswith("Reply in English")
     assert language_prompt("zh").startswith("用中文")
+
+
+def test_a_translation_request_gets_its_own_outline():
+    from app.insight import INTENT_TRANSLATE, classify_intent, intent_prompt
+
+    assert classify_intent("把这段 README 翻译成英文") == INTENT_TRANSLATE
+    assert "译文" in intent_prompt(INTENT_TRANSLATE)
+
+
+def test_translation_is_outranked_by_an_explicit_error_report():
+    from app.insight import INTENT_ERROR, classify_intent
+
+    assert classify_intent("翻译这段报错信息：Connection refused") == INTENT_ERROR
+
+
+def test_a_question_that_mentions_chinese_is_not_translation():
+    from app.insight import classify_intent
+
+    assert classify_intent("为什么中文文档比英文文档旧") != "translate"

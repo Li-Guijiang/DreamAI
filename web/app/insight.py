@@ -14,6 +14,7 @@ INTENT_ERROR = "error"
 INTENT_DESIGN = "design"
 INTENT_CODE = "code"
 INTENT_WRITING = "writing"
+INTENT_TRANSLATE = "translate"
 INTENT_EXPLAIN = "explain"
 INTENT_CHAT = "chat"
 
@@ -24,6 +25,7 @@ INTENT_PROMPTS: dict[str, str] = {
     INTENT_DESIGN: "本轮是方案设计：先写目标与约束，再给两到三个可选方案与取舍，最后给推荐及理由。",
     INTENT_CODE: "本轮是写代码：先给可运行的最小实现，再说明关键行与边界情况；不要先讲原理。",
     INTENT_WRITING: "本轮是写作：先给成稿，再给一句修改说明；不要逐句解释用词。",
+    INTENT_TRANSLATE: "本轮是翻译：先给可直接使用的译文；只在术语或语气需要取舍时补一句说明，不逐句对照。",
     INTENT_EXPLAIN: "本轮是解释概念：先给一句话定义，再给一个具体例子，最后指出常见误解。",
     INTENT_CHAT: "",
 }
@@ -31,6 +33,7 @@ INTENT_PROMPTS: dict[str, str] = {
 _ERROR_WORDS = ("报错", "错误", "异常", "exception", "traceback", "failed", "失败", "跑不起来", "启动不了", "npe", "500")
 _DESIGN_WORDS = ("方案", "架构", "设计", "选型", "对比", "权衡", "怎么做", "如何实现", "规划")
 _WRITE_WORDS = ("写一段", "写一篇", "润色", "改写", "文案", "通知", "总结", "简历", "周报", "演讲稿")
+_TRANSLATE_WORDS = ("翻译", "译成", "译为", "translate", "translation")
 _EXPLAIN_WORDS = ("是什么", "什么是", "原理", "区别", "为什么", "解释", "含义")
 
 
@@ -47,6 +50,8 @@ def classify_intent(text: str) -> str:
         return INTENT_ERROR
     if any(word in body for word in _WRITE_WORDS):
         return INTENT_WRITING
+    if any(word in body for word in _TRANSLATE_WORDS):
+        return INTENT_TRANSLATE
     if any(word in body for word in _DESIGN_WORDS):
         return INTENT_DESIGN
     if any(word in body for word in _EXPLAIN_WORDS):
