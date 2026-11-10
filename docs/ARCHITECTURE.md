@@ -157,7 +157,8 @@ POST /api/chat
 
 | 方法 | 何时调用 | 记的是什么 |
 |---|---|---|
-| `record_turn` | 每轮结束（含失败） | 请求数、失败数、按模型分行、按难度分级、首 token 时间 |
+| `record_turn` | 每轮结束（含失败） | 请求数、失败数、按模型分行、按难度分级、按题型、首 token 时间 |
+| `record_cancelled` | 客户端中途断开 | 单独计数：token 花了，但既不算成功也不算失败 |
 | `record_usage` | 上游回了 usage 字段 | 提示/补全 token、成本；无价模型清 `costKnown` |
 | `record_local` | 身份问答、主人指令 | 不经过模型的回答，另记 `local` 行 |
 | `record_blocked` | 熔断拒绝 | 一次请求 + 一次失败，单列 `blocked` |
@@ -173,8 +174,13 @@ POST /api/chat
    只有后两种说明 TTL 太短或容量太小；
 4. **熔断的 `openings` 是进程级累计**，失败计数会被下一次成功清零，看不出“反复抖”。
 
-`/api/usage` 因此回答四个问题：用了多少（requests）、花了多少（costUsd / byModel）、
-快不快（avgTtft）、多少没走模型（local / blocked）。
+`/api/usage` 因此回答五个问题：用了多少（requests）、花了多少（costUsd / byModel，
+每行自带失败率）、快不快（avgTtft / ttftMax——平均会藏住一次 40 秒的等待，
+最差值不会）、在问什么（byIntent）、多少没走模型（local / blocked / cancelled）。
+
+限流器也有自己的快照：`/api/health` 的 `limiter.tracked` 是正在被观察的客户端数——
+只有数量，不含 IP；`X-RateLimit-Remaining` 头把剩余额度告诉客户端，
+让它能在被拒绝之前自己降速。
 
 ## 本地端（CLI / 桌面）一轮的路径
 
