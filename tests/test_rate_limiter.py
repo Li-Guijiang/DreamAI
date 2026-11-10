@@ -20,9 +20,10 @@ def test_a_limit_is_enforced_inside_the_window():
 
     assert _hit(limiter, "1.2.3.4")[0] is True
     assert _hit(limiter, "1.2.3.4")[0] is True
-    allowed, retry = _hit(limiter, "1.2.3.4")
+    allowed, retry, remaining = _hit(limiter, "1.2.3.4")
     assert allowed is False
     assert retry >= 1
+    assert remaining == 0
 
 
 def test_another_client_is_not_punished_for_the_first():
@@ -55,3 +56,11 @@ def test_an_expired_window_frees_the_client():
     allowed, _ = _hit(limiter, "1.2.3.4")
 
     assert allowed is True
+
+
+def test_the_remaining_count_falls_as_the_window_fills():
+    limiter = RateLimiter(limit=3, window=60)
+
+    assert _hit(limiter, "1.2.3.4")[2] == 2
+    assert _hit(limiter, "1.2.3.4")[2] == 1
+    assert _hit(limiter, "1.2.3.4")[2] == 0

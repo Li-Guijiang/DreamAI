@@ -105,8 +105,13 @@ class RateLimiter:
         self._hits: dict[str, deque[float]] = defaultdict(deque)
         self._lock = asyncio.Lock()
 
-    async def hit(self, key: str) -> tuple[bool, int]:
-        """Return ``(allowed, retry_after_seconds)``."""
+    async def hit(self, key: str) -> tuple[bool, int, int]:
+        """Return ``(allowed, retry_after_seconds, remaining_in_window)``.
+
+        The remaining count is what turns a bare limit into a contract: a client
+        that can see how many requests it has left slows down before it is told
+        to.
+        """
         now = time.monotonic()
         async with self._lock:
             bucket = self._hits[key]
@@ -114,11 +119,11 @@ class RateLimiter:
                 bucket.popleft()
             if len(bucket) >= self._limit:
                 retry = int(self._window - (now - bucket[0])) + 1
-                return False, max(1, retry)
+                return False, max(1, retry), 0
             bucket.append(now)
             if len(self._hits) > 20000:  # keep memory bounded
                 self._hits.clear()
-            return True, 0
+            return True, 0, max(0, self._limit - len(bucket))
 
     def stats(self) -> dict:
         """What the health endpoint reports about the limiter.
