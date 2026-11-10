@@ -645,11 +645,15 @@ async def public_config() -> JSONResponse:
 
 def _local_chat(text: str, *, extra_headers: dict[str, str] | None = None) -> StreamingResponse:
     """Stream a deterministic, model-free answer (identity or owner command)."""
+    # A local answer is untraceable without an id: a bug report about the dossier
+    # or the verification flow could not be matched to a log line.
+    request_id = f"req_{uuid.uuid4().hex[:8]}"
 
     async def stream() -> AsyncIterator[bytes]:
         started = time.monotonic()
         _stats.record_local()
-        yield sse("meta", {"model": "local", "version": VERSION})
+        logger.info("local reply id=%s chars=%s", request_id, len(text))
+        yield sse("meta", {"model": "local", "version": VERSION, "requestId": request_id})
         yield sse("delta", {"t": text})
         yield sse(
             "done",
@@ -665,6 +669,7 @@ def _local_chat(text: str, *, extra_headers: dict[str, str] | None = None) -> St
         "Cache-Control": "no-cache, no-transform",
         "Connection": "keep-alive",
         "X-Accel-Buffering": "no",
+        "X-Request-Id": request_id,
     }
     if extra_headers:
         headers.update(extra_headers)

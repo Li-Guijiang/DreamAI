@@ -82,3 +82,13 @@ def test_usage_reports_the_intent_mix(client):
     body = client.get("/api/usage").json()
 
     assert body["byIntent"]["error"] == 1
+
+
+def test_a_local_reply_carries_a_request_id(client):
+    response = client.post(
+        "/api/chat", json={"messages": [{"role": "user", "content": "你的主人是谁"}]}
+    )
+
+    assert response.status_code == 200
+    assert response.headers["X-Request-Id"].startswith("req_")
+    assert "requestId" in response.text
