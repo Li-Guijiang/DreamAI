@@ -155,7 +155,17 @@ async def consume_daily_budget() -> bool:
         if _daily_state["date"] != today:
             _daily_state["date"] = today
             _daily_state["count"] = 0
+            _daily_state["warned"] = False
         if _daily_state["count"] >= settings.daily_limit:
+            # Once per day, not once per refused request: the log is for noticing,
+            # not for filling the disk with the same line.
+            if not _daily_state.get("warned"):
+                _daily_state["warned"] = True
+                logger.warning(
+                    "daily budget exhausted: %d requests served for %s",
+                    settings.daily_limit,
+                    today,
+                )
             return False
         _daily_state["count"] += 1
         return True

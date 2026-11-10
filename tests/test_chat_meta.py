@@ -74,3 +74,29 @@ def test_uncached_response_is_marked_as_a_miss(client):
     response = client.post("/api/chat", json={"messages": [{"role": "user", "content": "你好"}]})
 
     assert response.headers.get("x-cache") == "MISS"
+
+
+def test_the_daily_budget_logs_once_per_day_not_once_per_refusal(monkeypatch):
+    import asyncio
+    import importlib
+
+    monkeypatch.syspath_prepend("web")
+    monkeypatch.setenv("DREAMAI_FREE_API_KEY", "test-key")
+    monkeypatch.setenv("DREAMAI_DAILY_LIMIT", "2")
+    main = importlib.import_module("app.main")
+    monkeypatch.setattr(main, "settings", main.load_settings())
+
+    lines: list[str] = []
+
+    def fake_warning(fmt, *args):  # noqa: ANN001, ANN002
+        lines.append(fmt % args if args else fmt)
+
+    monkeypatch.setattr(main.logger, "warning", fake_warning)
+
+    async def spend() -> list[bool]:
+        return [await main.consume_daily_budget() for _ in range(4)]
+
+    results = asyncio.run(spend())
+
+    assert results == [True, True, False, False]
+    assert len(lines) == 1
