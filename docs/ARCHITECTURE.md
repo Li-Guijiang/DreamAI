@@ -189,13 +189,17 @@ POST /api/chat
 
 1. `capture_preference` / `handle_owner_command`：`记住：…`、`【更新档案】…` 直接本地回答，不掉模型；
 2. `trim_long_input`：长粘贴只留头、关键行、尾，再进历史；
-3. `classify_tier` + `reply_budget`：判定难度并折算 token 预算（light 封顶 768，deep 在配置值上加 1024，
+3. `compress_history`：超过 `max_history_chars` 的历史折叠成摘要——最新几轮原样保留，
+   更早的变成带角色标注的摘要（只作用于发给模型的副本，存储不动）；
+4. `classify_tier` + `reply_budget`：判定难度并折算 token 预算（light 封顶 768，deep 在配置值上加 1024，
    再封顶 8192），**预算相对配置值收放，不是替换配置**；
-4. `tier_hint` + `intent_prompt` + 重复检测：三条提示拼进 system prompt 末尾；
-5. 调 provider（带上 `max_tokens`）。老式一参签名仍可用：只吞掉指名 `max_tokens` 的 `TypeError`；
-6. 后处理：`strip_filler` → `limit_emoji` → `close_fences` → `dedupe_sentences`；
-7. `looks_empty`：空回答重试一次，仍空则明说“没生成有效内容”；
-8. `mask_contacts`（公开面）→ 写入会话历史。
+5. 提示拼装：`tier_hint` + `intent_prompt` + 重复检测 + 语言跟随（英文问题附英文提示）
+   + 指代检测（折叠后追问时指明「对象在摘要里」），全部拼进 system prompt 末尾；
+6. 调 provider（带上 `max_tokens`）。老式一参签名仍可用：只吞掉指名 `max_tokens` 的 `TypeError`；
+7. 后处理：`strip_filler` → `limit_emoji` → `close_fences` → `dedupe_sentences`；
+8. `looks_empty`：空回答重试一次，仍空则明说“没生成有效内容”；
+9. `mask_contacts`（公开面）→ 写入会话历史；`turn_count` 只数真正调模型的轮次，
+   CLI 的 `/stats` 读它与 `last_tier`。
 
 与网页版的差别值得记住：网页版在流式过程中无法改写已发出的字，所以它把力气花在
 “发之前”（提示词、预算、缓存、熔断）；本地端能改全文，所以把力气花在“收之后”（去套话、闭代码块、去重复）。
