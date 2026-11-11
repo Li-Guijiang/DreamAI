@@ -22,7 +22,9 @@ _REVEAL = re.compile(
     r"(print|show|repeat|reveal|output)\s+(me\s+)?(your\s+)?(system\s+prompt|instructions?|rules)",
     re.I,
 )
-_ROLE_SWITCH = re.compile(r"(you are now|from now on you are|act as)\s+(a\s+)?(dan|jailbreak|unrestricted)", re.I)
+_ROLE_SWITCH = re.compile(
+    r"(you are now|from now on you are|act as)\s+(a\s+)?(dan|jailbreak|unrestricted)", re.I
+)
 _OVERRIDE_ZH = re.compile(r"(忽略|无视|忘记)(以上|之前|前面|上面)(的)?(所有)?(指令|规则|设定|提示)")
 _REVEAL_ZH = re.compile(r"(输出|打印|重复|告诉我)(你的)?(系统提示|系统指令|设定|提示词)")
 

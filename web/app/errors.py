@@ -51,8 +51,7 @@ def user_message(status: int, label: str = "") -> str:
         return "这次请求的内容太长了，上游拒绝接收：请缩短问题，或开启一个新对话。"
     if status in PAYLOAD_STATUS:
         return (
-            "上游认为请求的格式不对：多半是这个模型不支持某个参数，"
-            "或 max_tokens 超过了它的上限。"
+            "上游认为请求的格式不对：多半是这个模型不支持某个参数，或 max_tokens 超过了它的上限。"
         )
     if status == 410:
         # A retired model is permanent. Retrying it is pure waste, and the
