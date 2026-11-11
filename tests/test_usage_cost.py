@@ -40,10 +40,15 @@ def test_usage_reports_latency_tier_and_local_traffic(client):
     assert body["blocked"] >= 0
 
 
-def test_usage_by_model_rows_carry_cost_and_tokens(client):
+def test_usage_by_model_rows_carry_cost_and_tokens(client, monkeypatch):
     import importlib
 
     main = importlib.import_module("app.main")
+    from app.stats import UsageStats
+
+    # Other web tests share these module-level counters; this one measures a
+    # single turn, so it must start from a fresh counter.
+    monkeypatch.setattr(main, "_stats", UsageStats(started_at=main.STARTED_AT))
     main._stats.record_turn("probe-model", tier="light", ttft=0.5)
     main._stats.record_usage("probe-model", 12, 8, 0.0004)
 
