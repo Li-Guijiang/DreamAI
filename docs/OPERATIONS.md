@@ -30,6 +30,7 @@ curl -s https://liguijiang.com/api/usage  | python -m json.tool
 | 花了多少 | `costUsd` / `costKnown` | `costKnown=false` 表示价格表里缺模型，总数是下限 |
 | 快不快 | `avgTtft` / `ttftMax` | 平均 1s 以内正常；`ttftMax` 远高于平均值说明偶发慢轮，不是常态 |
 | 在问什么 | `byIntent` | `error` 占比异常升高通常意味着上游或部署出问题，用户在排错 |
+| 走的哪一家 | `byProvider` | 某一家独占失败时先看 `byProvider`，再看该家下的 `byModel.failureRate` |
 | 有多少没走模型 | `local` / `blocked` / `cancelled` | `blocked` 高 = 熔断频繁；`cancelled` 高 = 用户等不及提前关页 |
 
 ### 1.3 一行日志怎么读
@@ -125,6 +126,7 @@ systemctl restart dreamai-web
 | 「等上游响应超时了」 | 408 | 网络/上游，可重试 |
 | 「没有找到这个接口或模型」 | 404 | 配置：base_url 或模型名 |
 | 「上游认为请求的格式不对」 | 400 / 422 | 参数超出模型支持范围 |
+| 「这个模型已经下线」 | 410 | 模型被厂商移除：换模型或更新配置清单，重试无用 |
 | 「这次请求的内容太长了」 | 413 | 输入太长，分段发送 |
 | 「上游连续失败，已暂停约 30 秒」 | 熔断打开 | 上游连续失败，等 `retryIn` |
 | 「今天的免费额度已经用完啦」 | 每日预算 | 等次日或填自己的 Key |
@@ -146,3 +148,40 @@ CLI / 桌面端没有 HTTP 接口，排查靠三样东西：
 本地端给 provider 传的 `max_tokens` 随难度变化：light ≤ 768、deep = 配置值 + 1024
 （封顶 8192）。如果回答明显被截断，先确认问题没有被误判成 light
 （一眼判据：`/stats` 的 `last tier`）。
+
+## 7. token 与成本一直是 0 怎么办
+
+按顺序排查，四步能定位绝大多数情况：
+
+1. 上游是否支持 `stream_options.include_usage`。少数网关见到这个字段就返回 400
+   （文案为「上游认为请求的格式不对」）。此时设 `DREAMAI_STREAM_USAGE=0` 并重启：
+   流式回答照常，但 token / 成本按设计保持为 0——这是取舍，不是故障；
+2. 用 `curl -N` 看一轮 SSE 的末尾有没有 `event: usage`。没有说明厂商没给计数，
+   与本站无关；
+3. 有 `usage` 但 `/api/usage` 仍为 0：检查该轮是否被熔断、缓存命中或提前取消，
+   这三种情况不产生新的上游计数；
+4. 计数在、`costUsd` 为 0 且 `costKnown=false`：价格表里没这个模型。用
+   `DREAMAI_PRICE_OVERRIDES=模型名=输入单价,输出单价` 补上（单位为美元/百万 token），
+   重启后启动日志会打印 `price overrides: 模型名`。多个条目用分号隔开。
+
+示例：
+
+```bash
+DREAMAI_PRICE_OVERRIDES='new-model=0.5,1.5;gpt-4o=2.5,10'
+```
+
+`costKnown=false` 只代表「有模型没价格」，不代表「没拿到 usage」；免费模型
+单价为 0 是已知价格，不会误标。
+
+## 8. 事故时间线的两端
+
+日志里现在成对出现：
+
+```
+breaker open state=open failures=3 openings=2 cooldown=30.0s
+breaker recovered state=closed openings=2
+```
+
+`breaker recovered` 由半开状态那一个探测请求成功后写入；只有正常轮次不会打这一行。
+`possible injection id=... severity=high` 是规则覆盖或身份切换的尝试，
+`severity=low` 只是想看系统提示，两者都加固了 system prompt 且都不写缓存。
