@@ -64,3 +64,28 @@ def test_success_needs_no_retry():
 
     assert run(factory) == [("content", "一次成功")]
     assert calls["n"] == 1
+
+
+def test_a_usage_event_is_never_merged_into_text():
+    import asyncio
+
+    from app.llm import coalesce
+
+    async def source():
+        yield "content", "半句"
+        yield "usage", '{"prompt_tokens": 1}'
+        yield "content", "下半句"
+        yield "usage", '{"completion_tokens": 2}'
+
+    items = asyncio.run(_drain(coalesce(source())))
+
+    assert items == [
+        ("content", "半句"),
+        ("usage", '{"prompt_tokens": 1}'),
+        ("content", "下半句"),
+        ("usage", '{"completion_tokens": 2}'),
+    ]
+
+
+async def _drain(source):  # noqa: ANN001
+    return [item async for item in source]

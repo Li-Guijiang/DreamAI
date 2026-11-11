@@ -106,6 +106,14 @@ async def coalesce(
     async for next_kind, text in source:
         if not text:
             continue
+        if next_kind == "usage":
+            # A usage event is a JSON object. Merging two of them - or appending
+            # one to a run of text - produces a string nobody can parse.
+            if buffer:
+                yield kind, "".join(buffer)
+                buffer, size, kind = [], 0, ""
+            yield "usage", text
+            continue
         if kind and next_kind != kind:
             yield kind, "".join(buffer)
             buffer, size = [], 0
