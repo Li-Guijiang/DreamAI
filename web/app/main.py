@@ -1041,6 +1041,15 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             logger.exception("unexpected chat error ip=%s", ip)
             yield sse("error", {"message": "服务出现了一点意外，请稍后重试。"})
         finally:
+            # One estimate for the whole turn: the counters, the done event and
+            # the log all read the same number. Passing cost=None here would mark
+            # the total unknown even for a free model whose price is known (0).
+            cost: float | None = None
+            if isinstance(usage_payload, dict):
+                prompt_tokens = int(usage_payload.get("prompt_tokens") or 0)
+                completion_tokens = int(usage_payload.get("completion_tokens") or 0)
+                cost = estimate_cost(model, prompt_tokens, completion_tokens)
+                _stats.record_usage(model, prompt_tokens, completion_tokens, cost)
             if cancelled:
                 _stats.record_cancelled(model)
             else:
@@ -1050,12 +1059,6 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     intent=intent,
                     failed=failed,
                     ttft=(first_token_at - started) if first_token_at else 0.0,
-                )
-            if isinstance(usage_payload, dict):
-                _stats.record_usage(
-                    model,
-                    int(usage_payload.get("prompt_tokens") or 0),
-                    int(usage_payload.get("completion_tokens") or 0),
                 )
             if not failed and not cancelled:
                 _breaker.record_success()
@@ -1069,23 +1072,9 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     "elapsed": round(time.monotonic() - started, 2),
                     "model": model,
                 }
-                # One estimate, used by the reply, the counters and the log: three
-                # computations could disagree after a price change.
-                cost = (
-                    estimate_cost(
-                        model,
-                        int(usage_payload.get("prompt_tokens") or 0),
-                        int(usage_payload.get("completion_tokens") or 0),
-                    )
-                    if usage_payload
-                    else None
-                )
                 if usage_payload:
                     done_payload["usage"] = usage_payload
-                    if cost is None:
-                        _stats.known_cost = False
-                    else:
-                        _stats.cost_usd += cost
+                    if cost is not None:
                         done_payload["cost"] = {"usd": cost, "text": format_cost(cost)}
                 logger.info(
                     format_turn_log(

@@ -19,9 +19,17 @@ if WEB not in sys.path:
 @pytest.fixture()
 def harness(monkeypatch):
     main = importlib.import_module("app.main")
+    from app.stats import UsageStats
+
     monkeypatch.setattr(
         main, "settings", dataclasses.replace(main.settings, free_api_key="test-key")
     )
+    # The counters, breaker and limiter are module-level and shared with every
+    # other web test. Start from a clean slate so this file measures one turn.
+    monkeypatch.setattr(main, "_stats", UsageStats(started_at=main.STARTED_AT))
+    main._breaker.reset()
+    main._cache.clear()
+    main.limiter._hits.clear()
 
     async def fake_stream(*args, **kwargs):  # noqa: ANN002, ANN003
         yield "content", "先给结论。"
@@ -52,21 +60,17 @@ def test_the_usage_event_reaches_the_client(harness):
 
 def test_tokens_and_cost_are_counted(harness):
     main, client = harness
-    before = main._stats.snapshot()
-
     _chat(client)
     after = main._stats.snapshot()
 
-    assert after["promptTokens"] - before["promptTokens"] == 1000
-    assert after["completionTokens"] - before["completionTokens"] == 500
+    assert after["promptTokens"] == 1000
+    assert after["completionTokens"] == 500
     # The site's default model is free, so the cost is zero but known, and the
     # tokens are attributed to that model's row rather than only to the total.
-    assert after["costUsd"] == before["costUsd"]
+    assert after["costUsd"] == 0.0
     assert after["costKnown"] is True
     model = main.settings.free_model
-    assert after["byModel"][model]["promptTokens"] - before["byModel"].get(
-        model, {}
-    ).get("promptTokens", 0) == 1000
+    assert after["byModel"][model]["promptTokens"] == 1000
 
 
 def test_the_done_event_carries_its_cost(harness):
