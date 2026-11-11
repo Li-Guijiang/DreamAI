@@ -27,6 +27,7 @@ def build(provider_id: str, **kwargs):
         messages=kwargs.pop("messages", MESSAGES),
         temperature=0.4,
         max_tokens=512,
+        **kwargs,
     )
 
 
