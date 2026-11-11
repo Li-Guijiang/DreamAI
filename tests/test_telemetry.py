@@ -105,3 +105,13 @@ def test_the_breaker_line_survives_an_empty_snapshot():
     from app.telemetry import format_breaker_log
 
     assert "failures=0" in format_breaker_log({})
+
+
+def test_the_recovery_line_is_short_and_says_it_closed():
+    from app.telemetry import format_recovery_log
+
+    line = format_recovery_log({"state": "closed", "openings": 2})
+
+    assert line.startswith("breaker recovered")
+    assert "state=closed" in line
+    assert "openings=2" in line

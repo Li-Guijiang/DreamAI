@@ -43,3 +43,11 @@ def format_breaker_log(stats: dict) -> str:
         f"failures={stats.get('failures', 0)} openings={stats.get('openings', 0)} "
         f"cooldown={stats.get('cooldown', 0)}s"
     )
+
+
+def format_recovery_log(stats: dict) -> str:
+    """One line when a half-open probe succeeds and the breaker closes again."""
+    return (
+        f"breaker recovered state={stats.get('state', 'closed')} "
+        f"openings={stats.get('openings', 0)}"
+    )
