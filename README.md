@@ -237,6 +237,11 @@ reaches the screen. Both are now explicit.
 | Cache off switch | `DREAMAI_CACHE_TTL=0` disables the cache without deleting code | `cache.py` |
 | Local folding | Long CLI sessions fold old turns into a digest instead of losing the subject | `compress_history()` |
 | Session spend | `/stats` in the CLI: model turns, provider, last tier | `agent.turn_count` |
+| Real usage | Token counts from all three wire formats, one usage event per stream | `usage_from_chunk()`, `DREAMAI_STREAM_USAGE` |
+| Price corrections | `DREAMAI_PRICE_OVERRIDES` fixes a stale price without a release | `pricing.configure_prices()` |
+| Provider view | `/api/usage` groups turns per vendor, not just per model | `byProvider` |
+| Stream repair | An unclosed code fence gets one final closing delta | `unclosed_fence()` |
+| Guarded turns | Injection attempts are graded and never cached | `classify_injection()` |
 
 The same rules exist twice: `dream_ai/identity.py` for the CLI and the desktop
 shell, and `web/app/config.py` for the service, which can run without the Python
