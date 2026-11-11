@@ -43,6 +43,9 @@ class UsageStats:
         # tier mix cannot: both are chat, but one is debugging and one is small
         # talk.
         self._by_intent: dict[str, int] = {}
+        # Models are per vendor; when a vendor is down, all of its models fail
+        # together. Grouping by provider is what turns that into one number.
+        self._by_provider: dict[str, int] = {}
         # Two kinds of turn that never reach a model and would otherwise look
         # like traffic: answered locally, and refused by the breaker.
         self.local_answers = 0
@@ -69,6 +72,7 @@ class UsageStats:
         *,
         tier: str = "",
         intent: str = "",
+        provider: str = "",
         failed: bool = False,
         ttft: float = 0.0,
     ) -> None:
@@ -80,6 +84,8 @@ class UsageStats:
             self._by_tier[tier] = self._by_tier.get(tier, 0) + 1
         if intent:
             self._by_intent[intent] = self._by_intent.get(intent, 0) + 1
+        if provider:
+            self._by_provider[provider] = self._by_provider.get(provider, 0) + 1
         if failed:
             self.failures += 1
             slot["failures"] += 1
@@ -95,6 +101,7 @@ class UsageStats:
         if tier:
             self._by_tier[tier] = self._by_tier.get(tier, 0) + 1
         self._slot("local")["requests"] += 1
+        self._by_provider["local"] = self._by_provider.get("local", 0) + 1
 
     def record_blocked(self) -> None:
         """Count a turn the breaker refused before any work was done."""
@@ -163,6 +170,7 @@ class UsageStats:
             "cancelled": self.cancelled,
             "byTier": dict(self._by_tier),
             "byIntent": dict(self._by_intent),
+            "byProvider": dict(self._by_provider),
             "byModel": {
                 model: {
                     **slot,

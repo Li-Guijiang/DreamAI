@@ -211,3 +211,13 @@ def test_each_model_row_carries_its_own_failure_rate():
 
     assert rows["a"]["failureRate"] == pytest.approx(0.5)
     assert rows["b"]["failureRate"] == 0.0
+
+
+def test_turns_are_grouped_by_provider():
+    stats = UsageStats()
+    stats.record_turn("a", provider="deepseek")
+    stats.record_turn("b", provider="deepseek")
+    stats.record_turn("c", provider="anthropic")
+    stats.record_local()
+
+    assert stats.snapshot()["byProvider"] == {"deepseek": 2, "anthropic": 1, "local": 1}
