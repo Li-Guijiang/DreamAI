@@ -52,7 +52,7 @@ from .quality import (
     unclosed_fence,
 )
 from .routing import choose_model, describe_routing, unknown_targets
-from .safety import detect_injection, harden_system_prompt
+from .safety import classify_injection, harden_system_prompt
 from .stats import UsageStats
 from .telemetry import format_breaker_log, format_turn_log
 
@@ -870,14 +870,23 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         messages[0] = {"role": "system", "content": system_prompt}
 
     request_id = f"req_{uuid.uuid4().hex[:8]}"
-    injection = detect_injection(last_user)
+    injection, severity = classify_injection(last_user)
     if injection:
         system_prompt = harden_system_prompt(system_prompt)
         messages[0] = {"role": "system", "content": system_prompt}
-        logger.warning("possible injection id=%s hit=%r", request_id, injection[:40])
+        log = logger.warning if severity == "high" else logger.info
+        log(
+            "possible injection id=%s severity=%s hit=%r",
+            request_id,
+            severity,
+            injection[:40],
+        )
     cache_key = None
     cached_text: str | None = None
-    if _cache.enabled and temperature <= 0.3:
+    # A turn that tripped the guard is answered with a hardened prompt. It is
+    # cheap to keep such answers out of the cache entirely: they are rare, and a
+    # security-sensitive reply should never be replayed to a later visitor.
+    if _cache.enabled and injection is None and temperature <= 0.3:
         cache_key = make_key(upstream.provider.id, model, messages, temperature, budget)
         cached_text = _cache.get(cache_key)
 
