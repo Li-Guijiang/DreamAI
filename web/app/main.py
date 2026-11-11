@@ -949,6 +949,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                         max_tokens=budget,
                         top_p=settings.top_p,
                         presence_penalty=settings.presence_penalty,
+                        include_usage=settings.stream_usage,
                     ):
                         yield item
 
@@ -965,6 +966,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                         messages=messages,
                         temperature=temperature,
                         max_tokens=budget,
+                        include_usage=settings.stream_usage,
                     ):
                         yield item
 
