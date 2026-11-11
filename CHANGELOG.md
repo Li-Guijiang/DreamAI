@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Usage accounting is real now
+
+- OpenAI-compatible streams ask for `stream_options.include_usage` (switch:
+  `DREAMAI_STREAM_USAGE=0`); all three wire formats are parsed into one `usage`
+  event per stream, and that event bypasses text coalescing.
+- One cost estimate now feeds the counters, the per-model row, the done event
+  and the log. A missing price still clears `costKnown`; a free model does not.
+- `DREAMAI_PRICE_OVERRIDES` corrects or adds prices at startup.
+- `/api/usage` also reports `byProvider`, and the breaker writes a matching
+  `breaker recovered` line when a half-open probe succeeds.
+- End-to-end test proves a usage event reaches the numbers; both tier classifiers
+  now share a parity corpus.
+
+### Streaming integrity
+
+- An unclosed code fence receives one closing delta; the cached copy matches.
+- Injection attempts are graded (reveal = info, override = warning) and never
+  cached.
+- HTTP 410 gets permanent wording, is never retried, and keeps the provider's
+  deprecation notice out of the chat bubble.
+
+
 ### Honest counting
 
 - A turn whose client hung up mid-stream is counted as `cancelled`, not as a
