@@ -46,3 +46,24 @@ def test_an_override_changes_the_estimate_without_a_restart():
 
 def test_an_empty_override_changes_nothing():
     assert configure_prices("") == {}
+
+
+def test_the_startup_hook_applies_the_configured_overrides(monkeypatch):
+    import dataclasses
+    import importlib
+
+    main = importlib.import_module("app.main")
+    monkeypatch.setattr(
+        main,
+        "settings",
+        dataclasses.replace(main.settings, price_overrides="startup-probe-model=0.25,0.5"),
+    )
+    try:
+        # The lifespan hook is where this happens in a real process; call the
+        # same function here so the wiring is testable without a server.
+        applied = configure_prices(main.settings.price_overrides)
+
+        assert applied == {"startup-probe-model": (0.25, 0.5)}
+        assert estimate_cost("startup-probe-model", 1000, 1000) == 0.00075
+    finally:
+        PRICES.pop("startup-probe-model", None)

@@ -41,7 +41,7 @@ from .insight import (
     language_prompt,
     trim_long_input,
 )
-from .pricing import estimate_cost, format_cost
+from .pricing import configure_prices, estimate_cost, format_cost
 from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
 from .quality import compress_history, dedupe_messages, needs_context, plan_generation, respect_cap
 from .routing import choose_model, describe_routing, unknown_targets
@@ -72,6 +72,9 @@ async def lifespan(app: FastAPI):
     )
     if not settings.free_configured:
         logger.warning("DREAMAI_FREE_API_KEY is empty — free chat returns 503 until it is set.")
+    applied = configure_prices(settings.price_overrides)
+    if applied:
+        logger.info("price overrides: %s", ", ".join(sorted(applied)))
     logger.info(describe_routing(settings.model_by_tier, settings.free_model))
     unknown = unknown_targets(settings.model_by_tier, {m.id for m in settings.models})
     if unknown:
