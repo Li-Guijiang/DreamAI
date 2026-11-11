@@ -43,7 +43,14 @@ from .insight import (
 )
 from .pricing import configure_prices, estimate_cost, format_cost
 from .providers import BYOK_PROVIDERS, get_provider, public_catalog, resolve_model
-from .quality import compress_history, dedupe_messages, needs_context, plan_generation, respect_cap
+from .quality import (
+    compress_history,
+    dedupe_messages,
+    needs_context,
+    plan_generation,
+    respect_cap,
+    unclosed_fence,
+)
 from .routing import choose_model, describe_routing, unknown_targets
 from .safety import detect_injection, harden_system_prompt
 from .stats import UsageStats
@@ -1012,6 +1019,14 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                         yield sse("reasoning" if kind == "reasoning" else "delta", {"t": text})
                 finally:
                     pump.cancel()
+                # The last chance to repair the answer: after this point the
+                # stream is closed and the text is already rendered. Appending a
+                # delta keeps the cached copy and the client's copy identical.
+                if not failed and unclosed_fence("".join(answered)):
+                    patch = "\n```"
+                    answered.append(patch)
+                    produced += len(patch)
+                    yield sse("delta", {"t": patch})
         except llm.LLMError as exc:
             failed = True
             openings_before = _breaker.openings
