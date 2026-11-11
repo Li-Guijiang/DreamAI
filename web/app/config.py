@@ -165,6 +165,16 @@ def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
 
 
+def _env_bool(name: str, default: bool = True) -> bool:
+    """On/off environment switch; anything unusual falls back to the default."""
+    raw = _env(name, "").lower()
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
 def _env_int(name: str, default: int, minimum: int = 0) -> int:
     try:
         value = int(_env(name, str(default)))
@@ -251,6 +261,9 @@ class Settings:
     # Optional sampling knobs; None means "let the provider default apply".
     top_p: float | None = None
     presence_penalty: float | None = None
+    # Ask OpenAI-compatible endpoints for a final usage chunk. A few gateways
+    # reject the extra field; setting this to 0 keeps streaming answers working.
+    stream_usage: bool = True
     # Resilience and caching, tunable without a code change.
     breaker_threshold: int = 3
     breaker_cooldown: float = 30.0
@@ -383,6 +396,7 @@ def load_settings() -> Settings:
         max_tokens=_env_int("DREAMAI_MAX_TOKENS", 4096, 256),
         top_p=_env_optional_float("DREAMAI_TOP_P"),
         presence_penalty=_env_optional_float("DREAMAI_PRESENCE_PENALTY"),
+        stream_usage=_env_bool("DREAMAI_STREAM_USAGE", True),
         breaker_threshold=_env_int("DREAMAI_BREAKER_THRESHOLD", 3, 1),
         breaker_cooldown=_env_float("DREAMAI_BREAKER_COOLDOWN", 30.0),
         cache_ttl=_env_float("DREAMAI_CACHE_TTL", 300.0),
