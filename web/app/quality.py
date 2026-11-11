@@ -244,3 +244,13 @@ def dedupe_messages(messages: Sequence[dict[str, str]]) -> list[dict[str, str]]:
             continue
         result.append(dict(message))
     return result
+
+
+def unclosed_fence(text: str) -> bool:
+    """True when an answer opened a code fence it never closed.
+
+    A streamed answer cannot be rewritten after the fact, but the last delta can
+    still be appended before the connection closes. Counting fences is enough:
+    an inline triple backtick pair inside prose still leaves an even count.
+    """
+    return (text or "").count("```") % 2 == 1

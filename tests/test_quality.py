@@ -168,3 +168,22 @@ def test_no_cap_keeps_the_plan():
 
 def test_cap_never_goes_below_the_floor():
     assert respect_cap(5120, 8) == 128
+
+
+def test_an_open_fence_is_detected_before_the_stream_closes():
+    from app.quality import unclosed_fence
+
+    assert unclosed_fence("代码如下：\n```python\nprint(1)") is True
+
+
+def test_a_closed_fence_is_left_alone():
+    from app.quality import unclosed_fence
+
+    assert unclosed_fence("```bash\nls\n```\n完成") is False
+
+
+def test_an_empty_or_plain_answer_is_left_alone():
+    from app.quality import unclosed_fence
+
+    assert unclosed_fence("") is False
+    assert unclosed_fence("先给结论。") is False
