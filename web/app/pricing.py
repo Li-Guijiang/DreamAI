@@ -46,3 +46,37 @@ def format_cost(total: float | None) -> str:
     if total < 0.01:
         return f"${total:.4f}"
     return f"${total:.2f}"
+
+
+def parse_price_overrides(raw: str) -> dict[str, tuple[float, float]]:
+    """Parse ``model=input,output;model2=input,output`` into a price table.
+
+    A published price list is a dated snapshot. A vendor can change a price or
+    add a model without a release, so the operator needs a way to correct one
+    entry in an environment variable instead of editing source. Malformed pairs
+    are skipped rather than allowed to poison the table.
+    """
+    result: dict[str, tuple[float, float]] = {}
+    for item in (raw or "").split(";"):
+        item = item.strip()
+        if not item or "=" not in item:
+            continue
+        model, numbers = item.split("=", 1)
+        parts = [part.strip() for part in numbers.split(",")]
+        if not model.strip() or len(parts) != 2:
+            continue
+        try:
+            input_price, output_price = float(parts[0]), float(parts[1])
+        except ValueError:
+            continue
+        if input_price < 0 or output_price < 0:
+            continue
+        result[model.strip()] = (input_price, output_price)
+    return result
+
+
+def configure_prices(raw: str) -> dict[str, tuple[float, float]]:
+    """Apply operator overrides to the module table and return what was applied."""
+    overrides = parse_price_overrides(raw)
+    PRICES.update(overrides)
+    return overrides
