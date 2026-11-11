@@ -146,7 +146,12 @@ POST /api/chat
 ## 成本与可观测性
 
 - `pricing.py` 按模型单价（美元/百万 token）估算；未知模型返回 `None`，
-  `/api/usage` 用 `costKnown=false` 明说“有模型没价”；
+  `/api/usage` 用 `costKnown=false` 明说“有模型没价”；价格表可用
+  `DREAMAI_PRICE_OVERRIDES=model=输入价,输出价;...` 在启动时纠正，无需改代码；
+- token 数来自上游：OpenAI 兼容端点要带 `stream_options.include_usage` 才会在流的
+  末尾给出 `usage`；Anthropic 分在 `message_start` / `message_delta` 两处；Gemini
+  的 `usageMetadata` 会重复出现。三种格式由 `adapters.usage_from_chunk` 归一，
+  `llm._stream_raw` 用 `max()` 累加后只发一个 `usage` 事件。JSON 事件不参与文本合流；
 - 每轮一行日志：`chat done id=req_xxx tier=deep intent=error ttft=0.84s total=6.21s chars=812 model=... cache=miss cost=$0.0012`；
 - `X-Request-Id` 与事件体同值，用户截图即可定位日志；
 - `/api/health` 暴露熔断状态与缓存计数，`/api/usage` 暴露 token、成本、命中率。
@@ -157,7 +162,7 @@ POST /api/chat
 
 | 方法 | 何时调用 | 记的是什么 |
 |---|---|---|
-| `record_turn` | 每轮结束（含失败） | 请求数、失败数、按模型分行、按难度分级、按题型、首 token 时间 |
+| `record_turn` | 每轮结束（含失败） | 请求数、失败数、按模型分行、按供应商、按难度分级、按题型、首 token 时间 |
 | `record_cancelled` | 客户端中途断开 | 单独计数：token 花了，但既不算成功也不算失败 |
 | `record_usage` | 上游回了 usage 字段 | 提示/补全 token、成本；无价模型清 `costKnown` |
 | `record_local` | 身份问答、主人指令 | 不经过模型的回答，另记 `local` 行 |
@@ -174,9 +179,13 @@ POST /api/chat
    只有后两种说明 TTL 太短或容量太小；
 4. **熔断的 `openings` 是进程级累计**，失败计数会被下一次成功清零，看不出“反复抖”。
 
-`/api/usage` 因此回答五个问题：用了多少（requests）、花了多少（costUsd / byModel，
+`/api/usage` 因此回答六个问题：用了多少（requests）、花了多少（costUsd / byModel，
 每行自带失败率）、快不快（avgTtft / ttftMax——平均会藏住一次 40 秒的等待，
-最差值不会）、在问什么（byIntent）、多少没走模型（local / blocked / cancelled）。
+最差值不会）、在问什么（byIntent）、走的是哪一家（byProvider）、
+多少没走模型（local / blocked / cancelled）。
+
+`costKnown=false` 只表示「有模型没价格」，不表示「这一轮没拿到 usage」——没拿到
+usage 时根本不会碰这个标志。免费模型单价为 0 且已知，同样不会误标成未知。
 
 限流器也有自己的快照：`/api/health` 的 `limiter.tracked` 是正在被观察的客户端数——
 只有数量，不含 IP；`X-RateLimit-Remaining` 头把剩余额度告诉客户端，
