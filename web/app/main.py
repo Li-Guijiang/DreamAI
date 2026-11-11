@@ -641,6 +641,7 @@ async def usage() -> JSONResponse:
             "byModel": totals["byModel"],
             "local": totals["local"],
             "blocked": totals["blocked"],
+            "cancelled": totals["cancelled"],
             "daily": _daily_state,
             "dailyLimit": settings.daily_limit,
         }

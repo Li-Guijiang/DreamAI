@@ -97,3 +97,7 @@ def test_a_local_reply_carries_a_request_id(client):
     assert response.status_code == 200
     assert response.headers["X-Request-Id"].startswith("req_")
     assert "requestId" in response.text
+
+
+def test_usage_reports_how_many_turns_were_abandoned(client):
+    assert "cancelled" in client.get("/api/usage").json()
