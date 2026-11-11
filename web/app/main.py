@@ -54,7 +54,7 @@ from .quality import (
 from .routing import choose_model, describe_routing, unknown_targets
 from .safety import classify_injection, harden_system_prompt
 from .stats import UsageStats
-from .telemetry import format_breaker_log, format_turn_log
+from .telemetry import format_breaker_log, format_recovery_log, format_turn_log
 
 logging.basicConfig(
     level=logging.INFO,
@@ -1090,7 +1090,12 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     ttft=(first_token_at - started) if first_token_at else 0.0,
                 )
             if not failed and not cancelled:
+                # Only a half-open probe can close an open breaker; that is the
+                # moment an incident actually ends.
+                recovering = _breaker.state == "half-open"
                 _breaker.record_success()
+                if recovering:
+                    logger.info(format_recovery_log(_breaker.stats()))
                 if cache_key and answered:
                     _cache.put(cache_key, "".join(answered))
                 done_payload = {
