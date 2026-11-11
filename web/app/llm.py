@@ -14,7 +14,7 @@ from collections.abc import AsyncIterator
 
 import httpx
 
-from .adapters import build_request, parse_chunk
+from .adapters import build_request, parse_chunk, usage_from_chunk
 from .errors import is_retryable
 
 logger = logging.getLogger("dreamai.llm")
@@ -130,8 +130,9 @@ async def stream_completion(
     max_tokens: int = 4096,
     top_p: float | None = None,
     presence_penalty: float | None = None,
+    include_usage: bool = True,
 ) -> AsyncIterator[tuple[str, str]]:
-    """Yield coalesced ``(kind, text)`` where kind is ``content`` or ``reasoning``."""
+    """Yield ``content`` / ``reasoning`` deltas and one final ``usage`` event."""
     async for item in coalesce(
         _stream_raw(
             provider,
@@ -142,6 +143,7 @@ async def stream_completion(
             max_tokens=max_tokens,
             top_p=top_p,
             presence_penalty=presence_penalty,
+            include_usage=include_usage,
         )
     ):
         yield item
@@ -157,8 +159,9 @@ async def _stream_raw(
     max_tokens: int = 4096,
     top_p: float | None = None,
     presence_penalty: float | None = None,
+    include_usage: bool = True,
 ) -> AsyncIterator[tuple[str, str]]:
-    """Parse the provider stream into per-token items."""
+    """Parse the provider stream into per-token items plus a final usage event."""
     url, headers, payload = build_request(
         provider,
         api_key=api_key,
@@ -168,10 +171,15 @@ async def _stream_raw(
         max_tokens=max_tokens,
         top_p=top_p,
         presence_penalty=presence_penalty,
+        include_usage=include_usage,
     )
     headers["User-Agent"] = "DreamAI-Web/1.0 (+https://liguijiang.com)"
 
     client = get_client()
+    # Anthropic and Gemini report cumulative counters repeatedly; max() keeps the
+    # last (largest) value without caring which chunk carried it.
+    totals = {"prompt_tokens": 0, "completion_tokens": 0}
+    seen_usage = False
     try:
         async with client.stream("POST", url, headers=headers, json=payload) as response:
             if response.status_code != 200:
@@ -196,12 +204,21 @@ async def _stream_raw(
                     continue
                 if data == "[DONE]":
                     break
+                usage = usage_from_chunk(provider.kind, data)
+                if usage:
+                    seen_usage = True
+                    for key, value in usage.items():
+                        totals[key] = max(totals.get(key, 0), value)
                 try:
                     items = parse_chunk(provider.kind, event_name, data)
                 except ValueError as exc:
                     raise LLMError(str(exc)) from exc
                 for kind, text in items:
                     yield kind, text
+        if seen_usage:
+            # Sent after the last text delta, before the stream closes. main.py
+            # already knows how to turn this into an SSE usage event and a cost.
+            yield "usage", json.dumps(totals)
     except LLMError:
         raise
     except httpx.TimeoutException as exc:
