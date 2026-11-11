@@ -148,3 +148,21 @@ def test_google_spells_top_p_inside_generation_config():
     )
 
     assert payload["generationConfig"]["topP"] == 0.6
+
+
+def test_openai_compatible_streams_ask_for_a_usage_chunk():
+    _, _, payload = build("deepseek")
+
+    assert payload["stream_options"] == {"include_usage": True}
+
+
+def test_the_usage_request_can_be_switched_off():
+    _, _, payload = build("deepseek", include_usage=False)
+
+    assert "stream_options" not in payload
+
+
+def test_anthropic_and_google_are_untouched_by_the_switch():
+    for provider_id in ("anthropic", "google"):
+        _, _, payload = build(provider_id, include_usage=False)
+        assert "stream_options" not in payload

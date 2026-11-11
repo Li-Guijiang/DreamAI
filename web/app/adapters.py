@@ -25,6 +25,7 @@ def build_request(
     max_tokens: int,
     top_p: float | None = None,
     presence_penalty: float | None = None,
+    include_usage: bool = True,
 ) -> tuple[str, dict[str, str], dict]:
     """Return ``(url, headers, payload)`` for a streaming request.
 
@@ -85,6 +86,10 @@ def build_request(
         "max_tokens": max_tokens,
         "stream": True,
     }
+    if include_usage:
+        # The final SSE chunk then carries a top-level `usage` object. Without
+        # this field most vendors simply never send token counts on a stream.
+        payload["stream_options"] = {"include_usage": True}
     if top_p is not None:
         payload["top_p"] = top_p
     if presence_penalty is not None:
