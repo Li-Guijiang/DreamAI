@@ -112,3 +112,19 @@ def test_a_request_that_never_arrived_keeps_its_own_explanation():
 
 def test_a_missing_status_with_nothing_to_say_still_answers():
     assert final_message(None, "DeepSeek", "") == "请求没有成功，请稍后重试。"
+
+
+def test_a_retired_model_is_permanent_and_names_the_fix():
+    message = user_message(410, "OpenAI")
+
+    assert "OpenAI" in message
+    assert "模型" in message
+    assert "换" in message
+    assert "稍后重试" not in message
+    assert not is_retryable(410)
+
+
+def test_a_retired_model_never_shows_the_provider_wording():
+    from app.errors import final_message
+
+    assert final_message(410, "OpenAI", "model deprecated") == user_message(410, "OpenAI")

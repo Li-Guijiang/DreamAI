@@ -28,7 +28,7 @@ GENERIC = "请求没有成功，请稍后重试。"
 # Statuses where our sentence beats anything the provider could say. 400 and 422
 # are deliberately absent: there the provider knows which parameter it rejected,
 # and that detail is the whole answer.
-CURATED_STATUS = BYOK_STATUS | {404, 408, 413, 429}
+CURATED_STATUS = BYOK_STATUS | {404, 408, 410, 413, 429}
 
 
 def is_retryable(status: int) -> bool:
@@ -54,6 +54,10 @@ def user_message(status: int, label: str = "") -> str:
             "上游认为请求的格式不对：多半是这个模型不支持某个参数，"
             "或 max_tokens 超过了它的上限。"
         )
+    if status == 410:
+        # A retired model is permanent. Retrying it is pure waste, and the
+        # visitor can do nothing; whoever configured the site must pick a new id.
+        return f"{who}的这个模型已经下线：请在设置中换一个模型，或更新服务端的模型清单。"
     if status == 404:
         # A 404 from an OpenAI-compatible endpoint is almost never a missing
         # page: it is a wrong path (a base_url without /v1) or a wrong model.
