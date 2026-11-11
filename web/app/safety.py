@@ -49,3 +49,20 @@ def harden_system_prompt(prompt: str) -> str:
     if GUARD_LINE in prompt:
         return prompt
     return f"{prompt}\n\n{GUARD_LINE}"
+
+
+# Asking to see the prompt is curiosity; demanding that the rules change or that
+# the model switch identity is an attempt to take control. Both are hardened, but
+# only the second deserves a warning-level log line.
+_HIGH_PATTERNS = (_ROLE_SWITCH, _OVERRIDE_EN, _OVERRIDE_ZH)
+
+
+def classify_injection(text: str) -> tuple[str | None, str]:
+    """Return ``(matched_fragment, severity)`` with severity none/low/high."""
+    hit = detect_injection(text)
+    if hit is None:
+        return None, "none"
+    body = text or ""
+    if any(pattern.search(body) for pattern in _HIGH_PATTERNS):
+        return hit, "high"
+    return hit, "low"
