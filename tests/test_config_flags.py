@@ -36,3 +36,9 @@ def test_the_stream_usage_switch_reaches_settings(monkeypatch):
 
     monkeypatch.delenv("DREAMAI_STREAM_USAGE")
     assert load_settings().stream_usage is True
+
+
+def test_price_overrides_are_read_from_the_environment(monkeypatch):
+    monkeypatch.setenv("DREAMAI_PRICE_OVERRIDES", "brand-new-model=1,3")
+
+    assert load_settings().price_overrides == "brand-new-model=1,3"

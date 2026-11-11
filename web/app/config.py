@@ -275,6 +275,8 @@ class Settings:
     fallback_model: str = ""
     # tier -> model, parsed from DREAMAI_MODEL_BY_TIER.
     model_by_tier: dict[str, str] = field(default_factory=dict)
+    # Operator corrections to the dated price list; see pricing.parse_price_overrides.
+    price_overrides: str = ""
 
     rate_limit: int = 30
     rate_window: int = 600
@@ -402,6 +404,7 @@ def load_settings() -> Settings:
         cache_ttl=_env_float("DREAMAI_CACHE_TTL", 300.0),
         cache_max_items=_env_int("DREAMAI_CACHE_MAX_ITEMS", 128, 1),
         model_by_tier=_parse_tier_map(_env("DREAMAI_MODEL_BY_TIER", "")),
+        price_overrides=_env("DREAMAI_PRICE_OVERRIDES", ""),
         fallback_base_url=_env("DREAMAI_FALLBACK_BASE_URL", ""),
         fallback_api_key=_env("DREAMAI_FALLBACK_API_KEY", ""),
         fallback_model=_env("DREAMAI_FALLBACK_MODEL", ""),
