@@ -255,3 +255,47 @@ half-open --(失败)--> open
 3. 给 `/api/usage` 加一个字段，只在 `stats.snapshot()` 里改一处（理解单一数据形状的好处）；
 4. 把 `guard` 的阈值改成 1，用假时钟写一条「失败一次就熔断」的测试；
 5. 用 `curl -N` 亲眼看一次 SSE，再对比不加 `-N` 的差别。
+
+---
+
+## 10. 附录：亲手验证一轮 SSE 的 usage 事件
+
+这一节把第 2 节（SSE）和第 6 节（成本核算）接起来。很多 LLM 网关默认**不在流式响应里
+给 token 计数**，因为多算一次账单元数据要额外成本；所以调用方要显式请求。
+
+### 10.1 三个必要的知识点
+
+1. **`stream_options.include_usage`**：OpenAI 兼容协议的请求字段。带上它，流的最后一个
+   chunk 才是 `{"choices":[],"usage":{"prompt_tokens":...,"completion_tokens":...}}`。
+2. **协议差异**：Anthropic 把输入计数放在 `message_start`、输出计数放在
+   `message_delta`；Gemini 用 `usageMetadata`，而且是 camelCase，还可能在多个 chunk
+   里重复给出累计值。所以本项目用 `max()` 累加，而不是「最后一个覆盖前面」。
+3. **累加器不能合并 JSON**：文本 delta 可以每 24 字符合流成一条 SSE，JSON 对象不行。
+   一合并就变成无法解析的字符串，成本于是静默丢失。
+
+### 10.2 动手验证
+
+```bash
+curl -N -X POST https://liguijiang.com/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"用一句话解释 SSE"}]}'
+```
+
+观察事件顺序：`meta` → 若干 `delta`（或 `reasoning`）→ `usage` → `done`。
+`done` 里的 `cost` 由同一份 `usage` 算出，`X-Request-Id` 与 `requestId` 可用于查日志。
+
+再验证计数落库：
+
+```bash
+curl -s https://liguijiang.com/api/usage | python -m json.tool
+```
+
+对比 `promptTokens` / `completionTokens` 的变化。若为 0，按 `docs/OPERATIONS.md`
+第 7 节的四步排查，其中最常见的一步是网关不接受 `include_usage`
+（`DREAMAI_STREAM_USAGE=0`）。
+
+### 10.3 一个容易混淆的点
+
+`costKnown=false` 的意思是「价格表里缺模型」，不是「这一轮没拿到 usage」。
+没拿到 usage 时代码根本不碰这个标志；免费模型单价为 0 属于**已知**价格。
+把「未知数据」和「未知单价」分开，是账单类系统不撒谎的最低要求。
