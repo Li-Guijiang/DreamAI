@@ -147,3 +147,76 @@ def parse_chunk(kind: str, event: str, data: str) -> list[tuple[str, str]]:
     if isinstance(delta.get("content"), str) and delta["content"]:
         items.append(("content", delta["content"]))
     return items
+
+
+def _count(value: object) -> int | None:
+    """Token counts are non-negative numbers; a bool is not a count."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return max(0, int(value))
+
+
+def usage_from_chunk(kind: str, data: str) -> dict[str, int] | None:
+    """Normalise whatever token counts a provider put in one SSE chunk.
+
+    Three shapes are in the wild:
+
+    * OpenAI-compatible: a final ``usage`` object in the last chunk;
+    * Anthropic: ``message_start.message.usage`` for input, then a cumulative
+      ``message_delta.usage`` for output;
+    * Gemini: ``usageMetadata`` with camel-cased names, often repeated.
+
+    Only the keys actually present are returned, so a caller can accumulate
+    across chunks without mistaking a missing value for a zero.
+    """
+    if not data or data == "[DONE]":
+        return None
+    try:
+        chunk = json.loads(data)
+    except ValueError:
+        return None
+    if not isinstance(chunk, dict):
+        return None
+
+    if kind == "anthropic":
+        usage = chunk.get("usage") or {}
+        if chunk.get("type") == "message_start":
+            usage = (chunk.get("message") or {}).get("usage") or {}
+        if not isinstance(usage, dict):
+            return None
+        found: dict[str, int] = {}
+        for source, target in (
+            ("input_tokens", "prompt_tokens"),
+            ("output_tokens", "completion_tokens"),
+        ):
+            count = _count(usage.get(source))
+            if count is not None:
+                found[target] = count
+        return found or None
+
+    if kind == "google":
+        meta = chunk.get("usageMetadata") or {}
+        if not isinstance(meta, dict):
+            return None
+        found = {}
+        for source, target in (
+            ("promptTokenCount", "prompt_tokens"),
+            ("candidatesTokenCount", "completion_tokens"),
+        ):
+            count = _count(meta.get(source))
+            if count is not None:
+                found[target] = count
+        return found or None
+
+    usage = chunk.get("usage") or {}
+    if not isinstance(usage, dict):
+        return None
+    found = {}
+    for source, target in (
+        ("prompt_tokens", "prompt_tokens"),
+        ("completion_tokens", "completion_tokens"),
+    ):
+        count = _count(usage.get(source))
+        if count is not None:
+            found[target] = count
+    return found or None
