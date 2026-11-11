@@ -20,3 +20,4 @@ New decisions should be added as numbered Markdown files, e.g. `0001-pluggable-p
 | [0010](./0010-local-reply-sizing.md) | Local reply sizing: the same question gets the same room |
 | [0011](./0011-local-parity.md) | Local parity: fold history, follow language, keep both copies honest |
 | [0012](./0012-usage-accounting.md) | Usage accounting: ask, parse, emit, and price once |
+| [0013](./0013-streaming-integrity.md) | Streaming integrity: repair the last byte, not the whole reply |
