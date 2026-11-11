@@ -637,6 +637,7 @@ async def usage() -> JSONResponse:
             "ttftMax": totals["ttftMax"],
             "byTier": totals["byTier"],
             "byIntent": totals["byIntent"],
+            "byProvider": totals["byProvider"],
             "byModel": totals["byModel"],
             "local": totals["local"],
             "blocked": totals["blocked"],
@@ -1084,6 +1085,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     model,
                     tier=tier,
                     intent=intent,
+                    provider=upstream.provider.id,
                     failed=failed,
                     ttft=(first_token_at - started) if first_token_at else 0.0,
                 )

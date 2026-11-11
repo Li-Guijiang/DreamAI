@@ -80,3 +80,11 @@ def test_the_done_event_carries_its_cost(harness):
 
     assert '"cost"' in body
     assert '"text"' in body
+
+
+def test_the_provider_is_recorded_for_a_real_turn(harness):
+    main, client = harness
+
+    _chat(client)
+
+    assert main._stats.snapshot()["byProvider"] == {"free": 1}
