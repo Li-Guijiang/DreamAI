@@ -100,6 +100,10 @@ async def coalesce(
     source: AsyncIterator[tuple[str, str]], max_chars: int = COALESCE_CHARS
 ) -> AsyncIterator[tuple[str, str]]:
     """Merge consecutive ``(kind, text)`` items until ``max_chars`` or a kind change."""
+    # A non-positive threshold means "no cap": merge until the kind changes or
+    # the stream ends. Before this guard, `size >= 0` was true for every delta
+    # and coalescing silently switched itself off into one event per token.
+    limit = int(max_chars) if max_chars > 0 else None
     kind = ""
     buffer: list[str] = []
     size = 0
@@ -122,7 +126,7 @@ async def coalesce(
         kind = next_kind
         buffer.append(text)
         size += len(text)
-        if size >= max_chars:
+        if limit is not None and size >= limit:
             yield kind, "".join(buffer)
             buffer, size = [], 0
 
