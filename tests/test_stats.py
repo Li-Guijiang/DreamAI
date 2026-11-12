@@ -278,3 +278,25 @@ def test_the_truncation_rate_is_the_share_of_all_requests():
 
 def test_a_fresh_counter_has_no_truncation_rate():
     assert UsageStats().snapshot()["truncationRate"] == 0.0
+
+
+def test_the_finish_mix_separates_a_filter_hit_from_a_truncation():
+    stats = UsageStats()
+    stats.record_turn("m", finish="length", truncated=True)
+    stats.record_turn("m", finish="filter")
+    stats.record_turn("m", finish="stop")
+    stats.record_turn("m")
+
+    assert stats.snapshot()["byFinish"] == {"length": 1, "filter": 1, "stop": 1}
+
+
+def test_truncations_are_attributed_to_the_tier_whose_cap_was_tight():
+    stats = UsageStats()
+    stats.record_turn("m", tier="deep", finish="length", truncated=True)
+    stats.record_turn("m", tier="deep", finish="length", truncated=True)
+    stats.record_turn("m", tier="light", finish="stop")
+
+    snapshot = stats.snapshot()
+
+    assert snapshot["truncatedByTier"] == {"deep": 2}
+    assert snapshot["byTier"] == {"deep": 2, "light": 1}

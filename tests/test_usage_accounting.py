@@ -159,6 +159,7 @@ def test_a_truncated_stream_is_reported_as_truncated(harness, monkeypatch):
     usage = client.get("/api/usage").json()
     assert usage["truncated"] == 1
     assert usage["truncationRate"] == 1.0
+    assert usage["byFinish"] == {"length": 1}
 
 
 def test_a_normal_finish_is_not_called_truncated(harness, monkeypatch):
