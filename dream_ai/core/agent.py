@@ -372,7 +372,12 @@ class DreamAIAgent:
         """
         model = getattr(self._provider, "model", None) or getattr(self._provider, "name", "")
         usage = getattr(self._provider, "last_usage", None)
-        self._usage.record(model or "unknown", usage if isinstance(usage, dict) else None)
+        finish = getattr(self._provider, "last_finish", "")
+        self._usage.record(
+            model or "unknown",
+            usage if isinstance(usage, dict) else None,
+            finish if isinstance(finish, str) else "",
+        )
 
     def _sync_system_prompt(self) -> None:
         """Push the effective system prompt into the memory backend."""
