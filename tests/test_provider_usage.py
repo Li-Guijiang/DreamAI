@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from dream_ai.providers.openai_compat import OpenAICompatProvider, usage_from_response
+from dream_ai.providers.openai_compat import (  # noqa: E402
+    OpenAICompatProvider,
+    finish_from_response,
+    usage_from_response,
+)
 
 
 def test_counts_are_read_from_a_mapping_response():
@@ -70,3 +74,30 @@ def test_usage_starts_empty_on_a_fresh_provider():
     provider = OpenAICompatProvider(model="m", api_key="k", base_url="http://x")
 
     assert provider.last_usage == {}
+
+
+def test_the_finish_reason_is_kept_raw():
+    response = SimpleNamespace(
+        choices=[SimpleNamespace(finish_reason="length", message=SimpleNamespace(content="ok"))]
+    )
+
+    # The ledger normalises it; the provider deliberately does not.
+    assert finish_from_response(response) == "length"
+
+
+def test_the_finish_reason_is_read_from_a_mapping_too():
+    response = {"choices": [{"finish_reason": "stop", "message": {"content": "ok"}}]}
+
+    assert finish_from_response(response) == "stop"
+
+
+def test_a_missing_finish_reason_is_an_empty_string():
+    assert finish_from_response({"choices": [{"message": {"content": "ok"}}]}) == ""
+    assert finish_from_response({"choices": []}) == ""
+    assert finish_from_response({"choices": [{"finish_reason": None}]}) == ""
+
+
+def test_a_fresh_provider_has_no_finish_reason():
+    provider = OpenAICompatProvider(model="m", api_key="k", base_url="http://x")
+
+    assert provider.last_finish == ""
