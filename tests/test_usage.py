@@ -106,3 +106,29 @@ def test_reset_starts_over():
 
     assert usage.snapshot()["turns"] == 0
     assert usage.snapshot()["costKnown"] is True
+
+
+def test_a_truncated_turn_is_counted_separately():
+    usage = SessionUsage()
+    usage.record("deepseek-chat", {"prompt_tokens": 10, "completion_tokens": 10}, finish="length")
+    usage.record("deepseek-chat", {"prompt_tokens": 10, "completion_tokens": 10}, finish="stop")
+
+    snapshot = usage.snapshot()
+
+    assert snapshot["turns"] == 2
+    assert snapshot["truncated"] == 1
+    assert snapshot["costKnown"] is True
+
+
+def test_a_vendor_spelling_of_truncation_is_understood():
+    usage = SessionUsage()
+    usage.record("m", {"prompt_tokens": 1, "completion_tokens": 1}, finish="max_tokens")
+
+    assert usage.snapshot()["truncated"] == 1
+
+
+def test_no_finish_reason_is_not_a_truncation():
+    usage = SessionUsage()
+    usage.record("m", {"prompt_tokens": 1, "completion_tokens": 1})
+
+    assert usage.snapshot()["truncated"] == 0

@@ -95,3 +95,17 @@ def test_a_provider_that_reports_nothing_makes_the_total_a_lower_bound():
     assert snapshot["unmeasured"] == 1
     assert snapshot["costKnown"] is False
     assert snapshot["promptTokens"] == 0
+
+
+def test_the_agent_passes_the_finish_reason_to_the_ledger():
+    class CutOff(Metered):
+        def generate(self, messages, **kwargs):  # noqa: ANN001, ANN003
+            reply = super().generate(messages, **kwargs)
+            self.last_finish = "max_tokens"
+            return reply
+
+    agent = _agent(CutOff())
+
+    agent.chat("写一篇长文")
+
+    assert agent.session_usage.snapshot()["truncated"] == 1

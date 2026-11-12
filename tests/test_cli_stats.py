@@ -101,3 +101,13 @@ def test_a_free_priced_model_reads_as_free():
     _print_stats(agent, console)
 
     assert "cost            free" in "\n".join(console.lines)
+
+
+def test_truncated_turns_have_their_own_line():
+    agent = DreamAIAgent(provider=Metered(), preferences=PreferenceMemory(), system_prompt="BASE")
+    agent.session_usage.record("gpt-4o", {"prompt_tokens": 10, "completion_tokens": 10}, "length")
+
+    console = PlainConsole()
+    _print_stats(agent, console)
+
+    assert "truncated       1" in "\n".join(console.lines)
