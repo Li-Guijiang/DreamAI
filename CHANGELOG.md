@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Finishing a stream
+
+- All three wire formats now report why the model stopped, normalised to
+  `length / stop / filter / other`. The stream emits one `finish` event that
+  bypasses text coalescing, so the word `length` can never land in an answer.
+- The `done` event carries `finish` and `truncated`; the log carries
+  `finish=<word>`. The browser's event vocabulary is unchanged.
+- A truncated answer is never cached. It used to be replayed verbatim on every
+  identical request until the TTL expired.
+- `/api/usage` reports `truncated`, `truncationRate`, `truncatedByTier` and
+  `byFinish`, so a tight deep-tier cap and a content-filter stop read as two
+  different situations.
+- The CLI mirrors this: the hosted provider exposes `last_finish`, the session
+  ledger counts truncated turns, and `/stats` prints them. A parity test keeps the
+  two finish-reason maps identical.
+- The response cache reports `bytes` / `avgBytes` (UTF-8, not characters), and the
+  byte count survives replacement, expiry, eviction and `clear()`.
+- `coalesce(max_chars<=0)` now means "no cap" instead of silently emitting one
+  event per token.
+
 ### Prompt cache accounting
 
 - Anthropic's system prompt is sent as a cacheable block
