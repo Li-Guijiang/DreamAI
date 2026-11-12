@@ -208,8 +208,25 @@ half-open --(失败)--> open
 3. **缓存与推理 token**：部分模型把思考过程也计入输出。
 4. **价格会变**：所以本项目把单价做成一张带日期的表，未知模型返回 `None`，
    并在 `/api/usage` 用 `costKnown=false` 明说「这个总数是下限，不是全貌」。
+5. **缓存价不是固定折扣**：同一份「缓存命中」的输入，Anthropic 收原价的 10%、
+   Google 收 25%、OpenAI 收 50%、DeepSeek 收约 26%。用一个系数去乘，
+   四家里有三家会错，所以价格表按模型各存一个 `CACHE_PRICES`。
 
-- 代码位置：`web/app/pricing.py`、`stats.record_usage`。
+三家的「数量」口径也不一样，这是比单价更容易踩的坑：
+
+| 厂商 | 缓存读取放在哪 | 是否已计入输入 | 思考 token |
+|---|---|---|---|
+| OpenAI 兼容 | `prompt_tokens_details.cached_tokens` | 已计入 | 无独立字段 |
+| DeepSeek | `prompt_cache_hit_tokens` | 已计入 | `reasoning_content` 计入输出 |
+| Anthropic | `cache_read_input_tokens` | **未计入** `input_tokens` | 计入 `output_tokens` |
+| Gemini | `cachedContentTokenCount` | 已计入 `promptTokenCount` | `thoughtsTokenCount` **未计入** |
+
+一句话总结：**先统一「数量」的口径，再谈「单价」**。项目里统一发生在
+`adapters.usage_from_chunk`，计费发生在 `pricing.estimate_cost(..., cached=)`，
+两者之间不允许再出现厂商名判断。
+
+- 代码位置：`web/app/pricing.py`、`web/app/adapters.py`、`stats.record_usage`、
+  本地端 `dream_ai/usage.py`。
 
 ---
 
@@ -299,3 +316,35 @@ curl -s https://liguijiang.com/api/usage | python -m json.tool
 `costKnown=false` 的意思是「价格表里缺模型」，不是「这一轮没拿到 usage」。
 没拿到 usage 时代码根本不碰这个标志；免费模型单价为 0 属于**已知**价格。
 把「未知数据」和「未知单价」分开，是账单类系统不撒谎的最低要求。
+
+---
+
+## 11. 附录：亲手算一遍缓存对账单的影响
+
+不需要网络，也不需要 Key，一支笔就能验完。前提是 `docs/PRICING.md` 附录里的
+那张表（gpt-4o：输入 2.50、缓存输入 1.25、输出 10.00，单位美元/百万 token）。
+
+假设一轮问题用了 2000 个输入 token、100 个输出 token，其中 1500 个输入命中缓存。
+
+1. **不区分缓存**（很多网关的做法）：
+   2000 × 2.50 / 10⁶ + 100 × 10.00 / 10⁶ = 0.005 + 0.001 = **$0.0060**
+2. **区分缓存**（本项目）：
+   500 × 2.50 / 10⁶ + 1500 × 1.25 / 10⁶ + 100 × 10.00 / 10⁶
+   = 0.00125 + 0.001875 + 0.001 = **$0.004125**
+
+差距 31%，而这只是 1500 个 token。真实对话里前缀动辄上万 token，
+把缓存算错的系统报出的账单可以是真实值的两倍以上——反过来也一样，
+把缓存 token 重复相加会得到一张虚高的账单。
+
+自己验证的两种方式：
+
+```bash
+# 1. 看算术：七个用例同时跑两份实现，任何漂移都会失败
+python -m pytest tests/test_price_parity.py tests/test_pricing.py -v
+
+# 2. 看真实数据：跑几轮对话后看缓存占比是否在上升
+curl -s https://liguijiang.com/api/usage | python -m json.tool | head -20
+```
+
+`cachedShare` 长期为 0 通常不是厂商不支持，而是 system prompt 每轮都在变：
+把时间、随机 id、会话 id 写进提示词前缀，等于把缓存关掉了。
