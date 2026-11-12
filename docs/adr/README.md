@@ -26,3 +26,4 @@ New decisions should be added as numbered Markdown files, e.g.
 | [0012](./0012-usage-accounting.md) | Usage accounting: ask, parse, emit, and price once |
 | [0013](./0013-streaming-integrity.md) | Streaming integrity: repair the last byte, not the whole reply |
 | [0014](./0014-cache-aware-accounting.md) | Cache-aware accounting: the same tokens, the right price |
+| [0015](./0015-finishing-a-stream.md) | Finishing a stream: know why it stopped |
