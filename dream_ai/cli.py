@@ -20,6 +20,7 @@ from .autonomy import PlanStep, TraceEntry
 from .config import Settings, load_settings
 from .core import DreamAIAgent
 from .exceptions import ConfigurationError, ProviderError, ToolConfirmationRequired, ToolError
+from .pricing import format_cost
 from .ui import Console, prepare_output
 
 HELP_TEXT = """\
@@ -36,7 +37,7 @@ Available commands:
   /clear           Clear the conversation history
   /motion          Toggle the terminal launch / typing / spinner effects
   /about           Show provider, tools, autonomy, session info, and preferences
-  /stats           Show what this session has spent: model turns, provider, last tier
+  /stats           Show what this session has spent: turns, tokens, and cost
   /profile         Show the owner dossier (same as 【查看我的全部档案】)
   /quit | /exit    Leave Dream AI
 Type anything else to chat with Dream AI.
@@ -223,11 +224,37 @@ def _run_autonomous(agent: DreamAIAgent, settings: Settings, objective: str, ui:
     ui.reply(result.final_summary)
 
 
+def _token_text(usage: dict) -> str:
+    """One line of token counts, with the cached share when there is one."""
+    prompt = usage["promptTokens"]
+    completion = usage["completionTokens"]
+    if not prompt and not completion:
+        return "none reported yet" if usage["turns"] else "-"
+    text = f"in {prompt:,} / out {completion:,}"
+    cached = usage["cachedTokens"]
+    if cached and prompt:
+        share = round(100 * cached / prompt)
+        text += f" / cached {cached:,} ({share}%)"
+    return text
+
+
+def _cost_text(usage: dict) -> str:
+    """The cost, or an explicit admission that it is only part of the bill."""
+    if usage["costKnown"]:
+        return format_cost(usage["costUsd"])
+    if usage["costUsd"]:
+        return f"at least {format_cost(usage['costUsd'])} (some turns unmeasured)"
+    return "unknown (no price for this model, or no counts reported)"
+
+
 def _print_stats(agent: DreamAIAgent, ui: Console) -> None:
-    """One short block: what this session has cost so far, in turns."""
+    """One short block: what this session has cost so far."""
+    usage = agent.session_usage.snapshot()
     ui.line(ui.muted("--- session stats ---"))
     ui.line(f"provider        {agent.provider_name}")
-    ui.line(f"model turns     {agent.turn_count}")
+    ui.line(f"model turns     {usage['turns']}")
+    ui.line(f"tokens          {_token_text(usage)}")
+    ui.line(f"cost            {_cost_text(usage)}")
     ui.line(f"last tier       {agent.last_tier or 'n/a (no model turn yet)'}")
     ui.line(f"preferences     {len(agent.preference_notes)}")
     ui.line(f"history entries {len(agent.history)}")
