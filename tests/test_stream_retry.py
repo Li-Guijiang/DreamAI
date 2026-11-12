@@ -10,7 +10,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "web"))
 
-from app.llm import LLMError, stream_with_retry  # noqa: E402
+from app.llm import LLMError, retry_delay, stream_with_retry  # noqa: E402
 
 
 def run(factory, attempts: int = 2):
@@ -89,3 +89,25 @@ def test_a_usage_event_is_never_merged_into_text():
 
 async def _drain(source):  # noqa: ANN001
     return [item async for item in source]
+
+
+def test_a_retry_waits_longer_than_the_one_before():
+    # The ranges do not overlap: attempt 1 waits inside [d/2, d], attempt 2
+    # inside [d, 2d].
+    assert retry_delay(0.6, 2) > retry_delay(0.6, 1)
+
+
+def test_the_wait_is_half_fixed_and_half_jittered(monkeypatch):
+    monkeypatch.setattr("app.llm.random.uniform", lambda low, high: low)
+    assert retry_delay(0.6, 1) == pytest.approx(0.3)
+
+    monkeypatch.setattr("app.llm.random.uniform", lambda low, high: high)
+    assert retry_delay(0.6, 1) == pytest.approx(0.6)
+
+
+def test_no_delay_is_still_no_delay():
+    assert retry_delay(0.0, 3) == 0.0
+
+
+def test_a_negative_delay_cannot_make_the_clock_go_backwards():
+    assert retry_delay(-5, 2) == 0.0
