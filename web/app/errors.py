@@ -28,7 +28,7 @@ GENERIC = "请求没有成功，请稍后重试。"
 # Statuses where our sentence beats anything the provider could say. 400 and 422
 # are deliberately absent: there the provider knows which parameter it rejected,
 # and that detail is the whole answer.
-CURATED_STATUS = BYOK_STATUS | {404, 408, 410, 413, 429}
+CURATED_STATUS = BYOK_STATUS | {404, 408, 410, 413, 425, 429}
 
 
 def is_retryable(status: int) -> bool:
@@ -47,6 +47,11 @@ def user_message(status: int, label: str = "") -> str:
         return "上游服务暂时不可用，稍后重试；已经生成的回答不会重复计费。"
     if status == 408:
         return "等上游响应超时了，请重试或把问题缩短一些。"
+    if status == 425:
+        # Too Early: the endpoint is up but not ready for this request yet - a
+        # replay guard, or a model still warming. It is retryable, and calling it
+        # a generic failure would hide that a second attempt usually works.
+        return "上游还没准备好接收这个请求（HTTP 425），通常重试一次就能通过。"
     if status == 413:
         return "这次请求的内容太长了，上游拒绝接收：请缩短问题，或开启一个新对话。"
     if status in PAYLOAD_STATUS:
