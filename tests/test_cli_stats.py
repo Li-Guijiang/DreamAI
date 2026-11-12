@@ -28,6 +28,20 @@ class Recording:
         return "好的。"
 
 
+class Metered:
+    """A provider that reports counts, like a hosted one."""
+
+    name = "metered"
+    model = "gpt-4o"
+
+    def __init__(self) -> None:
+        self.last_usage: dict[str, int] = {}
+
+    def generate(self, messages, **kwargs):  # noqa: ANN001, ANN003
+        self.last_usage = {"prompt_tokens": 2000, "completion_tokens": 100, "cached_tokens": 1500}
+        return "好的。"
+
+
 def test_the_stats_block_reports_turns_tier_and_history():
     agent = DreamAIAgent(provider=Recording(), preferences=PreferenceMemory(), system_prompt="BASE")
     agent.chat("在吗")
@@ -50,3 +64,40 @@ def test_a_fresh_session_reports_no_tier_yet():
     _print_stats(agent, console)
 
     assert "n/a (no model turn yet)" in "\n".join(console.lines)
+
+
+def test_tokens_and_cost_are_printed_when_the_provider_reports_them():
+    agent = DreamAIAgent(provider=Metered(), preferences=PreferenceMemory(), system_prompt="BASE")
+    agent.chat("在吗")
+
+    console = PlainConsole()
+    _print_stats(agent, console)
+    joined = "\n".join(console.lines)
+
+    assert "in 2,000 / out 100 / cached 1,500 (75%)" in joined
+    # 500 fresh input at 2.5/M + 1500 cached at 1.25/M + 100 out at 10/M = 0.004125,
+    # printed to four decimals because a fraction of a cent is noise.
+    assert "$0.0041" in joined
+
+
+def test_a_provider_that_reports_nothing_says_so_instead_of_showing_zero():
+    agent = DreamAIAgent(provider=Recording(), preferences=PreferenceMemory(), system_prompt="BASE")
+    agent.chat("在吗")
+
+    console = PlainConsole()
+    _print_stats(agent, console)
+    joined = "\n".join(console.lines)
+
+    assert "none reported yet" in joined
+    assert "unknown (no price for this model" in joined
+    assert "$0.00" not in joined
+
+
+def test_a_free_priced_model_reads_as_free():
+    agent = DreamAIAgent(provider=Metered(), preferences=PreferenceMemory(), system_prompt="BASE")
+    agent.session_usage.record("glm-4-flash", {"prompt_tokens": 10, "completion_tokens": 10})
+
+    console = PlainConsole()
+    _print_stats(agent, console)
+
+    assert "cost            free" in "\n".join(console.lines)
