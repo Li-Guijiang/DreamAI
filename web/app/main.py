@@ -673,6 +673,8 @@ async def usage() -> JSONResponse:
             "cancelled": totals["cancelled"],
             "truncated": totals["truncated"],
             "truncationRate": totals["truncationRate"],
+            "truncatedByTier": totals["truncatedByTier"],
+            "byFinish": totals["byFinish"],
             "daily": _daily_state,
             "dailyLimit": settings.daily_limit,
         }
@@ -1143,6 +1145,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     failed=failed,
                     ttft=(first_token_at - started) if first_token_at else 0.0,
                     truncated=truncated,
+                    finish=finish_reason,
                 )
             if not failed and not cancelled:
                 # Only a half-open probe can close an open breaker; that is the
