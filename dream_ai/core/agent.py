@@ -41,6 +41,7 @@ from ..quality import (
     tier_hint,
 )
 from ..tools import ToolCall, ToolRegistry, parse_tool_calls
+from ..usage import SessionUsage
 from .conversation import Conversation
 
 
@@ -81,8 +82,9 @@ class DreamAIAgent:
         self._max_tokens = max(1, int(max_tokens))
         self._max_history_chars = max(200, int(max_history_chars))
         self._last_tier = ""
-        # Model turns only: owner commands and captured preferences are free.
-        self._turn_count = 0
+        # Every model call lands here: turns, tokens, and what could not be
+        # measured. Owner commands and captured preferences never do.
+        self._usage = SessionUsage()
         self._last_execution: ExecutionResult | None = None
 
     @property
@@ -113,7 +115,12 @@ class DreamAIAgent:
     @property
     def turn_count(self) -> int:
         """How many model calls this session has made."""
-        return self._turn_count
+        return self._usage.turns
+
+    @property
+    def session_usage(self) -> SessionUsage:
+        """What this session has spent: turns, tokens, and cost where known."""
+        return self._usage
 
     @property
     def last_tier(self) -> str:
@@ -235,7 +242,6 @@ class DreamAIAgent:
 
         budget = reply_budget(tier, self._max_tokens)
         reply = self._generate(history, budget)
-        self._turn_count += 1
         reply = strip_filler(reply)
         reply = dedupe_sentences(close_fences(limit_emoji(strip_filler(reply))))
         if looks_empty(reply):
@@ -344,13 +350,29 @@ class DreamAIAgent:
         A provider written against the older one-argument signature is still
         usable: only the TypeError that names the new keyword is swallowed, so a
         genuine failure inside generate() is not mistaken for an API mismatch.
+
+        The call is recorded here rather than at the call sites, so the retry
+        after an empty answer is counted and priced like any other call.
         """
         try:
-            return self._provider.generate(messages, max_tokens=budget)
+            reply = self._provider.generate(messages, max_tokens=budget)
         except TypeError as exc:
             if "max_tokens" not in str(exc):
                 raise
-            return self._provider.generate(messages)
+            reply = self._provider.generate(messages)
+        self._record_call()
+        return reply
+
+    def _record_call(self) -> None:
+        """File one provider call in the session ledger.
+
+        A provider only has to implement ``name`` and ``generate``; the optional
+        members are read defensively so a minimal or third-party implementation
+        is still usable, just unmeasured.
+        """
+        model = getattr(self._provider, "model", None) or getattr(self._provider, "name", "")
+        usage = getattr(self._provider, "last_usage", None)
+        self._usage.record(model or "unknown", usage if isinstance(usage, dict) else None)
 
     def _sync_system_prompt(self) -> None:
         """Push the effective system prompt into the memory backend."""
