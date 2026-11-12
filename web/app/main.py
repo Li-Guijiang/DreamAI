@@ -629,6 +629,8 @@ async def usage() -> JSONResponse:
             "failures": totals["failures"],
             "promptTokens": totals["promptTokens"],
             "completionTokens": totals["completionTokens"],
+            "cachedTokens": totals["cachedTokens"],
+            "cachedShare": totals["cachedShare"],
             "costUsd": totals["costUsd"],
             "costKnown": totals["costKnown"],
             "cacheHitRate": cache["hitRate"],
@@ -932,7 +934,11 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     "cache": "hit",
                 },
             )
-            _stats.record_turn(model, tier=tier)
+            # A hit costs no tokens, but it is still a request the service
+            # answered. Filing it under the real provider would inflate that
+            # vendor's turn count; leaving the fields blank made byProvider and
+            # byIntent stop adding up to `requests`.
+            _stats.record_turn(model, tier=tier, intent=intent, provider="cache")
             logger.info(
                 "chat cache id=%s tier=%s intent=%s chars=%s",
                 request_id,
@@ -1077,8 +1083,13 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             if isinstance(usage_payload, dict):
                 prompt_tokens = int(usage_payload.get("prompt_tokens") or 0)
                 completion_tokens = int(usage_payload.get("completion_tokens") or 0)
-                cost = estimate_cost(model, prompt_tokens, completion_tokens)
-                _stats.record_usage(model, prompt_tokens, completion_tokens, cost)
+                # Part of the prompt that the provider served from its own cache;
+                # it is billed at a lower rate, so it is passed to both calls.
+                cached_tokens = int(usage_payload.get("cached_tokens") or 0)
+                cost = estimate_cost(model, prompt_tokens, completion_tokens, cached=cached_tokens)
+                _stats.record_usage(
+                    model, prompt_tokens, completion_tokens, cost, cached=cached_tokens
+                )
             if cancelled:
                 _stats.record_cancelled(model)
             else:
