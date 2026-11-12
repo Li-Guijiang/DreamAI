@@ -15,7 +15,7 @@ from collections.abc import AsyncIterator
 
 import httpx
 
-from .adapters import build_request, parse_chunk, usage_from_chunk
+from .adapters import build_request, finish_from_chunk, parse_chunk, usage_from_chunk
 from .errors import is_retryable
 
 logger = logging.getLogger("dreamai.llm")
@@ -107,13 +107,14 @@ async def coalesce(
     async for next_kind, text in source:
         if not text:
             continue
-        if next_kind == "usage":
-            # A usage event is a JSON object. Merging two of them - or appending
-            # one to a run of text - produces a string nobody can parse.
+        if next_kind in ("usage", "finish"):
+            # A usage event is a JSON object and a finish event is one word.
+            # Merging either into a run of text - or into each other - produces a
+            # string nobody can parse, so both bypass the buffer entirely.
             if buffer:
                 yield kind, "".join(buffer)
                 buffer, size, kind = [], 0, ""
-            yield "usage", text
+            yield next_kind, text
             continue
         if kind and next_kind != kind:
             yield kind, "".join(buffer)
@@ -142,7 +143,7 @@ async def stream_completion(
     include_usage: bool = True,
     prompt_cache: bool = True,
 ) -> AsyncIterator[tuple[str, str]]:
-    """Yield ``content`` / ``reasoning`` deltas and one final ``usage`` event."""
+    """Yield content / reasoning deltas, plus one usage and one finish event."""
     async for item in coalesce(
         _stream_raw(
             provider,
@@ -173,7 +174,7 @@ async def _stream_raw(
     include_usage: bool = True,
     prompt_cache: bool = True,
 ) -> AsyncIterator[tuple[str, str]]:
-    """Parse the provider stream into per-token items plus a final usage event."""
+    """Parse the provider stream into per-token items plus the final metadata."""
     url, headers, payload = build_request(
         provider,
         api_key=api_key,
@@ -193,6 +194,9 @@ async def _stream_raw(
     # last (largest) value without caring which chunk carried it.
     totals = {"prompt_tokens": 0, "completion_tokens": 0}
     seen_usage = False
+    # Only the last chunk of a stream carries the reason; some vendors also send
+    # an empty reason in an earlier chunk, which must not win over the real one.
+    finish: str | None = None
     try:
         async with client.stream("POST", url, headers=headers, json=payload) as response:
             if response.status_code != 200:
@@ -222,6 +226,9 @@ async def _stream_raw(
                     seen_usage = True
                     for key, value in usage.items():
                         totals[key] = max(totals.get(key, 0), value)
+                reason = finish_from_chunk(provider.kind, event_name, data)
+                if reason:
+                    finish = reason
                 try:
                     items = parse_chunk(provider.kind, event_name, data)
                 except ValueError as exc:
@@ -232,6 +239,10 @@ async def _stream_raw(
             # Sent after the last text delta, before the stream closes. main.py
             # already knows how to turn this into an SSE usage event and a cost.
             yield "usage", json.dumps(totals)
+        if finish:
+            # The reason is a single normalised word, not a text delta: emitting
+            # it as content would put the word "length" in the user's answer.
+            yield "finish", finish
     except LLMError:
         raise
     except httpx.TimeoutException as exc:
