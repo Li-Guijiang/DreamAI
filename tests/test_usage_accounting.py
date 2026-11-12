@@ -88,3 +88,41 @@ def test_the_provider_is_recorded_for_a_real_turn(harness):
     _chat(client)
 
     assert main._stats.snapshot()["byProvider"] == {"free": 1}
+
+
+def test_cached_prompt_tokens_reach_the_usage_endpoint(harness, monkeypatch):
+    main, client = harness
+
+    async def cached_stream(*args, **kwargs):  # noqa: ANN002, ANN003
+        yield "content", "答。"
+        yield "usage", json.dumps(
+            {"prompt_tokens": 2000, "completion_tokens": 10, "cached_tokens": 1792}
+        )
+
+    monkeypatch.setattr(main.llm, "stream_completion", cached_stream)
+    _chat(client)
+
+    usage = client.get("/api/usage").json()
+
+    assert usage["promptTokens"] == 2000
+    assert usage["cachedTokens"] == 1792
+    assert usage["cachedShare"] == 0.896
+    assert usage["byModel"][main.settings.free_model]["cachedTokens"] == 1792
+
+
+def test_a_cache_hit_is_filed_under_the_cache_not_the_vendor(harness):
+    main, client = harness
+    body = {"messages": [{"role": "user", "content": "在吗"}], "temperature": 0.2}
+
+    first = client.post("/api/chat", json=body)
+    second = client.post("/api/chat", json=body)
+
+    assert first.headers["X-Cache"] == "MISS"
+    assert second.headers["X-Cache"] == "HIT"
+    snapshot = main._stats.snapshot()
+    assert snapshot["requests"] == 2
+    # A hit spent no tokens, so it must not be counted as a vendor turn; the
+    # totals still have to add up to the number of requests served.
+    assert snapshot["byProvider"] == {"free": 1, "cache": 1}
+    assert sum(snapshot["byIntent"].values()) == 2
+    assert snapshot["promptTokens"] == 1000
