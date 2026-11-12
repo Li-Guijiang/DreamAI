@@ -147,3 +147,16 @@ def test_a_leading_finish_event_does_not_create_an_empty_text_event():
         return [item async for item in llm.coalesce(source())]
 
     assert asyncio.run(run()) == [("finish", "stop"), ("content", "你好")]
+
+
+def test_a_non_positive_coalesce_threshold_still_merges_text():
+    async def source():
+        yield "content", "a"
+        yield "content", "b"
+
+    async def run(threshold):
+        return [item async for item in llm.coalesce(source(), max_chars=threshold)]
+
+    assert asyncio.run(run(0)) == [("content", "ab")]
+    assert asyncio.run(run(-5)) == [("content", "ab")]
+    assert asyncio.run(run(1)) == [("content", "a"), ("content", "b")]
