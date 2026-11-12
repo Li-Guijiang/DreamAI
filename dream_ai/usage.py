@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from .finish import is_truncated
 from .pricing import estimate_cost
 
 
@@ -43,6 +44,8 @@ class SessionUsage:
         self.unmeasured = 0
         # Turns whose model is not in the price table.
         self.unpriced = 0
+        # Turns stopped by the token budget rather than by the model.
+        self.truncated = 0
         self.models: dict[str, int] = {}
 
     @property
@@ -50,10 +53,17 @@ class SessionUsage:
         """Whether the total accounts for every turn, rather than a subset."""
         return self.unmeasured == 0 and self.unpriced == 0
 
-    def record(self, model: str, usage: Mapping[str, int] | None) -> None:
-        """Add one model turn, priced if the model is known."""
+    def record(self, model: str, usage: Mapping[str, int] | None, finish: str = "") -> None:
+        """Add one model turn, priced if the model is known.
+
+        ``finish`` is the vendor's raw reason; the shared map decides whether it
+        means the answer was cut off. A truncated turn still counts as a turn,
+        but a session view that hides it looks more complete than it is.
+        """
         self.turns += 1
         self.models[model] = self.models.get(model, 0) + 1
+        if is_truncated(finish):
+            self.truncated += 1
         counts = _counts(usage)
         if counts is None:
             self.unmeasured += 1
@@ -78,6 +88,7 @@ class SessionUsage:
             "costKnown": self.known_cost,
             "unmeasured": self.unmeasured,
             "unpriced": self.unpriced,
+            "truncated": self.truncated,
             "models": dict(self.models),
         }
 
