@@ -237,6 +237,9 @@ reaches the screen. Both are now explicit.
 | Cache off switch | `DREAMAI_CACHE_TTL=0` disables the cache without deleting code | `cache.py` |
 | Local folding | Long CLI sessions fold old turns into a digest instead of losing the subject | `compress_history()` |
 | Session spend | `/stats` in the CLI: model turns, provider, last tier | `agent.turn_count` |
+| Local ledger | Turns, tokens and cost for a CLI session, with its unknowns named | `dream_ai/usage.py`, `last_usage` |
+| Cached tokens | Prompt-cache hits reported per model, never added to the prompt twice | `cachedTokens` in `/api/usage` |
+| Cache pricing | Cached input billed at its own per-model rate, not one global multiplier | `CACHE_PRICES` |
 | Real usage | Token counts from all three wire formats, one usage event per stream | `usage_from_chunk()`, `DREAMAI_STREAM_USAGE` |
 | Price corrections | `DREAMAI_PRICE_OVERRIDES` fixes a stale price without a release | `pricing.configure_prices()` |
 | Provider view | `/api/usage` groups turns per vendor, not just per model | `byProvider` |
