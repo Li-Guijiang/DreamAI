@@ -2,6 +2,41 @@
 
 ## Unreleased
 
+### Prompt cache accounting
+
+- All three wire formats now report `cached_tokens`, the part of the prompt a
+  cache served. Anthropic's cache reads and writes are added back into the prompt
+  total (they are outside `input_tokens`); Gemini's thinking tokens are added to
+  the completion total (they are outside `candidatesTokenCount`).
+- Cached input is billed at its own rate. `pricing.CACHE_PRICES` holds one figure
+  per model, because the real discount is 0.5 at OpenAI, 0.26 at DeepSeek, 0.25 at
+  Google and 0.1 at Anthropic; a model without a cache price is billed at the list
+  price. A `cached` count above the prompt is clamped.
+- `/api/usage` reports `cachedTokens` and `cachedShare`, and each model row
+  carries its own `cachedTokens`.
+- A cache hit is filed under the pseudo-provider `cache`, so the vendor totals add
+  up to `requests` without inflating a real vendor.
+- `DREAMAI_PRICE_OVERRIDES` takes an optional third number for the cached price:
+  `model=input,output,cached`.
+
+### Local session ledger
+
+- `dream_ai/usage.py` keeps turns, tokens and cost for the CLI and the desktop
+  shell. Providers expose `last_usage`, filled from the SDK response by the
+  hosted provider, and `model`, the key the price table uses.
+- `/stats` prints the token line and the cost, and admits its two unknowns:
+  `unmeasured` (the provider reported nothing) and `unpriced` (no price for the
+  model) read as "at least $…" or "unknown", never as `$0.00`.
+- A retry after an empty answer is counted and priced like any other call.
+
+### Small corrections
+
+- The rate limiter prunes clients idle for a whole window instead of emptying the
+  table at 20 000 keys, which used to reset every client's quota at once.
+- HTTP 425 gets its own sentence instead of the generic one; it stays retryable.
+- The retry wait uses equal jitter, so a hundred browsers that lost the same
+  upstream do not return in lockstep.
+
 ### Usage accounting is real now
 
 - OpenAI-compatible streams ask for `stream_options.include_usage` (switch:
@@ -48,7 +83,8 @@
   What is stored is untouched.
 - The CLI follows the user's language and notices follow-ups like the web service
   does; both intent copies now classify translation requests the same way.
-- `/stats` shows model turns, provider, last tier and history length.
+- `/stats` shows model turns, provider, last tier and history length, plus the
+  token and cost lines described above.
 
 ### Configuration
 
