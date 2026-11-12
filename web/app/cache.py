@@ -44,6 +44,11 @@ def make_key(
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _size(value: str) -> int:
+    """Bytes an answer actually occupies, so CJK text is not counted as ASCII."""
+    return len(value.encode("utf-8"))
+
+
 class ResponseCache:
     """Small TTL + LRU cache; values are finished answers, not deltas."""
 
@@ -60,6 +65,10 @@ class ResponseCache:
         self._items: OrderedDict[str, tuple[str, float]] = OrderedDict()
         self.hits = 0
         self.misses = 0
+        # Answers are stored in memory for minutes at a time. Counting items
+        # alone says nothing about how much RAM that is: one cached essay can be
+        # worth a hundred cached greetings. Sizes are UTF-8 bytes, not chars.
+        self._bytes = 0
         # A miss because nobody asked yet, a miss because the entry aged out and
         # a capacity eviction mean different things; only the last two say the
         # cache is too small or the TTL too short.
@@ -76,6 +85,7 @@ class ResponseCache:
         value, expires_at = entry
         if self._clock() >= expires_at:
             del self._items[key]
+            self._bytes -= _size(value)
             self.misses += 1
             self.expired += 1
             return None
@@ -86,10 +96,15 @@ class ResponseCache:
     def put(self, key: str, value: str) -> None:
         if not self.enabled or not value:
             return
+        old = self._items.get(key)
+        if old is not None:
+            self._bytes -= _size(old[0])
         self._items[key] = (value, self._clock() + self.ttl)
+        self._bytes += _size(value)
         self._items.move_to_end(key)
         while len(self._items) > self.max_items:
-            self._items.popitem(last=False)
+            _, (evicted, _) = self._items.popitem(last=False)
+            self._bytes -= _size(evicted)
             self.evictions += 1
 
     def stats(self) -> dict:
@@ -99,6 +114,8 @@ class ResponseCache:
             "enabled": self.enabled,
             "items": len(self._items),
             "capacity": self.max_items,
+            "bytes": self._bytes,
+            "avgBytes": round(self._bytes / len(self._items), 1) if self._items else 0,
             "ttl": self.ttl,
             "hits": self.hits,
             "misses": self.misses,
@@ -110,7 +127,9 @@ class ResponseCache:
         }
 
     def clear(self) -> None:
+        """Drop the entries, keeping the lifetime hit/miss counters."""
         self._items.clear()
+        self._bytes = 0
 
     def __len__(self) -> int:
         return len(self._items)
