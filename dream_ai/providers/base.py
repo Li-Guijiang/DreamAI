@@ -38,6 +38,15 @@ class LLMProvider(ABC):
         """
         return {}
 
+    @property
+    def last_finish(self) -> str:
+        """Why the most recent call stopped, in the vendor's own spelling.
+
+        Empty when the provider does not say. The session ledger normalises it,
+        so this stays raw: no vendor-specific knowledge in the provider layer.
+        """
+        return ""
+
     @abstractmethod
     def generate(self, messages: list[dict[str, str]], **kwargs: Any) -> str:
         """Produce a reply from the given message history.

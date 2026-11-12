@@ -58,6 +58,28 @@ def usage_from_response(response: Any) -> dict[str, int]:
     return found
 
 
+def finish_from_response(response: Any) -> str:
+    """The vendor's finish reason, or an empty string when it says nothing.
+
+    Kept raw on purpose: normalising it is the ledger's job, and the same map is
+    used by the web service's streamed answers.
+    """
+    choices = (
+        response.get("choices")
+        if isinstance(response, dict)
+        else getattr(response, "choices", None)
+    )
+    if not choices:
+        return ""
+    first = choices[0]
+    reason = (
+        first.get("finish_reason")
+        if isinstance(first, dict)
+        else getattr(first, "finish_reason", None)
+    )
+    return reason if isinstance(reason, str) else ""
+
+
 class OpenAICompatProvider(LLMProvider):
     """Chat through an OpenAI-compatible HTTP API."""
 
@@ -76,6 +98,7 @@ class OpenAICompatProvider(LLMProvider):
         self._temperature = temperature
         self._client: Any = None
         self._last_usage: dict[str, int] = {}
+        self._last_finish = ""
 
     @property
     def name(self) -> str:
@@ -88,6 +111,10 @@ class OpenAICompatProvider(LLMProvider):
     @property
     def last_usage(self) -> dict[str, int]:
         return dict(self._last_usage)
+
+    @property
+    def last_finish(self) -> str:
+        return self._last_finish
 
     def _ensure_client(self) -> Any:
         if self._client is not None:
@@ -106,8 +133,9 @@ class OpenAICompatProvider(LLMProvider):
     def generate(self, messages: list[dict[str, str]], **kwargs: Any) -> str:
         client = self._ensure_client()
         # Cleared before the call, so a failure cannot leave the previous turn's
-        # counts looking like this turn's.
+        # counts or finish reason looking like this turn's.
         self._last_usage = {}
+        self._last_finish = ""
 
         payload_messages: list[dict[str, str]] = list(messages)
         if self._system_prompt and not any(m["role"] == "system" for m in payload_messages):
@@ -133,6 +161,7 @@ class OpenAICompatProvider(LLMProvider):
         # The counts belong to this call only; the agent reads them after the
         # reply, and they are the difference between a measured bill and a guess.
         self._last_usage = usage_from_response(response)
+        self._last_finish = finish_from_response(response)
 
         choice = response.choices[0]
         content = choice.message.content
