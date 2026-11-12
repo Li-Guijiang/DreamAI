@@ -90,6 +90,31 @@ def test_a_turn_without_cache_or_cost_ends_at_the_model():
     assert line.endswith("model=m")
 
 
+def test_the_cached_share_is_logged_so_a_low_cost_makes_sense():
+    line = format_turn_log(
+        "req_3",
+        tier="standard",
+        intent="code",
+        ttft=0.3,
+        total=2.0,
+        chars=200,
+        model="gpt-4o",
+        cached_tokens=1792,
+        cost=0.0041,
+    )
+
+    assert "cachedTokens=1792" in line
+    assert line.index("cachedTokens=") < line.index("cost=")
+
+
+def test_no_cached_tokens_no_field():
+    line = format_turn_log(
+        "req_4", tier="light", intent="chat", ttft=0.1, total=0.2, chars=3, model="m", cost=0.0
+    )
+
+    assert "cachedTokens" not in line
+
+
 def test_the_breaker_line_reports_the_numbers_that_explain_it():
     from app.telemetry import format_breaker_log
 
