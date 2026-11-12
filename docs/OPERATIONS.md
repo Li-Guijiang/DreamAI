@@ -220,3 +220,37 @@ cost            $0.0041
 
 当出现 `unmeasured`（provider 没有返回计数）或 `unpriced`（价格表没有该模型）时，
 `cost` 会写成 `at least $…` 或 `unknown (…)`，而不是一个看起来完整的数字。
+
+## 10. 回答写到一半就断了
+
+SSE 正常结束不等于回答完整：模型达到 `max_tokens` 时同样会干净地关闭连接。
+现在每轮 `done` 事件带两个字段：`finish`（`length` / `stop` / `filter` / `other`）
+与 `truncated`（布尔值，始终存在）。日志里对应 `finish=length`。
+
+排查顺序：
+
+1. 看 `/api/usage` 的 `truncated` 与 `truncationRate`。偶发的几条不需要处理；
+   长期高于 5% 说明回答预算偏紧；
+2. 看 `truncatedByTier`。集中在 `deep` 就调 deep 档的预算，不要动全局
+   `DREAMAI_MAX_TOKENS`；集中在 `light` 多半是难度误判，先查问题分类；
+3. 看 `byFinish.filter`。出现 `filter` 不是截断，是上游安全策略拦了内容，
+   与预算无关，不要靠加 token 解决；
+4. `cache.hitRate` 突然下降但 `truncated` 上升，是正常联动：被截断的回答
+   **不写缓存**，同一个问题再问一次会重新走上游，这是设计而非缓存失效。
+
+判定要点：
+
+- `X-Cache: MISS` 连续出现在同一个问题上，配合 `finish=length`，符合预期；
+- `done.finish` 缺失说明上游这个网关根本不报结束原因，此时 `truncated=false`
+  只代表「未知」，不代表「完整」；换一个网关或查看上游文档；
+- 本地端 `/stats` 的 `truncated` 行由 SDK 的 `finish_reason` 得出，与 web 端
+  共用同一张归一映射，测试锁住两份副本不会漂移。
+
+调整示例（提高 deep 档上限，不影响其它档）：
+
+```bash
+DREAMAI_MAX_TOKENS=4096
+```
+
+改完重启，观察一轮 `truncationRate`；不要在事故中同时改价目表和预算，
+否则无法判断是哪个改动起了作用。
