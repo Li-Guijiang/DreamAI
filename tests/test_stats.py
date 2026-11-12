@@ -221,3 +221,34 @@ def test_turns_are_grouped_by_provider():
     stats.record_local()
 
     assert stats.snapshot()["byProvider"] == {"deepseek": 2, "anthropic": 1, "local": 1}
+
+
+def test_cached_tokens_are_inside_the_prompt_total_not_on_top_of_it():
+    stats = UsageStats()
+    stats.record_usage("gpt-4o", 2000, 50, 0.001, cached=1792)
+
+    snapshot = stats.snapshot()
+
+    assert snapshot["promptTokens"] == 2000
+    assert snapshot["cachedTokens"] == 1792
+    assert snapshot["byModel"]["gpt-4o"]["cachedTokens"] == 1792
+
+
+def test_a_cached_count_above_the_prompt_is_clamped():
+    stats = UsageStats()
+    stats.record_usage("gpt-4o", 100, 10, 0.001, cached=5000)
+
+    assert stats.snapshot()["cachedTokens"] == 100
+
+
+def test_the_cached_share_explains_the_count():
+    stats = UsageStats()
+    stats.record_usage("gpt-4o", 1000, 10, 0.001, cached=750)
+
+    assert stats.snapshot()["cachedShare"] == pytest.approx(0.75)
+
+
+def test_no_prompt_tokens_means_no_share_rather_than_a_division():
+    stats = UsageStats()
+
+    assert stats.snapshot()["cachedShare"] == 0.0
