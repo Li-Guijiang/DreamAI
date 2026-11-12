@@ -348,3 +348,50 @@ curl -s https://liguijiang.com/api/usage | python -m json.tool | head -20
 
 `cachedShare` 长期为 0 通常不是厂商不支持，而是 system prompt 每轮都在变：
 把时间、随机 id、会话 id 写进提示词前缀，等于把缓存关掉了。
+
+---
+
+## 12. 流结束 ≠ 回答结束
+
+一个容易忽略的事实：**HTTP 连接正常关闭，只说明上游发完了它打算发的东西**。
+模型写到 `max_tokens` 上限时会停得非常「体面」——没有异常、没有错误帧、
+最后一个 delta 与平时一模一样。如果只看连接状态，一条被截断的回答和一条
+完整回答没有任何区别。
+
+三种协议都把原因放在最后一块数据里，只是位置和叫法不同：
+
+| 协议 | 字段 | 「被截断」写作 |
+|---|---|---|
+| OpenAI 兼容 | `choices[0].finish_reason` | `length` |
+| Anthropic | `message_delta` 事件的 `delta.stop_reason` | `max_tokens` |
+| Gemini | `candidates[0].finishReason` | `MAX_TOKENS` |
+
+本项目把它们归一成四个词：`length` / `stop` / `filter` / `other`。
+注意 `filter` 与 `length` 完全不同：一个是安全策略拦下了内容，一个是预算不够，
+把两者混为一谈会导致「加 max_tokens 试图解决内容审核」这种错误操作。
+
+由此衍生出三个工程判断：
+
+1. **结束原因是元数据，不是文本**。流式合流逻辑必须让它直通，否则单词
+   `length` 会被拼进用户看到的回答末尾；
+2. **截断的回答不能进缓存**。缓存是精确匹配重放，一条半截答案会被反复重放
+   直到 TTL 到期，用户再问一次也拿不到后半段；
+3. **不能自动续写**。前文已经推送到浏览器了，再来一次会把两段答案拼在一起；
+   正确做法是把 `truncated` 交给调用方，由调用方决定是否发起新一轮。
+
+动手验证：
+
+```bash
+# 看 done 事件里的 finish 与 truncated 字段
+curl -N -s -X POST https://liguijiang.com/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"messages":[{"role":"user","content":"写一篇两万字的系统设计文档"}]}' \
+  | grep -A2 '^event: done'
+
+# 看累计的截断率、按难度分布、以及各类结束原因
+curl -s https://liguijiang.com/api/usage \
+  | python -c 'import json,sys; d=json.load(sys.stdin); print({k:d[k] for k in ("truncated","truncationRate","truncatedByTier","byFinish")})'
+```
+
+再读一遍 `tests/test_llm_finish.py` 与 `tests/test_finish_parity.py`：前者证明
+结束原因不会变成回答文字，后者保证 web 与本地 CLI 用同一张映射表。
