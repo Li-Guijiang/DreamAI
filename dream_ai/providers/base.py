@@ -19,6 +19,25 @@ class LLMProvider(ABC):
     def name(self) -> str:
         """Human-readable provider identifier."""
 
+    @property
+    def model(self) -> str:
+        """The model id as the vendor spells it.
+
+        The price table keys on this, so a provider that knows its own model
+        should say so rather than making the caller parse ``name``.
+        """
+        return self.name
+
+    @property
+    def last_usage(self) -> dict[str, int]:
+        """Token counts the most recent call reported.
+
+        Empty when the provider does not report any - a local model usually
+        cannot, and a hosted one occasionally stays quiet. The caller treats an
+        empty mapping as "unmeasured", never as zero tokens.
+        """
+        return {}
+
     @abstractmethod
     def generate(self, messages: list[dict[str, str]], **kwargs: Any) -> str:
         """Produce a reply from the given message history.
