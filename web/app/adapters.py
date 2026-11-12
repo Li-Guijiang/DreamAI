@@ -168,6 +168,92 @@ def _count(value: object) -> int | None:
     return max(0, int(value))
 
 
+# --- Why a stream stopped --------------------------------------------------
+#
+# Without this, a reply cut off at max_tokens looks exactly like a complete one:
+# the SSE stream ends cleanly, the browser shows a half sentence, and the cache
+# then replays that half sentence forever. The vendors spell the reason in three
+# different places; the four words below are all downstream code needs to know.
+
+FINISH_LENGTH = "length"
+FINISH_STOP = "stop"
+FINISH_FILTER = "filter"
+FINISH_OTHER = "other"
+
+_LENGTH_REASONS = frozenset({"length", "LENGTH", "max_tokens", "MAX_TOKENS"})
+_STOP_REASONS = frozenset({"stop", "STOP", "end_turn", "endTurn", "stop_sequence"})
+_FILTER_REASONS = frozenset(
+    {
+        "content_filter",
+        "refusal",
+        "SAFETY",
+        "RECITATION",
+        "BLOCKLIST",
+        "PROHIBITED_CONTENT",
+        "SPII",
+    }
+)
+# Gemini uses this for "no reason in this chunk", not for a finished answer.
+_UNSPECIFIED_REASONS = frozenset({"", "none", "null", "FINISH_REASON_UNSPECIFIED", "unspecified"})
+
+
+def normalise_finish(reason: object) -> str | None:
+    """One vendor reason, folded into length / stop / filter / other.
+
+    ``None`` means the chunk carried no reason at all - the normal case for all
+    but the final chunk. Unknown values become ``other`` rather than being
+    discarded: a new vendor reason should be visible, not silent.
+    """
+    if not isinstance(reason, str):
+        return None
+    raw = reason.strip()
+    if raw in _UNSPECIFIED_REASONS:
+        return None
+    if raw in _LENGTH_REASONS:
+        return FINISH_LENGTH
+    if raw in _STOP_REASONS:
+        return FINISH_STOP
+    if raw in _FILTER_REASONS:
+        return FINISH_FILTER
+    return FINISH_OTHER
+
+
+def finish_from_chunk(kind: str, event: str, data: str) -> str | None:
+    """Read the finish/stop reason out of one SSE chunk, if it has one.
+
+    * OpenAI-compatible: ``choices[0].finish_reason`` in the last chunk;
+    * Anthropic: ``delta.stop_reason`` on the ``message_delta`` event;
+    * Gemini: ``candidates[0].finishReason`` in the last chunk.
+    """
+    if not data or data == "[DONE]":
+        return None
+    try:
+        chunk = json.loads(data)
+    except ValueError:
+        return None
+    if not isinstance(chunk, dict):
+        return None
+
+    if kind == "anthropic":
+        if event != "message_delta":
+            return None
+        delta = chunk.get("delta") or {}
+        if not isinstance(delta, dict):
+            return None
+        return normalise_finish(delta.get("stop_reason"))
+
+    if kind == "google":
+        candidates = chunk.get("candidates") or []
+        if not candidates or not isinstance(candidates[0], dict):
+            return None
+        return normalise_finish(candidates[0].get("finishReason"))
+
+    choices = chunk.get("choices") or []
+    if not choices or not isinstance(choices[0], dict):
+        return None
+    return normalise_finish(choices[0].get("finish_reason"))
+
+
 def usage_from_chunk(kind: str, data: str) -> dict[str, int] | None:
     """Normalise whatever token counts a provider put in one SSE chunk.
 
