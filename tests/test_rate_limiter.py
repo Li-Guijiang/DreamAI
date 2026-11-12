@@ -86,3 +86,48 @@ def test_chat_responses_carry_the_rate_limit_headers():
     assert "X-RateLimit-Limit" in response.headers
     assert "X-RateLimit-Remaining" in response.headers
     assert int(response.headers["X-RateLimit-Remaining"]) >= 0
+
+
+def test_a_quiet_client_is_forgotten_instead_of_everyone_being_reset():
+    limiter = RateLimiter(limit=1, window=60)
+    limiter.MAX_TRACKED = 2
+    _hit(limiter, "active")
+    # Two clients that last asked long before the window: they are
+    # indistinguishable from clients that never arrived.
+    limiter._hits["idle-a"].append(0.0)
+    limiter._hits["idle-b"].append(0.0)
+
+    _hit(limiter, "active")  # over the cap, so the table is pruned first
+
+    assert "idle-a" not in limiter._hits
+    assert "idle-b" not in limiter._hits
+    assert "active" in limiter._hits
+
+
+def test_a_full_table_keeps_the_most_recent_clients():
+    limiter = RateLimiter(limit=5, window=600)
+    limiter.MAX_TRACKED = 2
+    for key in ("a", "b", "c"):
+        _hit(limiter, key)
+
+    _hit(limiter, "d")  # prune runs before this one is inserted
+
+    # a was the least recently seen, so it is the one that goes.
+    assert "a" not in limiter._hits
+    assert {"b", "c", "d"} <= set(limiter._hits)
+
+
+def test_pruning_leaves_the_limit_intact_for_the_clients_it_keeps():
+    limiter = RateLimiter(limit=1, window=600)
+    limiter.MAX_TRACKED = 1
+    _hit(limiter, "busy")
+    for index in range(5):
+        _hit(limiter, f"passer-by-{index}")
+    # Whichever clients survived, the limiter still counts their hits.
+    assert limiter.stats()["tracked"] <= limiter.MAX_TRACKED + 1
+
+
+def test_the_snapshot_reports_the_pruning_cap():
+    limiter = RateLimiter(limit=5, window=60)
+
+    assert limiter.stats()["cap"] == limiter.MAX_TRACKED
