@@ -24,6 +24,10 @@ class UsageStats:
         self.failures = 0
         self.prompt_tokens = 0
         self.completion_tokens = 0
+        # Part of prompt_tokens that was served from a provider-side prompt cache.
+        # Kept apart because it is the only part of the bill that gets cheaper the
+        # more the service is used.
+        self.cached_tokens = 0
         self.cost_usd = 0.0
         # A price list goes stale; when a model is not in it, the total is a
         # lower bound and `/api/usage` has to say so instead of rounding to 0.
@@ -62,6 +66,7 @@ class UsageStats:
                 "failures": 0,
                 "promptTokens": 0,
                 "completionTokens": 0,
+                "cachedTokens": 0,
                 "costUsd": 0.0,
             },
         )
@@ -136,15 +141,24 @@ class UsageStats:
         prompt_tokens: int,
         completion_tokens: int,
         cost: float | None = None,
+        *,
+        cached: int = 0,
     ) -> None:
-        """Add the provider's own token counts for one turn."""
+        """Add the provider's own token counts for one turn.
+
+        ``cached`` is the part of ``prompt_tokens`` the prompt cache served; it is
+        counted inside the prompt total, never on top of it.
+        """
         prompt_tokens = max(0, int(prompt_tokens or 0))
         completion_tokens = max(0, int(completion_tokens or 0))
+        cached = min(max(0, int(cached or 0)), prompt_tokens)
         self.prompt_tokens += prompt_tokens
         self.completion_tokens += completion_tokens
+        self.cached_tokens += cached
         slot = self._slot(model)
         slot["promptTokens"] += prompt_tokens
         slot["completionTokens"] += completion_tokens
+        slot["cachedTokens"] += cached
         if cost is None:
             # The model has no price here, so its share stays at zero; the
             # per-model table still shows the tokens that were spent.
@@ -160,6 +174,12 @@ class UsageStats:
             "failures": self.failures,
             "promptTokens": self.prompt_tokens,
             "completionTokens": self.completion_tokens,
+            "cachedTokens": self.cached_tokens,
+            # The share, not just the count: 20k cached out of 1M is noise, 20k
+            # out of 25k is the cache doing its job.
+            "cachedShare": round(self.cached_tokens / self.prompt_tokens, 3)
+            if self.prompt_tokens
+            else 0.0,
             "costUsd": round(self.cost_usd, 4),
             "costKnown": self.known_cost,
             "avgTtft": round(self.avg_ttft(), 2),
