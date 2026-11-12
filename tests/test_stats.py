@@ -252,3 +252,29 @@ def test_no_prompt_tokens_means_no_share_rather_than_a_division():
     stats = UsageStats()
 
     assert stats.snapshot()["cachedShare"] == 0.0
+
+
+def test_a_truncated_turn_is_counted_but_not_called_a_failure():
+    stats = UsageStats()
+    stats.record_turn("deepseek-chat", truncated=True)
+    stats.record_turn("deepseek-chat")
+
+    snapshot = stats.snapshot()
+
+    assert snapshot["truncated"] == 1
+    assert snapshot["failures"] == 0
+    assert snapshot["byModel"]["deepseek-chat"]["truncated"] == 1
+
+
+def test_the_truncation_rate_is_the_share_of_all_requests():
+    stats = UsageStats()
+    stats.record_turn("m", truncated=True)
+    stats.record_turn("m")
+    stats.record_turn("m")
+    stats.record_local()
+
+    assert stats.snapshot()["truncationRate"] == pytest.approx(0.25)
+
+
+def test_a_fresh_counter_has_no_truncation_rate():
+    assert UsageStats().snapshot()["truncationRate"] == 0.0
