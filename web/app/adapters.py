@@ -168,6 +168,17 @@ def usage_from_chunk(kind: str, data: str) -> dict[str, int] | None:
 
     Only the keys actually present are returned, so a caller can accumulate
     across chunks without mistaking a missing value for a zero.
+
+    Three adjustments are made on the way in, because the vendors disagree about
+    what a "token count" covers and comparing them raw is misleading:
+
+    * ``cached_tokens`` is reported whenever a prompt cache was involved, as a
+      *subset* of ``prompt_tokens``. It is the part billed at the cheaper rate.
+    * Anthropic excludes cache reads and cache writes from ``input_tokens``, so
+      both are added back; otherwise a cached turn looks cheaper than a fresh
+      one on the token line while costing the same.
+    * Gemini reports thinking tokens in ``thoughtsTokenCount``, outside
+      ``candidatesTokenCount``, so they are folded into the completion total.
     """
     if not data or data == "[DONE]":
         return None
@@ -185,13 +196,26 @@ def usage_from_chunk(kind: str, data: str) -> dict[str, int] | None:
         if not isinstance(usage, dict):
             return None
         found: dict[str, int] = {}
-        for source, target in (
-            ("input_tokens", "prompt_tokens"),
-            ("output_tokens", "completion_tokens"),
-        ):
-            count = _count(usage.get(source))
-            if count is not None:
-                found[target] = count
+        # input_tokens counts only what was neither read from nor written to the
+        # cache. Summing the three is the number a reader expects: everything
+        # that went in this turn.
+        parts = [
+            count
+            for count in (
+                _count(usage.get("input_tokens")),
+                _count(usage.get("cache_read_input_tokens")),
+                _count(usage.get("cache_creation_input_tokens")),
+            )
+            if count is not None
+        ]
+        if parts:
+            found["prompt_tokens"] = sum(parts)
+        cached = _count(usage.get("cache_read_input_tokens"))
+        if cached:
+            found["cached_tokens"] = cached
+        output = _count(usage.get("output_tokens"))
+        if output is not None:
+            found["completion_tokens"] = output
         return found or None
 
     if kind == "google":
@@ -199,13 +223,18 @@ def usage_from_chunk(kind: str, data: str) -> dict[str, int] | None:
         if not isinstance(meta, dict):
             return None
         found = {}
-        for source, target in (
-            ("promptTokenCount", "prompt_tokens"),
-            ("candidatesTokenCount", "completion_tokens"),
-        ):
-            count = _count(meta.get(source))
-            if count is not None:
-                found[target] = count
+        prompt = _count(meta.get("promptTokenCount"))
+        if prompt is not None:
+            found["prompt_tokens"] = prompt
+        # Already contained in promptTokenCount: reported, not added.
+        cached = _count(meta.get("cachedContentTokenCount"))
+        if cached:
+            found["cached_tokens"] = cached
+        completion = _count(meta.get("candidatesTokenCount"))
+        thoughts = _count(meta.get("thoughtsTokenCount"))
+        if completion is not None or thoughts:
+            # Thinking is billed as output and is not in candidatesTokenCount.
+            found["completion_tokens"] = (completion or 0) + (thoughts or 0)
         return found or None
 
     usage = chunk.get("usage") or {}
@@ -219,4 +248,11 @@ def usage_from_chunk(kind: str, data: str) -> dict[str, int] | None:
         count = _count(usage.get(source))
         if count is not None:
             found[target] = count
+    # OpenAI nests the count; DeepSeek puts the same idea at the top level.
+    details = usage.get("prompt_tokens_details")
+    cached = _count(details.get("cached_tokens")) if isinstance(details, dict) else None
+    if cached is None:
+        cached = _count(usage.get("prompt_cache_hit_tokens"))
+    if cached:
+        found["cached_tokens"] = cached
     return found or None
