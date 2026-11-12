@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import random
 from collections.abc import AsyncIterator
 
 import httpx
@@ -236,6 +237,18 @@ async def _stream_raw(
         raise LLMError("无法连接模型服务，请稍后重试。") from exc
 
 
+def retry_delay(delay: float, attempt: int) -> float:
+    """Seconds to wait before retry number ``attempt`` (1-based).
+
+    Equal jitter: half the wait is fixed, so a retry is never immediate and a
+    failing provider gets a moment to recover; the other half is random, so a
+    hundred browsers that lost the same upstream do not come back in lockstep and
+    turn one blip into a second, larger one.
+    """
+    base = max(0.0, delay) * max(1, attempt)
+    return base / 2 + random.uniform(0, base / 2)
+
+
 async def stream_with_retry(
     factory, attempts: int = 2, delay: float = 0.6
 ) -> AsyncIterator[tuple[str, str]]:
@@ -256,7 +269,7 @@ async def stream_with_retry(
             if produced or not retryable or attempt == attempts:
                 raise
             logger.info("upstream %s, retrying (%s/%s)", error.status_code, attempt, attempts)
-            await asyncio.sleep(delay * attempt)
+            await asyncio.sleep(retry_delay(delay, attempt))
 
 
 async def stream_with_fallback(primary, fallback) -> AsyncIterator[tuple[str, str]]:
