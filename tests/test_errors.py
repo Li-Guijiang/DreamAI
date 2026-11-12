@@ -128,3 +128,18 @@ def test_a_retired_model_never_shows_the_provider_wording():
     from app.errors import final_message
 
     assert final_message(410, "OpenAI", "model deprecated") == user_message(410, "OpenAI")
+
+
+def test_too_early_says_a_second_attempt_usually_works():
+    message = user_message(425)
+
+    # 425 is retryable; a generic sentence would hide the one useful action.
+    assert "425" in message
+    assert "重试" in message
+    assert is_retryable(425)
+
+
+def test_too_early_keeps_our_sentence_over_the_providers():
+    from app.errors import final_message
+
+    assert final_message(425, "DeepSeek", "try again later") == user_message(425, "DeepSeek")
