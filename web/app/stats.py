@@ -53,6 +53,12 @@ class UsageStats:
         # Models are per vendor; when a vendor is down, all of its models fail
         # together. Grouping by provider is what turns that into one number.
         self._by_provider: dict[str, int] = {}
+        # Why the model stopped, in the four normalised words. "filter" turning
+        # up is a different incident from "length" turning up.
+        self._by_finish: dict[str, int] = {}
+        # A length finish broken down by tier: if all truncations are deep turns,
+        # the deep cap is the thing to change, not the global one.
+        self._truncated_by_tier: dict[str, int] = {}
         # Two kinds of turn that never reach a model and would otherwise look
         # like traffic: answered locally, and refused by the breaker.
         self.local_answers = 0
@@ -85,14 +91,19 @@ class UsageStats:
         failed: bool = False,
         ttft: float = 0.0,
         truncated: bool = False,
+        finish: str = "",
     ) -> None:
         """Count one finished turn, however it ended."""
         self.requests += 1
         slot = self._slot(model)
         slot["requests"] += 1
+        if finish:
+            self._by_finish[finish] = self._by_finish.get(finish, 0) + 1
         if truncated:
             self.truncated += 1
             slot["truncated"] += 1
+            if tier:
+                self._truncated_by_tier[tier] = self._truncated_by_tier.get(tier, 0) + 1
         if tier:
             self._by_tier[tier] = self._by_tier.get(tier, 0) + 1
         if intent:
@@ -197,11 +208,11 @@ class UsageStats:
             "blocked": self.blocked,
             "cancelled": self.cancelled,
             "truncated": self.truncated,
+            "truncatedByTier": dict(self._truncated_by_tier),
+            "byFinish": dict(self._by_finish),
             # How often the reply budget is the thing that ended the answer; a
             # rising share means the tier caps are too tight for real questions.
-            "truncationRate": round(self.truncated / self.requests, 3)
-            if self.requests
-            else 0.0,
+            "truncationRate": round(self.truncated / self.requests, 3) if self.requests else 0.0,
             "byTier": dict(self._by_tier),
             "byIntent": dict(self._by_intent),
             "byProvider": dict(self._by_provider),
