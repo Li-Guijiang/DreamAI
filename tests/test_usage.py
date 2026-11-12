@@ -72,9 +72,7 @@ def test_an_unpriced_model_is_counted_but_not_priced():
 
 def test_a_cached_count_above_the_prompt_is_clamped():
     usage = SessionUsage()
-    usage.record(
-        "gpt-4o", {"prompt_tokens": 100, "completion_tokens": 0, "cached_tokens": 5000}
-    )
+    usage.record("gpt-4o", {"prompt_tokens": 100, "completion_tokens": 0, "cached_tokens": 5000})
 
     snapshot = usage.snapshot()
 

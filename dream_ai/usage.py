@@ -61,9 +61,7 @@ class SessionUsage:
         self.prompt_tokens += counts["prompt"]
         self.completion_tokens += counts["completion"]
         self.cached_tokens += counts["cached"]
-        cost = estimate_cost(
-            model, counts["prompt"], counts["completion"], cached=counts["cached"]
-        )
+        cost = estimate_cost(model, counts["prompt"], counts["completion"], cached=counts["cached"])
         if cost is None:
             self.unpriced += 1
         else:

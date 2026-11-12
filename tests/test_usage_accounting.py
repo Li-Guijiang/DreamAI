@@ -95,8 +95,9 @@ def test_cached_prompt_tokens_reach_the_usage_endpoint(harness, monkeypatch):
 
     async def cached_stream(*args, **kwargs):  # noqa: ANN002, ANN003
         yield "content", "答。"
-        yield "usage", json.dumps(
-            {"prompt_tokens": 2000, "completion_tokens": 10, "cached_tokens": 1792}
+        yield (
+            "usage",
+            json.dumps({"prompt_tokens": 2000, "completion_tokens": 10, "cached_tokens": 1792}),
         )
 
     monkeypatch.setattr(main.llm, "stream_completion", cached_stream)
