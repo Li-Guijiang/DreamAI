@@ -179,10 +179,19 @@ POST /api/chat
    只有后两种说明 TTL 太短或容量太小；
 4. **熔断的 `openings` 是进程级累计**，失败计数会被下一次成功清零，看不出“反复抖”。
 
-`/api/usage` 因此回答六个问题：用了多少（requests）、花了多少（costUsd / byModel，
+`/api/usage` 因此回答八个问题：用了多少（requests）、花了多少（costUsd / byModel，
 每行自带失败率）、快不快（avgTtft / ttftMax——平均会藏住一次 40 秒的等待，
 最差值不会）、在问什么（byIntent）、走的是哪一家（byProvider）、
-多少没走模型（local / blocked / cancelled）。
+多少没走模型（local / blocked / cancelled）、缓存省了多少
+（cachedTokens / cachedShare，缓存命中的输入按更低的单价计费）、
+以及多少回答是被预算截断的（truncated / truncatedByTier / byFinish）。
+
+最后一组来自流的结束原因：SSE 连接正常关闭并不代表回答完整，模型达到
+`max_tokens` 时同样会干净地停。三种协议的 `finish_reason` / `stop_reason` /
+`finishReason` 在 `adapters.py` 归一成 `length / stop / filter / other`，
+由 `llm` 发一个 `finish` 事件（与 `usage` 一样绕过文本合流），
+`done` 事件带 `finish` 与 `truncated`。被截断的回答**不写缓存**，
+否则同一个问题会把半截答案一直重放到 TTL 到期。
 
 `costKnown=false` 只表示「有模型没价格」，不表示「这一轮没拿到 usage」——没拿到
 usage 时根本不会碰这个标志。免费模型单价为 0 且已知，同样不会误标成未知。
