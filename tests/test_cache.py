@@ -152,3 +152,55 @@ def test_a_disabled_cache_does_not_count_misses_as_traffic():
 
     assert cache.get("a") is None
     assert cache.misses == 0
+
+
+def test_the_snapshot_counts_utf8_bytes_not_characters():
+    cache = ResponseCache()
+    cache.put("a", "abc")  # 3 bytes
+    cache.put("b", "你好")  # 6 bytes
+
+    snapshot = cache.stats()
+
+    assert snapshot["bytes"] == 9
+    assert snapshot["avgBytes"] == 4.5
+
+
+def test_replacing_a_key_does_not_double_count_it():
+    cache = ResponseCache()
+    cache.put("a", "abc")
+    cache.put("a", "abcde")
+
+    assert cache.stats()["bytes"] == 5
+
+
+def test_an_evicted_entry_releases_its_bytes():
+    cache = ResponseCache(max_items=2)
+    cache.put("a", "12345")
+    cache.put("b", "12")
+    cache.put("c", "1")
+
+    assert cache.stats()["bytes"] == 3
+    assert cache.stats()["items"] == 2
+
+
+def test_an_expired_entry_releases_its_bytes():
+    clock = FakeClock()
+    cache = ResponseCache(ttl=10, clock=clock)
+    cache.put("a", "12345")
+    clock.t = 11
+
+    assert cache.get("a") is None
+    assert cache.stats()["bytes"] == 0
+
+
+def test_clear_releases_the_bytes_but_keeps_the_counters():
+    cache = ResponseCache()
+    cache.put("a", "12345")
+    cache.get("a")
+    cache.clear()
+
+    snapshot = cache.stats()
+
+    assert snapshot["bytes"] == 0
+    assert snapshot["avgBytes"] == 0
+    assert snapshot["hits"] == 1
