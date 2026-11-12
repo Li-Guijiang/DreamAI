@@ -37,7 +37,7 @@ Available commands:
   /clear           Clear the conversation history
   /motion          Toggle the terminal launch / typing / spinner effects
   /about           Show provider, tools, autonomy, session info, and preferences
-  /stats           Show what this session has spent: turns, tokens, and cost
+  /stats           Show what this session has spent: turns, tokens, cost, truncations
   /profile         Show the owner dossier (same as 【查看我的全部档案】)
   /quit | /exit    Leave Dream AI
 Type anything else to chat with Dream AI.
@@ -255,6 +255,7 @@ def _print_stats(agent: DreamAIAgent, ui: Console) -> None:
     ui.line(f"model turns     {usage['turns']}")
     ui.line(f"tokens          {_token_text(usage)}")
     ui.line(f"cost            {_cost_text(usage)}")
+    ui.line(f"truncated       {usage['truncated']}")
     ui.line(f"last tier       {agent.last_tier or 'n/a (no model turn yet)'}")
     ui.line(f"preferences     {len(agent.preference_notes)}")
     ui.line(f"history entries {len(agent.history)}")
