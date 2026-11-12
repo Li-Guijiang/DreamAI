@@ -1106,6 +1106,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             # the log all read the same number. Passing cost=None here would mark
             # the total unknown even for a free model whose price is known (0).
             cost: float | None = None
+            cached_tokens = 0
             if isinstance(usage_payload, dict):
                 prompt_tokens = int(usage_payload.get("prompt_tokens") or 0)
                 completion_tokens = int(usage_payload.get("completion_tokens") or 0)
@@ -1158,6 +1159,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                         chars=produced,
                         model=model,
                         cache="miss",
+                        cached_tokens=cached_tokens,
                         cost=cost,
                     )
                 )

@@ -26,12 +26,16 @@ def format_turn_log(
     outcome: str = "done",
     cost: float | None = None,
     cache: str = "",
+    cached_tokens: int = 0,
 ) -> str:
     """Render the single line written when a turn finishes."""
     return (
         f"chat {outcome} id={request_id} tier={tier} intent={intent} "
         f"ttft={ttft:.2f}s total={total:.2f}s chars={chars} model={model}"
         + (f" cache={cache}" if cache else "")
+        # The cached share explains a cost that looks too low for the model;
+        # without it the next reader suspects a bug in the price table.
+        + (f" cachedTokens={cached_tokens}" if cached_tokens else "")
         + (f" cost=${cost:.4f}" if cost is not None else "")
     )
 

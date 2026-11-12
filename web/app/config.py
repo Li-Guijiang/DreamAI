@@ -276,6 +276,7 @@ class Settings:
     # tier -> model, parsed from DREAMAI_MODEL_BY_TIER.
     model_by_tier: dict[str, str] = field(default_factory=dict)
     # Operator corrections to the dated price list; see pricing.parse_price_overrides.
+    # An optional third number corrects the cached-input price too.
     price_overrides: str = ""
 
     rate_limit: int = 30
