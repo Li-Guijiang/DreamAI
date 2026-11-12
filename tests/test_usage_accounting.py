@@ -127,3 +127,70 @@ def test_a_cache_hit_is_filed_under_the_cache_not_the_vendor(harness):
     assert snapshot["byProvider"] == {"free": 1, "cache": 1}
     assert sum(snapshot["byIntent"].values()) == 2
     assert snapshot["promptTokens"] == 1000
+
+
+def _done_payload(body: str) -> dict:
+    """The JSON object carried by the last `event: done` frame."""
+    done = [frame for frame in body.split("\n\n") if frame.startswith("event: done")]
+    data = next(line[6:] for line in done[-1].splitlines() if line.startswith("data:"))
+    return json.loads(data)
+
+
+def test_a_truncated_stream_is_reported_as_truncated(harness, monkeypatch):
+    main, client = harness
+
+    async def truncated_stream(*args, **kwargs):  # noqa: ANN002, ANN003
+        yield "content", "写到一半"
+        yield "usage", json.dumps({"prompt_tokens": 10, "completion_tokens": 5})
+        yield "finish", "length"
+
+    monkeypatch.setattr(main.llm, "stream_completion", truncated_stream)
+    body = _chat(client)
+
+    done = _done_payload(body)
+    assert done["truncated"] is True
+    assert done["finish"] == "length"
+    # The word "length" is metadata; it must not appear in the answer itself.
+    assert "length" not in "".join(
+        json.loads(line[6:])["t"]
+        for line in body.splitlines()
+        if line.startswith("data:") and '"t"' in line
+    )
+    usage = client.get("/api/usage").json()
+    assert usage["truncated"] == 1
+    assert usage["truncationRate"] == 1.0
+
+
+def test_a_normal_finish_is_not_called_truncated(harness, monkeypatch):
+    main, client = harness
+
+    async def finished_stream(*args, **kwargs):  # noqa: ANN002, ANN003
+        yield "content", "完整的回答"
+        yield "finish", "stop"
+
+    monkeypatch.setattr(main.llm, "stream_completion", finished_stream)
+    body = _chat(client)
+
+    done = _done_payload(body)
+    assert done["truncated"] is False
+    assert done["finish"] == "stop"
+    assert client.get("/api/usage").json()["truncated"] == 0
+
+
+def test_a_truncated_answer_is_never_cached(harness, monkeypatch):
+    main, client = harness
+
+    async def truncated_stream(*args, **kwargs):  # noqa: ANN002, ANN003
+        yield "content", "写到一半"
+        yield "finish", "length"
+
+    monkeypatch.setattr(main.llm, "stream_completion", truncated_stream)
+    body = {"messages": [{"role": "user", "content": "在吗"}], "temperature": 0.2}
+
+    first = client.post("/api/chat", json=body)
+    second = client.post("/api/chat", json=body)
+
+    # Both must go upstream: a cached half-answer would be replayed forever.
+    assert first.headers["X-Cache"] == "MISS"
+    assert second.headers["X-Cache"] == "MISS"
+    assert main._cache.stats()["items"] == 0

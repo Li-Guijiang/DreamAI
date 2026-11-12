@@ -115,6 +115,31 @@ def test_no_cached_tokens_no_field():
     assert "cachedTokens" not in line
 
 
+def test_the_finish_reason_sits_next_to_the_cost():
+    line = format_turn_log(
+        "req_5",
+        tier="deep",
+        intent="design",
+        ttft=0.4,
+        total=5.0,
+        chars=4000,
+        model="m",
+        finish="length",
+        cost=0.02,
+    )
+
+    assert "finish=length" in line
+    assert line.index("finish=") < line.index("cost=")
+
+
+def test_no_finish_reason_no_field():
+    line = format_turn_log(
+        "req_6", tier="light", intent="chat", ttft=0.1, total=0.2, chars=3, model="m"
+    )
+
+    assert "finish=" not in line
+
+
 def test_the_breaker_line_reports_the_numbers_that_explain_it():
     from app.telemetry import format_breaker_log
 
