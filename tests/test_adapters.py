@@ -41,7 +41,7 @@ def test_openai_compatible_uses_bearer_and_messages():
 
 
 def test_anthropic_moves_system_out_of_messages():
-    url, headers, payload = build("anthropic")
+    url, headers, payload = build("anthropic", prompt_cache=False)
 
     assert url == "https://api.anthropic.com/v1/messages"
     assert headers["x-api-key"] == "k" * 40
@@ -167,3 +167,32 @@ def test_anthropic_and_google_are_untouched_by_the_switch():
     for provider_id in ("anthropic", "google"):
         _, _, payload = build(provider_id, include_usage=False)
         assert "stream_options" not in payload
+
+
+def test_anthropic_system_prompt_is_marked_cacheable():
+    _, _, payload = build("anthropic")
+
+    block = payload["system"][0]
+    assert block["type"] == "text"
+    assert block["text"] == "你是 Dream AI"
+    assert block["cache_control"] == {"type": "ephemeral"}
+
+
+def test_the_cache_marker_can_be_switched_off():
+    _, _, payload = build("anthropic", prompt_cache=False)
+
+    assert payload["system"] == "你是 Dream AI"
+
+
+def test_no_system_prompt_means_no_empty_block():
+    _, _, payload = build(
+        "anthropic", messages=[{"role": "user", "content": "你好"}], prompt_cache=True
+    )
+
+    assert "system" not in payload
+
+
+def test_only_anthropic_needs_to_be_asked_for_a_cache():
+    for provider_id in ("deepseek", "google"):
+        _, _, payload = build(provider_id)
+        assert "cache_control" not in json.dumps(payload)

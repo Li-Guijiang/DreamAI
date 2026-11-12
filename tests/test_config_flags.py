@@ -42,3 +42,10 @@ def test_price_overrides_are_read_from_the_environment(monkeypatch):
     monkeypatch.setenv("DREAMAI_PRICE_OVERRIDES", "brand-new-model=1,3")
 
     assert load_settings().price_overrides == "brand-new-model=1,3"
+
+
+def test_the_prompt_cache_switch_is_on_by_default(monkeypatch):
+    assert load_settings().prompt_cache is True
+
+    monkeypatch.setenv("DREAMAI_PROMPT_CACHE", "0")
+    assert load_settings().prompt_cache is False
