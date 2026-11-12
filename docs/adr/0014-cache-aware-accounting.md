@@ -51,6 +51,14 @@ is also reported as `cached_tokens`, because that is the discounted part. Gemini
 thinking tokens are added to `completion_tokens`. Both adjustments happen at the
 boundary, so nothing downstream has to branch on the vendor.
 
+Accounting for a cache that is never asked for would be correct and idle, so the
+same change marks the Anthropic system prompt as cacheable (`cache_control:
+ephemeral`). The persona and the owner dossier are byte-identical on every turn,
+which is the prefix a prompt cache exists for. OpenAI caches long prefixes by
+itself and Gemini needs a separately created cache object, so the marker is only
+sent to Anthropic and can be switched off with `DREAMAI_PROMPT_CACHE=0` for a
+proxy that rejects unknown fields.
+
 Rejected: reporting `cached_tokens` on top of `prompt_tokens`. It reads well in a
 table and double-bills in a sum.
 
