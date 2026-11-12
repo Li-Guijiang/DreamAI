@@ -29,6 +29,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from . import llm, owner_auth, owner_store
+from .adapters import FINISH_LENGTH
 from .cache import ResponseCache, make_key
 from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
 from .errors import final_message
@@ -670,6 +671,8 @@ async def usage() -> JSONResponse:
             "local": totals["local"],
             "blocked": totals["blocked"],
             "cancelled": totals["cancelled"],
+            "truncated": totals["truncated"],
+            "truncationRate": totals["truncationRate"],
             "daily": _daily_state,
             "dailyLimit": settings.daily_limit,
         }
@@ -932,6 +935,10 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         failed = False
         cancelled = False
         usage_payload: dict | None = None
+        # Empty means the provider never said why it stopped. "length" means the
+        # answer was cut off at the token budget; both are reported, never mixed
+        # into the answer text.
+        finish_reason = ""
         answered: list[str] = []
         first_token_at = 0.0
         yield sse(
@@ -1056,6 +1063,11 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                             if isinstance(usage_payload, dict):
                                 yield sse("usage", usage_payload)
                             continue
+                        if kind == "finish":
+                            # Metadata, not a delta: a client that rendered this
+                            # would see the word "length" appended to the answer.
+                            finish_reason = text
+                            continue
                         if not first_token_at:
                             first_token_at = time.monotonic()
                         produced += len(text)
@@ -1109,6 +1121,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             # the total unknown even for a free model whose price is known (0).
             cost: float | None = None
             cached_tokens = 0
+            truncated = finish_reason == FINISH_LENGTH
             if isinstance(usage_payload, dict):
                 prompt_tokens = int(usage_payload.get("prompt_tokens") or 0)
                 completion_tokens = int(usage_payload.get("completion_tokens") or 0)
@@ -1129,6 +1142,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     provider=upstream.provider.id,
                     failed=failed,
                     ttft=(first_token_at - started) if first_token_at else 0.0,
+                    truncated=truncated,
                 )
             if not failed and not cancelled:
                 # Only a half-open probe can close an open breaker; that is the
@@ -1137,7 +1151,10 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 _breaker.record_success()
                 if recovering:
                     logger.info(format_recovery_log(_breaker.stats()))
-                if cache_key and answered:
+                # A reply cut off at the token budget must never be cached: the
+                # exact same question would then replay a half answer until the
+                # TTL expired, with no way for the visitor to get the rest.
+                if cache_key and answered and not truncated:
                     _cache.put(cache_key, "".join(answered))
                 done_payload = {
                     "tier": tier,
@@ -1146,7 +1163,10 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     "chars": produced,
                     "elapsed": round(time.monotonic() - started, 2),
                     "model": model,
+                    "truncated": truncated,
                 }
+                if finish_reason:
+                    done_payload["finish"] = finish_reason
                 if usage_payload:
                     done_payload["usage"] = usage_payload
                     if cost is not None:
@@ -1162,6 +1182,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                         model=model,
                         cache="miss",
                         cached_tokens=cached_tokens,
+                        finish=finish_reason,
                         cost=cost,
                     )
                 )

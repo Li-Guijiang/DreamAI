@@ -27,6 +27,7 @@ def format_turn_log(
     cost: float | None = None,
     cache: str = "",
     cached_tokens: int = 0,
+    finish: str = "",
 ) -> str:
     """Render the single line written when a turn finishes."""
     return (
@@ -36,6 +37,7 @@ def format_turn_log(
         # The cached share explains a cost that looks too low for the model;
         # without it the next reader suspects a bug in the price table.
         + (f" cachedTokens={cached_tokens}" if cached_tokens else "")
+        + (f" finish={finish}" if finish else "")
         + (f" cost=${cost:.4f}" if cost is not None else "")
     )
 
