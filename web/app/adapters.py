@@ -26,12 +26,17 @@ def build_request(
     top_p: float | None = None,
     presence_penalty: float | None = None,
     include_usage: bool = True,
+    prompt_cache: bool = True,
 ) -> tuple[str, dict[str, str], dict]:
     """Return ``(url, headers, payload)`` for a streaming request.
 
     Sampling knobs are optional and provider-specific: OpenAI-compatible endpoints
     take both, Anthropic takes ``top_p`` only, Gemini spells it ``topP`` inside
     ``generationConfig``.
+
+    ``prompt_cache`` marks the system prompt as cacheable on Anthropic, which is
+    the one vendor that has to be asked. OpenAI caches long prefixes on its own,
+    and Gemini needs a separately created cache, so the flag is a no-op for both.
     """
     if provider.kind == "anthropic":
         system = "\n\n".join(m["content"] for m in messages if m["role"] == "system")
@@ -43,7 +48,14 @@ def build_request(
             "temperature": temperature,
             "stream": True,
         }
-        if system:
+        if system and prompt_cache:
+            # The persona and the owner dossier are the same on every turn, which
+            # is exactly the prefix a prompt cache is for. One breakpoint is
+            # enough; the vendor allows four.
+            payload["system"] = [
+                {"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}
+            ]
+        elif system:
             payload["system"] = system
         if top_p is not None:
             payload["top_p"] = top_p

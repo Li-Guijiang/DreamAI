@@ -140,6 +140,7 @@ async def stream_completion(
     top_p: float | None = None,
     presence_penalty: float | None = None,
     include_usage: bool = True,
+    prompt_cache: bool = True,
 ) -> AsyncIterator[tuple[str, str]]:
     """Yield ``content`` / ``reasoning`` deltas and one final ``usage`` event."""
     async for item in coalesce(
@@ -153,6 +154,7 @@ async def stream_completion(
             top_p=top_p,
             presence_penalty=presence_penalty,
             include_usage=include_usage,
+            prompt_cache=prompt_cache,
         )
     ):
         yield item
@@ -169,6 +171,7 @@ async def _stream_raw(
     top_p: float | None = None,
     presence_penalty: float | None = None,
     include_usage: bool = True,
+    prompt_cache: bool = True,
 ) -> AsyncIterator[tuple[str, str]]:
     """Parse the provider stream into per-token items plus a final usage event."""
     url, headers, payload = build_request(
@@ -181,6 +184,7 @@ async def _stream_raw(
         top_p=top_p,
         presence_penalty=presence_penalty,
         include_usage=include_usage,
+        prompt_cache=prompt_cache,
     )
     headers["User-Agent"] = "DreamAI-Web/1.0 (+https://liguijiang.com)"
 

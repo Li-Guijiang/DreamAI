@@ -264,6 +264,9 @@ class Settings:
     # Ask OpenAI-compatible endpoints for a final usage chunk. A few gateways
     # reject the extra field; setting this to 0 keeps streaming answers working.
     stream_usage: bool = True
+    # Mark the system prompt as cacheable on Anthropic, which is the one vendor
+    # that must be asked. Off only if a proxy rejects the field.
+    prompt_cache: bool = True
     # Resilience and caching, tunable without a code change.
     breaker_threshold: int = 3
     breaker_cooldown: float = 30.0
@@ -400,6 +403,7 @@ def load_settings() -> Settings:
         top_p=_env_optional_float("DREAMAI_TOP_P"),
         presence_penalty=_env_optional_float("DREAMAI_PRESENCE_PENALTY"),
         stream_usage=_env_bool("DREAMAI_STREAM_USAGE", True),
+        prompt_cache=_env_bool("DREAMAI_PROMPT_CACHE", True),
         breaker_threshold=_env_int("DREAMAI_BREAKER_THRESHOLD", 3, 1),
         breaker_cooldown=_env_float("DREAMAI_BREAKER_COOLDOWN", 30.0),
         cache_ttl=_env_float("DREAMAI_CACHE_TTL", 300.0),

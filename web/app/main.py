@@ -1003,6 +1003,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                         top_p=settings.top_p,
                         presence_penalty=settings.presence_penalty,
                         include_usage=settings.stream_usage,
+                        prompt_cache=settings.prompt_cache,
                     ):
                         yield item
 
@@ -1020,6 +1021,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                         temperature=temperature,
                         max_tokens=budget,
                         include_usage=settings.stream_usage,
+                        prompt_cache=settings.prompt_cache,
                     ):
                         yield item
 
