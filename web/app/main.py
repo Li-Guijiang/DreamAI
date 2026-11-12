@@ -109,11 +109,37 @@ app = FastAPI(
 
 
 class RateLimiter:
+    #: Above this many watched clients, the quiet ones are forgotten. Pruning
+    #: beats clearing: emptying the table used to reset the quota of every
+    #: client at once, so enough distinct addresses could refill a bucket on
+    #: demand.
+    MAX_TRACKED = 20000
+
     def __init__(self, limit: int, window: int) -> None:
         self._limit = limit
         self._window = window
         self._hits: dict[str, deque[float]] = defaultdict(deque)
         self._lock = asyncio.Lock()
+
+    def _prune(self, now: float) -> None:
+        """Forget clients that have been quiet for a whole window.
+
+        An idle bucket is indistinguishable from one that never existed, so
+        dropping it cannot change any decision. Only if the table is still too
+        large are the least recently seen clients removed.
+        """
+        stale = [
+            key
+            for key, bucket in self._hits.items()
+            if not bucket or now - bucket[-1] > self._window
+        ]
+        for key in stale:
+            del self._hits[key]
+        excess = len(self._hits) - self.MAX_TRACKED
+        if excess > 0:
+            quietest = sorted(self._hits, key=lambda key: self._hits[key][-1])
+            for key in quietest[:excess]:
+                del self._hits[key]
 
     async def hit(self, key: str) -> tuple[bool, int, int]:
         """Return ``(allowed, retry_after_seconds, remaining_in_window)``.
@@ -124,6 +150,8 @@ class RateLimiter:
         """
         now = time.monotonic()
         async with self._lock:
+            if len(self._hits) > self.MAX_TRACKED:
+                self._prune(now)
             bucket = self._hits[key]
             while bucket and now - bucket[0] > self._window:
                 bucket.popleft()
@@ -131,8 +159,6 @@ class RateLimiter:
                 retry = int(self._window - (now - bucket[0])) + 1
                 return False, max(1, retry), 0
             bucket.append(now)
-            if len(self._hits) > 20000:  # keep memory bounded
-                self._hits.clear()
             return True, 0, max(0, self._limit - len(bucket))
 
     def stats(self) -> dict:
@@ -145,7 +171,7 @@ class RateLimiter:
             "tracked": len(self._hits),
             "limit": self._limit,
             "window": self._window,
-            "cap": 20000,
+            "cap": self.MAX_TRACKED,
         }
 
 
