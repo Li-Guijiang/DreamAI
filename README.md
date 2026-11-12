@@ -241,6 +241,9 @@ reaches the screen. Both are now explicit.
 | Cached tokens | Prompt-cache hits reported per model, never added to the prompt twice | `cachedTokens` in `/api/usage` |
 | Cache pricing | Cached input billed at its own per-model rate, not one global multiplier | `CACHE_PRICES` |
 | Cache marker | Anthropic's system prompt is sent as an ephemeral cache block | `DREAMAI_PROMPT_CACHE` |
+| Finish reason | All three streams report why the model stopped, in four shared words | `finish_from_chunk()` |
+| Truncation | `done.truncated`, the finish mix and the truncation rate by tier | `/api/usage`, `truncatedByTier` |
+| Cache hygiene | A cut-off answer is never cached; cached bytes are reported | `cache.py`, `adapters.py` |
 | Real usage | Token counts from all three wire formats, one usage event per stream | `usage_from_chunk()`, `DREAMAI_STREAM_USAGE` |
 | Price corrections | `DREAMAI_PRICE_OVERRIDES` fixes a stale price without a release | `pricing.configure_prices()` |
 | Provider view | `/api/usage` groups turns per vendor, not just per model | `byProvider` |
