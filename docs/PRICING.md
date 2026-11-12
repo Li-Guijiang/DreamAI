@@ -84,3 +84,53 @@
   plan is considered.
 - **Feedback:** Open an issue in the repository to suggest plan features or
   fair pricing.
+
+---
+
+## Appendix — what a token actually costs
+
+The plans above are about this project. The numbers below are about the model
+vendors, and they are the ones `/api/usage` and `/stats` report. They are kept in
+`web/app/pricing.py` and `dream_ai/pricing.py`, and a parity test compares the two.
+
+Snapshot: 2026-11, USD per 1M tokens, list prices. Vendors change these without
+notice, which is why an unknown model returns "unknown" rather than a guess.
+
+| Model | Input | Cached input | Output |
+|---|---:|---:|---:|
+| `glm-4-flash` | 0.00 | — | 0.00 |
+| `glm-4-plus` | 0.70 | — | 0.70 |
+| `deepseek-chat` | 0.27 | 0.07 | 1.10 |
+| `deepseek-reasoner` | 0.55 | 0.14 | 2.19 |
+| `gpt-4o-mini` | 0.15 | 0.075 | 0.60 |
+| `gpt-4o` | 2.50 | 1.25 | 10.00 |
+| `claude-3-5-haiku-latest` | 0.80 | 0.08 | 4.00 |
+| `claude-3-5-sonnet-latest` | 3.00 | 0.30 | 15.00 |
+| `gemini-2.0-flash` | 0.10 | 0.025 | 0.40 |
+| `gemini-1.5-pro` | 1.25 | 0.3125 | 5.00 |
+
+Three things this table is careful about:
+
+1. **Cached input is not a fixed discount.** It is a tenth at Anthropic, a quarter
+   at Google, half at OpenAI and about a quarter at DeepSeek, so the table keeps a
+   separate figure per model instead of one multiplier.
+2. **Thinking is output.** Gemini reports `thoughtsTokenCount` outside
+   `candidatesTokenCount`, and it is billed like any other completion token.
+3. **No price means no number.** A model absent from the table leaves
+   `costKnown=false`, and the CLI prints "at least $…" instead of a total that
+   looks complete.
+
+### Correcting a price without a release
+
+```bash
+DREAMAI_PRICE_OVERRIDES='new-model=0.5,1.5;gpt-4o=2.5,10,1.25'
+```
+
+- two numbers: input, output;
+- three numbers: input, output, cached input;
+- entries separated by `;`, values in USD per 1M tokens;
+- malformed, negative and non-finite values are skipped rather than applied.
+
+The override is read at startup and logged as `price overrides: …`, so an empty
+log line after a restart means the variable did not reach the process.
+
