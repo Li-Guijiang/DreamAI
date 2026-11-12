@@ -4,6 +4,11 @@
 
 ### Prompt cache accounting
 
+- Anthropic's system prompt is sent as a cacheable block
+  (`cache_control: ephemeral`), so the persona and dossier are actually cached;
+  switch it off with `DREAMAI_PROMPT_CACHE=0` if a proxy rejects the field. OpenAI
+  caches long prefixes by itself and Gemini needs a separately created cache, so
+  the flag is a no-op for both.
 - All three wire formats now report `cached_tokens`, the part of the prompt a
   cache served. Anthropic's cache reads and writes are added back into the prompt
   total (they are outside `input_tokens`); Gemini's thinking tokens are added to
