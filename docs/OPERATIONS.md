@@ -28,6 +28,7 @@ curl -s https://liguijiang.com/api/usage  | python -m json.tool
 |---|---|---|
 | 用了多少 | `requests` / `failures` | `failures / requests` 长期高于 10% 先看 `byModel.failureRate` 定位是哪家 |
 | 花了多少 | `costUsd` / `costKnown` | `costKnown=false` 表示价格表里缺模型，总数是下限 |
+| 缓存省了多少 | `cachedTokens` / `cachedShare` | 命中提示词缓存的那部分输入；占比高说明前缀稳定，成本被真正压下来了 |
 | 快不快 | `avgTtft` / `ttftMax` | 平均 1s 以内正常；`ttftMax` 远高于平均值说明偶发慢轮，不是常态 |
 | 在问什么 | `byIntent` | `error` 占比异常升高通常意味着上游或部署出问题，用户在排错 |
 | 走的哪一家 | `byProvider` | 某一家独占失败时先看 `byProvider`，再看该家下的 `byModel.failureRate` |
@@ -140,7 +141,8 @@ systemctl restart dreamai-web
 
 CLI / 桌面端没有 HTTP 接口，排查靠三样东西：
 
-1. `/stats`——会话用了多少模型轮次、上一问落在哪个难度档；
+1. `/stats`——会话用了多少模型轮次、输入输出各多少 token、缓存命中多少、花了多少钱，
+   以及上一问落在哪个难度档；
 2. `/about`——当前 provider 与配置；
 3. 历史折叠是请求时行为：`/clear` 之前存储的历史永远完整，
    长会话变慢先想到折叠（摘要以「以下是本轮之前的对话摘要」开头）。
@@ -163,6 +165,7 @@ CLI / 桌面端没有 HTTP 接口，排查靠三样东西：
 4. 计数在、`costUsd` 为 0 且 `costKnown=false`：价格表里没这个模型。用
    `DREAMAI_PRICE_OVERRIDES=模型名=输入单价,输出单价` 补上（单位为美元/百万 token），
    重启后启动日志会打印 `price overrides: 模型名`。多个条目用分号隔开。
+   怕缓存价不准就再给第三个数：`模型名=输入,输出,缓存输入`，见第 9 节。
 
 示例：
 
@@ -185,3 +188,35 @@ breaker recovered state=closed openings=2
 `breaker recovered` 由半开状态那一个探测请求成功后写入；只有正常轮次不会打这一行。
 `possible injection id=... severity=high` 是规则覆盖或身份切换的尝试，
 `severity=low` 只是想看系统提示，两者都加固了 system prompt 且都不写缓存。
+
+## 9. 提示词缓存：为什么账上的数字变小了
+
+四家厂商都做提示词缓存，但报账口径不同，`web/app/adapters.py` 已经把差异抹平，
+运维只需要认三个字段：
+
+| 字段 | 含义 | 与 `promptTokens` 的关系 |
+|---|---|---|
+| `promptTokens` | 本轮所有输入 | 总数 |
+| `completionTokens` | 本轮所有输出，含思考 | 总数 |
+| `cachedTokens` | 其中由缓存提供的那部分输入 | 子集，不叠加 |
+
+判读要点：
+
+1. `cachedTokens` 永远不会大于 `promptTokens`。看到更大的数，说明上游报错了口径，
+   代码会按 `promptTokens` 截断，账单不会被压低；
+2. `cachedShare` 才是有效指标。系统提示 + 历史前缀稳定时它应该逐步上升；
+   一直为 0 说明每轮前缀都在变（例如把时间戳写进了 system prompt），缓存等于没用；
+3. `costUsd` 下降不等于故障。缓存命中的输入按更低的单价计费，价格表里
+   `CACHE_PRICES` 记录的就是这个单价；没有该单价的模型按原价计，属于保守估计；
+4. Anthropic 的缓存写入（cache creation）按 1.25 倍计费，本系统把它并入
+   `promptTokens` 按原价算，因此这一部分会略微低估，属于已知取舍（ADR 0014）。
+
+本地端（CLI / 桌面）的 `/stats` 多两行，含义与上面一致：
+
+```
+tokens          in 2,000 / out 100 / cached 1,500 (75%)
+cost            $0.0041
+```
+
+当出现 `unmeasured`（provider 没有返回计数）或 `unpriced`（价格表没有该模型）时，
+`cost` 会写成 `at least $…` 或 `unknown (…)`，而不是一个看起来完整的数字。
