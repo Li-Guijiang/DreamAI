@@ -28,6 +28,9 @@ class UsageStats:
         # Kept apart because it is the only part of the bill that gets cheaper the
         # more the service is used.
         self.cached_tokens = 0
+        # A reply that stopped because it hit its token budget, not because the
+        # model finished. It is a request, but it is not a finished answer.
+        self.truncated = 0
         self.cost_usd = 0.0
         # A price list goes stale; when a model is not in it, the total is a
         # lower bound and `/api/usage` has to say so instead of rounding to 0.
@@ -64,6 +67,7 @@ class UsageStats:
             {
                 "requests": 0,
                 "failures": 0,
+                "truncated": 0,
                 "promptTokens": 0,
                 "completionTokens": 0,
                 "cachedTokens": 0,
@@ -80,11 +84,15 @@ class UsageStats:
         provider: str = "",
         failed: bool = False,
         ttft: float = 0.0,
+        truncated: bool = False,
     ) -> None:
         """Count one finished turn, however it ended."""
         self.requests += 1
         slot = self._slot(model)
         slot["requests"] += 1
+        if truncated:
+            self.truncated += 1
+            slot["truncated"] += 1
         if tier:
             self._by_tier[tier] = self._by_tier.get(tier, 0) + 1
         if intent:
@@ -188,6 +196,12 @@ class UsageStats:
             "local": self.local_answers,
             "blocked": self.blocked,
             "cancelled": self.cancelled,
+            "truncated": self.truncated,
+            # How often the reply budget is the thing that ended the answer; a
+            # rising share means the tier caps are too tight for real questions.
+            "truncationRate": round(self.truncated / self.requests, 3)
+            if self.requests
+            else 0.0,
             "byTier": dict(self._by_tier),
             "byIntent": dict(self._by_intent),
             "byProvider": dict(self._by_provider),
