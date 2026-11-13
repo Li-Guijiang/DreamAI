@@ -28,6 +28,10 @@ def test_client_status_is_not_retryable(status):
     assert not is_retryable(status)
 
 
+def test_a_statusless_failure_is_not_retried():
+    assert not is_retryable(None)
+
+
 def test_the_two_sets_do_not_overlap():
     assert not (RETRYABLE_STATUS & BYOK_STATUS)
 

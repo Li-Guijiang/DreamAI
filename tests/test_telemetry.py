@@ -140,6 +140,31 @@ def test_no_finish_reason_no_field():
     assert "finish=" not in line
 
 
+def test_a_failed_turn_carries_the_status_last():
+    line = format_turn_log(
+        "req_7",
+        tier="light",
+        intent="chat",
+        ttft=0.0,
+        total=0.3,
+        chars=0,
+        model="m",
+        outcome="failed",
+        status=408,
+    )
+
+    assert line.endswith("status=408")
+    assert line.startswith("chat failed ")
+
+
+def test_a_successful_turn_has_no_status_field():
+    line = format_turn_log(
+        "req_8", tier="light", intent="chat", ttft=0.1, total=0.2, chars=3, model="m"
+    )
+
+    assert "status=" not in line
+
+
 def test_the_breaker_line_reports_the_numbers_that_explain_it():
     from app.telemetry import format_breaker_log
 
