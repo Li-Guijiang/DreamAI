@@ -244,6 +244,10 @@ reaches the screen. Both are now explicit.
 | Finish reason | All three streams report why the model stopped, in four shared words | `finish_from_chunk()` |
 | Truncation | `done.truncated`, the finish mix and the truncation rate by tier | `/api/usage`, `truncatedByTier` |
 | Cache hygiene | A cut-off answer is never cached; cached bytes are reported | `cache.py`, `adapters.py` |
+| Retry policy | Timeouts and dropped connections get a status and one retry before the first token | `llm.py`, `errors.py` |
+| Slow upstreams | A configurable per-request read timeout, without rebuilding the pool | `DREAMAI_UPSTREAM_READ_TIMEOUT` |
+| Breaker probes | Half-open is a real state, and a probe with no answer expires | `guard.py` |
+| Durable counters | Optional aggregate-only snapshot; a restart no longer resets the totals | `DREAMAI_USAGE_STATE`, `state_store.py` |
 | Real usage | Token counts from all three wire formats, one usage event per stream | `usage_from_chunk()`, `DREAMAI_STREAM_USAGE` |
 | Price corrections | `DREAMAI_PRICE_OVERRIDES` fixes a stale price without a release | `pricing.configure_prices()` |
 | Provider view | `/api/usage` groups turns per vendor, not just per model | `byProvider` |
