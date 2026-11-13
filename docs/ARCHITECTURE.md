@@ -196,6 +196,11 @@ POST /api/chat
 `costKnown=false` 只表示「有模型没价格」，不表示「这一轮没拿到 usage」——没拿到
 usage 时根本不会碰这个标志。免费模型单价为 0 且已知，同样不会误标成未知。
 
+计数默认随进程消失。设置 `DREAMAI_USAGE_STATE` 后，`state_store.py` 会把原始
+累加量写入一个带版本号的 JSON 文件（临时文件 + `os.replace` 原子替换），
+启动时由 `UsageStats.import_counters()` 全量校验后恢复；比率一律重算，
+`uptime` 不恢复。文件只含聚合数字，不含 IP、消息或请求 id。
+
 限流器也有自己的快照：`/api/health` 的 `limiter.tracked` 是正在被观察的客户端数——
 只有数量，不含 IP；`X-RateLimit-Remaining` 头把剩余额度告诉客户端，
 让它能在被拒绝之前自己降速。
