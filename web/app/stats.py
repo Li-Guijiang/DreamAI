@@ -12,11 +12,59 @@ would only add a scheduling point where a half-updated number could be read.
 
 from __future__ import annotations
 
+import math
 import time
+
+#: Everything a snapshot carries. ``started_at`` is deliberately absent: uptime
+#: belongs to the process that is running now, not to the one that wrote the file.
+_NUMBER_FIELDS = (
+    "requests",
+    "failures",
+    "prompt_tokens",
+    "completion_tokens",
+    "cached_tokens",
+    "truncated",
+    "cost_usd",
+    "_ttft_total",
+    "_ttft_count",
+    "_ttft_max",
+    "local_answers",
+    "blocked",
+    "cancelled",
+)
+_MAP_FIELDS = (
+    "_by_tier",
+    "_by_intent",
+    "_by_provider",
+    "_by_finish",
+    "_truncated_by_tier",
+)
+
+
+def _finite(value: object) -> bool:
+    """A counter is a non-negative finite number; bool and nan are not."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        and value >= 0
+    )
+
+
+def _valid_map(value: object) -> bool:
+    return isinstance(value, dict) and all(
+        isinstance(key, str) and _finite(count) for key, count in value.items()
+    )
+
+
+def _valid_model_map(value: object) -> bool:
+    return isinstance(value, dict) and all(
+        isinstance(model, str) and _valid_map(slot) for model, slot in value.items()
+    )
 
 
 class UsageStats:
-    """Process-lifetime totals, reset by a restart and by nothing else."""
+    """Totals for this process, optionally restored from a previous one."""
 
     def __init__(self, started_at: float | None = None) -> None:
         self.started_at = started_at if started_at is not None else time.time()
@@ -185,6 +233,53 @@ class UsageStats:
         else:
             self.cost_usd += float(cost)
             slot["costUsd"] += float(cost)
+
+    def export_counters(self) -> dict:
+        """Aggregate counters only, ready for ``state_store.save_snapshot``.
+
+        The derived ratios in ``snapshot()`` are not exported: they are computed
+        from the counters, and storing both invites a disagreement between them.
+        """
+        data = {name: getattr(self, name) for name in _NUMBER_FIELDS}
+        data["known_cost"] = self.known_cost
+        for name in _MAP_FIELDS:
+            data[name] = dict(getattr(self, name))
+        data["_by_model"] = {model: dict(slot) for model, slot in self._by_model.items()}
+        return data
+
+    def import_counters(self, counters: dict | None) -> bool:
+        """Restore a previous process's totals; return False and change nothing on doubt.
+
+        Validation is all-or-nothing. A truncated or hand-edited file must not
+        leave a half-restored counter set that looks plausible in a dashboard.
+        Unknown keys are tolerated (an older writer), missing model fields are
+        filled from ``_slot``, and ``started_at`` is never touched.
+        """
+        if not isinstance(counters, dict):
+            return False
+        for name in _NUMBER_FIELDS:
+            if not _finite(counters.get(name)):
+                return False
+        if not isinstance(counters.get("known_cost"), bool):
+            return False
+        for name in _MAP_FIELDS:
+            if not _valid_map(counters.get(name)):
+                return False
+        if not _valid_model_map(counters.get("_by_model")):
+            return False
+
+        for name in _NUMBER_FIELDS:
+            setattr(self, name, counters[name])
+        self.known_cost = counters["known_cost"]
+        for name in _MAP_FIELDS:
+            setattr(self, name, dict(counters[name]))
+        self._by_model = {}
+        for model, row in counters["_by_model"].items():
+            slot = self._slot(model)
+            for key, value in row.items():
+                if key in slot:
+                    slot[key] = value
+        return True
 
     def snapshot(self) -> dict:
         """The numbers `/api/usage` reports, in its own spelling."""
