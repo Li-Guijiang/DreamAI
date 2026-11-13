@@ -153,3 +153,55 @@ def test_the_last_opening_is_recorded_as_wall_clock_time():
     breaker.record_failure()
 
     assert breaker.stats()["lastOpenedAt"] is not None
+
+
+def test_a_probe_that_never_reports_back_is_released():
+    breaker, clock = make(threshold=1, cooldown=5)
+    breaker.record_failure()
+    clock.advance(6)
+
+    assert breaker.allow() is True, "the first probe goes out"
+    clock.advance(4)
+    assert breaker.allow() is False, "still waiting for that probe's answer"
+    clock.advance(2)
+
+    assert breaker.allow() is True, "a stalled probe must not freeze the breaker"
+
+
+def test_a_released_probe_still_allows_only_one_at_a_time():
+    breaker, clock = make(threshold=1, cooldown=5)
+    breaker.record_failure()
+    clock.advance(6)
+    assert breaker.allow() is True
+    clock.advance(6)
+
+    assert breaker.allow() is True
+    assert breaker.allow() is False
+
+
+def test_a_successful_probe_clears_the_wait():
+    breaker, clock = make(threshold=1, cooldown=5)
+    breaker.record_failure()
+    clock.advance(6)
+    assert breaker.allow() is True
+
+    breaker.record_success()
+
+    assert breaker.allow() is True
+    assert breaker.state == CLOSED
+
+
+def test_the_state_machine_actually_stores_half_open():
+    breaker, clock = make(threshold=1, cooldown=5)
+    breaker.record_failure()
+    clock.advance(6)
+
+    assert breaker.state == HALF_OPEN
+    # record_failure()'s half-open branch is reachable only because the state
+    # was stored, not merely returned by the property.
+    breaker.allow()
+    breaker.record_failure()
+
+    assert breaker.state == OPEN
+    assert breaker.stats()["openings"] == 2
+    assert breaker.remaining() == pytest.approx(5.0)
