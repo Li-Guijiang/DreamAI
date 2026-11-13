@@ -1013,6 +1013,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                         presence_penalty=settings.presence_penalty,
                         include_usage=settings.stream_usage,
                         prompt_cache=settings.prompt_cache,
+                        read_timeout=settings.upstream_read_timeout,
                     ):
                         yield item
 
@@ -1031,6 +1032,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                         max_tokens=budget,
                         include_usage=settings.stream_usage,
                         prompt_cache=settings.prompt_cache,
+                        read_timeout=settings.upstream_read_timeout,
                     ):
                         yield item
 
