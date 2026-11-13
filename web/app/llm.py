@@ -146,6 +146,7 @@ async def stream_completion(
     presence_penalty: float | None = None,
     include_usage: bool = True,
     prompt_cache: bool = True,
+    read_timeout: float = 240.0,
 ) -> AsyncIterator[tuple[str, str]]:
     """Yield content / reasoning deltas, plus one usage and one finish event."""
     async for item in coalesce(
@@ -160,6 +161,7 @@ async def stream_completion(
             presence_penalty=presence_penalty,
             include_usage=include_usage,
             prompt_cache=prompt_cache,
+            read_timeout=read_timeout,
         )
     ):
         yield item
@@ -177,6 +179,7 @@ async def _stream_raw(
     presence_penalty: float | None = None,
     include_usage: bool = True,
     prompt_cache: bool = True,
+    read_timeout: float = 240.0,
 ) -> AsyncIterator[tuple[str, str]]:
     """Parse the provider stream into per-token items plus the final metadata."""
     url, headers, payload = build_request(
@@ -202,7 +205,12 @@ async def _stream_raw(
     # an empty reason in an earlier chunk, which must not win over the real one.
     finish: str | None = None
     try:
-        async with client.stream("POST", url, headers=headers, json=payload) as response:
+        # Request-level timeout, so one slow model can be given more room
+        # without rebuilding the shared connection pool for everyone else.
+        timeout = httpx.Timeout(connect=15.0, read=read_timeout, write=30.0, pool=15.0)
+        async with client.stream(
+            "POST", url, headers=headers, json=payload, timeout=timeout
+        ) as response:
             if response.status_code != 200:
                 body = await response.aread()
                 logger.warning("upstream %s: %s", response.status_code, body[:300])
