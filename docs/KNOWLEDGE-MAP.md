@@ -395,3 +395,55 @@ curl -s https://liguijiang.com/api/usage \
 
 再读一遍 `tests/test_llm_finish.py` 与 `tests/test_finish_parity.py`：前者证明
 结束原因不会变成回答文字，后者保证 web 与本地 CLI 用同一张映射表。
+
+---
+
+## 13. 状态机里的「看起来是」与「真的是」
+
+熔断器有三个状态：closed、open、half-open。旧实现里 `state` 属性在冷却到期后
+**返回** `half-open`，但内部字段 `_state` 一直是 `open`：
+
+```python
+@property
+def state(self) -> str:
+    if self._state == OPEN and elapsed >= cooldown:
+        return HALF_OPEN      # 只返回，不保存
+    return self._state
+```
+
+于是 `record_failure()` 中 `if self._state == HALF_OPEN` 这条分支永远不会命中。
+功能上碰巧没出错，因为失败计数早已超过阈值，另一半条件会兜住；但代码里
+出现了一个永远不会执行的分支，这正是「看起来是三态，实际只有两态」。
+正确做法是在读取状态时惰性迁移并**写回**字段。
+
+由此还引出一个更隐蔽的问题：半开状态只允许一个探测请求，用
+`_probe_in_flight` 占位。如果探测请求被客户端中途取消，成功与失败的回调
+都不会执行，这个标志永远是 `True`，服务从此拒绝所有请求——一个没有收到
+回执的探测，把熔断器永久钉死。修法是给探测加时间戳，超过一个冷却周期
+就释放槽位。**关键不是状态本身，而是「等待中的状态必须有退出条件」。**
+
+### 13.1 另一个容易错的地方：持久化不是复制 snapshot()
+
+`/api/usage` 返回的 `snapshot()` 里既有原始计数，也有算出来的比率
+（`cachedShare`、`truncationRate`、`failureRate`）。把整个 snapshot 存盘，
+下次直接读回来，看起来最省事，其实埋了两颗雷：
+
+1. 比率与计数可能不一致（旧文件遇到新算法），却都「看起来是数字」；
+2. `uptime` 是进程属性，也会被一起恢复，重启一次后显示为从未重启过。
+
+本项目只导出**原始累加量**，比率一律在读取时重算；`started_at` 明确列为
+不导出字段。导入前先做全量校验（有限、非负、类型正确、字典结构合法），
+任何一个字段非法就整份拒绝，而不是部分应用——半个正确的账单比零更危险。
+
+### 13.2 动手验证
+
+```bash
+# 状态机：半开探测没有回执时会被释放
+python -m pytest tests/test_guard.py -v
+
+# 持久化：往返一致、损坏拒绝、不恢复 uptime
+python -m pytest tests/test_state_store.py tests/test_stats_persistence.py -v
+```
+
+再打开 `tests/test_usage_snapshot_route.py`，看一次完整的
+「写快照 → 模拟重启 → 从文件恢复 → 正常关闭再写回」。
