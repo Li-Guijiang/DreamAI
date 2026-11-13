@@ -49,3 +49,12 @@ def test_the_prompt_cache_switch_is_on_by_default(monkeypatch):
 
     monkeypatch.setenv("DREAMAI_PROMPT_CACHE", "0")
     assert load_settings().prompt_cache is False
+
+
+def test_the_usage_snapshot_switch_is_off_by_default(monkeypatch):
+    monkeypatch.delenv("DREAMAI_USAGE_STATE", raising=False)
+
+    assert load_settings().usage_state == ""
+
+    monkeypatch.setenv("DREAMAI_USAGE_STATE", " /var/lib/dreamai/usage.json ")
+    assert load_settings().usage_state == "/var/lib/dreamai/usage.json"
