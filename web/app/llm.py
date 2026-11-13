@@ -250,10 +250,13 @@ async def _stream_raw(
     except LLMError:
         raise
     except httpx.TimeoutException as exc:
-        raise LLMError("模型响应超时，请稍后重试或缩短问题。") from exc
+        # A read timeout is the most ordinary transient failure there is, but it
+        # has no HTTP status. Without 408 the retry layer sees status=None and
+        # declines to try again, so one slow response becomes a visible error.
+        raise LLMError("模型响应超时，请稍后重试或缩短问题。", 408) from exc
     except httpx.HTTPError as exc:
         logger.warning("upstream transport error: %s", exc)
-        raise LLMError("无法连接模型服务，请稍后重试。") from exc
+        raise LLMError("无法连接模型服务，请稍后重试。", 503) from exc
 
 
 def retry_delay(delay: float, attempt: int) -> float:
