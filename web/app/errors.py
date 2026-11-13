@@ -31,8 +31,14 @@ GENERIC = "请求没有成功，请稍后重试。"
 CURATED_STATUS = BYOK_STATUS | {404, 408, 410, 413, 425, 429}
 
 
-def is_retryable(status: int) -> bool:
-    """Transient failures worth one more attempt before giving up."""
+def is_retryable(status: int | None) -> bool:
+    """Transient failures worth one more attempt before giving up.
+
+    ``None`` means the failure never reached an HTTP response (DNS, connect,
+    read timeout before any status line). Those are deliberately *not* retried
+    here: the transport layer now gives them a status, and anything else that is
+    still unknown should fail fast rather than silently doubling a request.
+    """
     return status in RETRYABLE_STATUS
 
 
