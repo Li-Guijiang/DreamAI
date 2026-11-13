@@ -38,6 +38,11 @@ class CircuitBreaker:
         self._state = CLOSED
         self._opened_at = 0.0
         self._probe_in_flight = False
+        # A probe is only useful while we are waiting for its answer. If the
+        # visitor disconnects mid-stream, neither record_success nor
+        # record_failure is called; without this timestamp the breaker would sit
+        # in half-open forever, refusing every later request.
+        self._probe_started_at = 0.0
         # Counted for the life of the process: a breaker that has opened nine
         # times today is a different situation from one that opened once.
         self.openings = 0
@@ -46,8 +51,12 @@ class CircuitBreaker:
 
     @property
     def state(self) -> str:
+        # Lazily move OPEN -> HALF_OPEN when the cooldown has elapsed. Returning
+        # HALF_OPEN without storing it left record_failure()'s half-open branch
+        # unreachable: the state machine looked like three states but only ever
+        # held two.
         if self._state == OPEN and self._clock() - self._opened_at >= self.cooldown:
-            return HALF_OPEN
+            self._state = HALF_OPEN
         return self._state
 
     def allow(self) -> bool:
@@ -59,8 +68,14 @@ class CircuitBreaker:
             return False
         # half-open: exactly one probe, so a recovering provider is not flooded
         if self._probe_in_flight:
-            return False
+            if self._clock() - self._probe_started_at < self.cooldown:
+                return False
+            # The probe never reported back. Release it rather than holding the
+            # breaker half-open indefinitely; a new probe is worth more than a
+            # slot reserved for an answer that will never arrive.
+            self._probe_in_flight = False
         self._probe_in_flight = True
+        self._probe_started_at = self._clock()
         return True
 
     def remaining(self) -> float:
@@ -73,9 +88,11 @@ class CircuitBreaker:
         self._failures = 0
         self._state = CLOSED
         self._probe_in_flight = False
+        self._probe_started_at = 0.0
 
     def record_failure(self) -> None:
         self._probe_in_flight = False
+        self._probe_started_at = 0.0
         self._failures += 1
         if self._state == HALF_OPEN or self._failures >= self.threshold:
             self._state = OPEN
@@ -100,3 +117,4 @@ class CircuitBreaker:
         self._state = CLOSED
         self._opened_at = 0.0
         self._probe_in_flight = False
+        self._probe_started_at = 0.0
