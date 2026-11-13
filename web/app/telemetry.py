@@ -28,6 +28,7 @@ def format_turn_log(
     cache: str = "",
     cached_tokens: int = 0,
     finish: str = "",
+    status: int | None = None,
 ) -> str:
     """Render the single line written when a turn finishes."""
     return (
@@ -39,6 +40,9 @@ def format_turn_log(
         + (f" cachedTokens={cached_tokens}" if cached_tokens else "")
         + (f" finish={finish}" if finish else "")
         + (f" cost=${cost:.4f}" if cost is not None else "")
+        # Last, and only on failures: the status is what distinguishes a slow
+        # upstream (408/504) from a bad key (401) in a grep of the log.
+        + (f" status={status}" if status is not None else "")
     )
 
 

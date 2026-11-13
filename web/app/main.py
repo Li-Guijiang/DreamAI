@@ -1103,6 +1103,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     chars=produced,
                     model=model,
                     outcome="failed",
+                    status=exc.status_code,
                 )
             )
             # status_code is None when the request never reached a server, so
