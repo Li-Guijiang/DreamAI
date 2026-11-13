@@ -267,6 +267,9 @@ class Settings:
     # Mark the system prompt as cacheable on Anthropic, which is the one vendor
     # that must be asked. Off only if a proxy rejects the field.
     prompt_cache: bool = True
+    # Optional file for /api/usage counters to survive a restart. Empty = off.
+    # Only aggregate counters are ever written; no IP, message or request id.
+    usage_state: str = ""
     # Seconds to wait for the next byte of a streamed reply. A slow reasoning
     # model needs more than a chat model; 240 is a compromise, and a gateway
     # that streams never faster than 5 minutes needs a higher value.
@@ -408,6 +411,7 @@ def load_settings() -> Settings:
         presence_penalty=_env_optional_float("DREAMAI_PRESENCE_PENALTY"),
         stream_usage=_env_bool("DREAMAI_STREAM_USAGE", True),
         prompt_cache=_env_bool("DREAMAI_PROMPT_CACHE", True),
+        usage_state=_env("DREAMAI_USAGE_STATE", ""),
         upstream_read_timeout=max(
             10.0,
             min(900.0, _env_float("DREAMAI_UPSTREAM_READ_TIMEOUT", 240.0)),
