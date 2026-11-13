@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Recovery and continuity
+
+- Read timeouts are now reported as HTTP 408 and other transport failures as 503,
+  so the existing one-retry policy actually applies to them. Failed turns append
+  `status=<code>` to the log line, and a statusless failure still fails fast.
+- `DREAMAI_UPSTREAM_READ_TIMEOUT` (default 240, clamped to 10..900) is applied as
+  a per-request `httpx.Timeout`, leaving the shared connection pool untouched.
+- The circuit breaker now stores `half-open` instead of only returning it, and
+  releases a half-open probe whose answer never arrived. A cancelled request can
+  no longer pin every later request behind an unanswered probe.
+- `DREAMAI_USAGE_STATE` optionally persists `/api/usage` counters across a
+  restart: a versioned, atomically replaced JSON file containing aggregates only.
+  Writes happen on shutdown and every 25 turns; corrupt or invalid snapshots are
+  ignored with a log line. `uptime` is never restored. The endpoint reports
+  `usagePersisted` so the switch is visible.
+- CI no longer runs `desktop/test/update.test.js` twice and now format-checks
+  `web/app` as well.
+
 ### Finishing a stream
 
 - All three wire formats now report why the model stopped, normalised to
