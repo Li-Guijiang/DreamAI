@@ -44,9 +44,11 @@ class FakeClient:
     def __init__(self, lines: list[str]) -> None:
         self._lines = lines
         self.payloads: list[dict] = []
+        self.timeouts: list[object] = []
 
-    def stream(self, method, url, headers=None, json=None):  # noqa: A002
+    def stream(self, method, url, headers=None, json=None, **kwargs):  # noqa: A002
         self.payloads.append(dict(json or {}))
+        self.timeouts.append(kwargs.get("timeout"))
         return FakeStream(self._lines)
 
 
