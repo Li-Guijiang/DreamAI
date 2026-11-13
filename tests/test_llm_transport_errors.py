@@ -35,7 +35,7 @@ class FailingClient:
     def __init__(self, exc: Exception) -> None:
         self.exc = exc
 
-    def stream(self, method, url, headers=None, json=None):  # noqa: A002
+    def stream(self, method, url, headers=None, json=None, **kwargs):  # noqa: A002, ARG002
         return FailingStream(self.exc)
 
 
