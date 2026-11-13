@@ -54,6 +54,7 @@ from .quality import (
 )
 from .routing import choose_model, describe_routing, unknown_targets
 from .safety import classify_injection, harden_system_prompt
+from .state_store import load_snapshot, save_snapshot
 from .stats import UsageStats
 from .telemetry import format_breaker_log, format_recovery_log, format_turn_log
 
@@ -67,6 +68,9 @@ settings = load_settings()
 STARTED_AT = time.time()
 
 MAX_BODY_BYTES = 512 * 1024
+# Write the counters every N turns as well as on shutdown, so a hard kill loses
+# at most N-1 turns instead of the whole process lifetime.
+USAGE_SAVE_EVERY = 25
 
 
 @asynccontextmanager
@@ -90,7 +94,17 @@ async def lifespan(app: FastAPI):
             "tier map names models this site does not serve: %s",
             ", ".join(f"{tier}={model}" for tier, model in sorted(unknown.items())),
         )
+    if settings.usage_state:
+        restored = load_snapshot(settings.usage_state)
+        if restored is None:
+            logger.info("usage snapshot: none at %s", settings.usage_state)
+        elif _stats.import_counters(restored):
+            logger.info("usage snapshot restored: %s requests", _stats.requests)
+        else:
+            logger.warning("usage snapshot rejected: %s", settings.usage_state)
     yield
+    if settings.usage_state and not save_snapshot(settings.usage_state, _stats.export_counters()):
+        logger.warning("usage snapshot could not be written: %s", settings.usage_state)
     await llm.close_client()
 
 
@@ -677,6 +691,7 @@ async def usage() -> JSONResponse:
             "byFinish": totals["byFinish"],
             "daily": _daily_state,
             "dailyLimit": settings.daily_limit,
+            "usagePersisted": bool(settings.usage_state),
         }
     )
 
@@ -1193,6 +1208,10 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     )
                 )
                 yield sse("done", done_payload)
+            if settings.usage_state and _stats.requests and _stats.requests % USAGE_SAVE_EVERY == 0:
+                # Small file, one synchronous write every 25 turns. A failure is
+                # not worth failing (or even logging from) a visitor's request.
+                save_snapshot(settings.usage_state, _stats.export_counters())
 
     return StreamingResponse(
         event_stream(),
