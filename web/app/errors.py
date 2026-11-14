@@ -42,6 +42,48 @@ def is_retryable(status: int | None) -> bool:
     return status in RETRYABLE_STATUS
 
 
+def error_code(status: int | None) -> str:
+    """A stable category for an SSE error event, independent of wording.
+
+    The chat bubble needs a sentence in the visitor's language; a client needs a
+    value it can switch on. Deriving the category from the Chinese sentence would
+    break every time an editor improves the wording.
+    """
+    if status is None:
+        return "internal"
+    if status in BYOK_STATUS:
+        return "auth"
+    if status in PAYLOAD_STATUS:
+        return "payload"
+    if status == 429:
+        return "rate_limit"
+    if status in (404, 410):
+        return "address"
+    return "upstream"
+
+
+def error_payload(
+    message: str,
+    *,
+    status: int | None = None,
+    code: str | None = None,
+    retryable: bool | None = None,
+) -> dict:
+    """The body of an ``event: error`` frame.
+
+    ``message`` stays exactly as before, so existing clients are unaffected; the
+    three new fields let a client distinguish "wait and retry" from "fix your
+    key" without parsing prose. ``code`` and ``retryable`` can be overridden for
+    failures that have no upstream status, such as an open breaker.
+    """
+    return {
+        "message": message,
+        "code": code or error_code(status),
+        "status": status,
+        "retryable": is_retryable(status) if retryable is None else retryable,
+    }
+
+
 def user_message(status: int, label: str = "") -> str:
     """A message that says what to do next, not what the provider returned."""
     who = f"{label} " if label else ""
