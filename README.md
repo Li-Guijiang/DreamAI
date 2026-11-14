@@ -248,6 +248,10 @@ reaches the screen. Both are now explicit.
 | Slow upstreams | A configurable per-request read timeout, without rebuilding the pool | `DREAMAI_UPSTREAM_READ_TIMEOUT` |
 | Breaker probes | Half-open is a real state, and a probe with no answer expires | `guard.py` |
 | Durable counters | Optional aggregate-only snapshot; a restart no longer resets the totals | `DREAMAI_USAGE_STATE`, `state_store.py` |
+| Config checks | Named, secret-free startup findings on `/api/health` | `validation.py`, `configChecks` |
+| Error contract | SSE errors carry `code`, `status` and `retryable` alongside the sentence | `errors.py`, `docs/API.md` |
+| Failure propagation | A failed upstream yields an error frame and counts toward the breaker | `main.py`, `tests/test_error_events_route.py` |
+| Private cache isolation | Owner answers never enter the shared cache | `main.py`, `owner_auth.py` |
 | Real usage | Token counts from all three wire formats, one usage event per stream | `usage_from_chunk()`, `DREAMAI_STREAM_USAGE` |
 | Price corrections | `DREAMAI_PRICE_OVERRIDES` fixes a stale price without a release | `pricing.configure_prices()` |
 | Provider view | `/api/usage` groups turns per vendor, not just per model | `byProvider` |
