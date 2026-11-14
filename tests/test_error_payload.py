@@ -45,6 +45,11 @@ def test_the_sentence_is_untouched():
     assert error_payload(sentence, status=503)["message"] == sentence
 
 
+def test_an_empty_sentence_falls_back_to_a_readable_one():
+    assert error_payload("", status=503)["message"]
+    assert error_payload("   ", status=503)["message"]
+
+
 def test_every_event_has_the_same_four_fields():
     payload = error_payload("msg", status=401)
 
