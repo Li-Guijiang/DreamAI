@@ -201,6 +201,14 @@ usage 时根本不会碰这个标志。免费模型单价为 0 且已知，同�
 启动时由 `UsageStats.import_counters()` 全量校验后恢复；比率一律重算，
 `uptime` 不恢复。文件只含聚合数字，不含 IP、消息或请求 id。
 
+失败传播与错误契约：`/api/chat` 由后台 pump 任务读取上游、主协程从队列取片段并写
+SSE。pump 捕获的异常会作为一条数据放入同一队列，由主协程重新抛出，因此上游失败
+一定产生 `error` 事件并计入熔断器，不会以 `chars=0` 的 `done` 收尾。`error` 事件除
+`message` 外带 `code` / `status` / `retryable`，字段契约见 `docs/API.md`，并由
+`tests/test_api_contract.py` 与源码逐项比对。启动时的
+`validation.check_settings()` 结果发布在 `/api/health.configChecks`；
+有效 owner cookie 的会话不进入共享响应缓存。
+
 限流器也有自己的快照：`/api/health` 的 `limiter.tracked` 是正在被观察的客户端数——
 只有数量，不含 IP；`X-RateLimit-Remaining` 头把剩余额度告诉客户端，
 让它能在被拒绝之前自己降速。
