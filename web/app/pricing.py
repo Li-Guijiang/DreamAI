@@ -106,6 +106,33 @@ def _floats(fields: list[str]) -> list[float] | None:
     return values if all(math.isfinite(value) and value >= 0 for value in values) else None
 
 
+def invalid_price_overrides(raw: str) -> list[str]:
+    """Entries the price parsers would silently skip.
+
+    ``parse_price_overrides`` deliberately ignores malformed entries so a typo
+    cannot poison the table. An operator still needs to know a correction was
+    ignored, otherwise the bill keeps using the stale price with no explanation.
+    Only the offending entry (a model name and numbers) is returned, truncated
+    so it cannot bloat a log line.
+    """
+    bad: list[str] = []
+    for item in (raw or "").split(";"):
+        item = item.strip()
+        if not item:
+            continue
+        if "=" not in item:
+            bad.append(item[:40])
+            continue
+        model, numbers = item.split("=", 1)
+        fields = [part.strip() for part in numbers.split(",")]
+        if not model.strip() or len(fields) < 2:
+            bad.append(item[:40])
+            continue
+        if _floats(fields[:2]) is None or (len(fields) >= 3 and _floats(fields[:3]) is None):
+            bad.append(item[:40])
+    return bad
+
+
 def parse_price_overrides(raw: str) -> dict[str, tuple[float, float]]:
     """Parse ``model=input,output[,cached];model2=…`` into a price table.
 
