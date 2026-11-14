@@ -447,3 +447,74 @@ python -m pytest tests/test_state_store.py tests/test_stats_persistence.py -v
 
 再打开 `tests/test_usage_snapshot_route.py`，看一次完整的
 「写快照 → 模拟重启 → 从文件恢复 → 正常关闭再写回」。
+
+---
+
+## 14. 后台任务的异常不会自己走到消费者
+
+流式服务里常见这样一种结构：一个后台任务读上游、把片段放进队列；
+主协程从队列取片段、写成 SSE 事件，并在等不到数据时发心跳。
+
+```python
+async def pump():
+    try:
+        async for item in upstream():
+            await queue.put(item)
+    finally:
+        await queue.put(None)      # 结束标记
+
+# 主协程
+while True:
+    item = await queue.get()
+    if item is None:
+        break
+    ...
+```
+
+问题在于：`upstream()` 抛出的异常**留在 pump 任务内部**。`finally`
+照样放入结束标记，主协程读到它便正常 `break`，于是用户看到的是
+`chars=0` 的 `done`，而不是 `error`；负责统计失败的 `except` 分支
+也永远不会执行。更糟的是，这个异常通常只以
+`Task exception was never retrieved` 出现在日志里，很难与某一次请求对应。
+
+修法是把异常当作一种数据放进同一条队列，由消费者重新抛出：
+
+```python
+except Exception as exc:
+    await queue.put(exc)
+...
+if isinstance(item, Exception):
+    raise item
+```
+
+三条经验：
+
+1. **结束标记不等于成功**。队列里至少要能表达「数据」「失败」「结束」三种状态，
+   只表达两种时，失败必然被折叠成结束；
+2. **后台任务的异常要有归宿**。要么被显式 `await`，要么通过错误通道传递，
+   不能依赖 asyncio 的任务异常日志；
+3. **心跳与错误通道要共存**。为了 12 秒心跳而把读流放进独立任务是对的，
+   但不能因此丢掉错误传播。
+
+### 14.1 错误分类不要从文案推导
+
+`{"message": "上游服务暂时不可用，稍后重试。"}` 对人足够，对程序不够。
+如果客户端靠判断句子里有没有「稍后」来决定是否重试，那么任何一次文案润色
+都会改变程序行为。正确做法是让服务端同时给出稳定字段：
+
+```json
+{"message": "上游服务暂时不可用，稍后重试。",
+ "code": "upstream", "status": 503, "retryable": true}
+```
+
+并且 `retryable` 必须由**服务端自己那套重试策略**推导出来，
+而不是客户端另写一份规则，否则两边迟早给出相反的建议。
+本项目的 `errors.error_payload()` 直接复用 `is_retryable()`，
+`docs/API.md` 是字段契约，`tests/test_api_contract.py` 会解析文档中的
+事件清单与 code 表，和源码逐项比对，防止文档漂移。
+
+动手验证：
+
+```bash
+python -m pytest tests/test_error_events_route.py tests/test_api_contract.py -v
+```
