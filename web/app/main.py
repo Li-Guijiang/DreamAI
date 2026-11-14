@@ -32,7 +32,7 @@ from . import llm, owner_auth, owner_store
 from .adapters import FINISH_LENGTH
 from .cache import ResponseCache, make_key
 from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
-from .errors import final_message
+from .errors import error_payload, final_message
 from .guard import CircuitBreaker
 from .insight import (
     classify_intent,
@@ -1012,7 +1012,14 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         if not _breaker.allow():
             logger.warning("circuit open, rejecting ip=%s id=%s", ip, request_id)
             _stats.record_blocked()
-            yield sse("error", {"message": "上游连续失败，已暂停约 30 秒，请稍后再试。"})
+            yield sse(
+                "error",
+                error_payload(
+                    "上游连续失败，已暂停约 30 秒，请稍后再试。",
+                    code="breaker",
+                    retryable=True,
+                ),
+            )
             yield sse(
                 "done",
                 {
@@ -1072,6 +1079,12 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     try:
                         async for item in _chain():
                             await queue.put(item)
+                    except Exception as exc:  # noqa: BLE001 - hand it to the request loop
+                        # Without this, a failed upstream looks like a clean end
+                        # of stream: the sentinel tells the loop to break, the
+                        # visitor gets an empty `done`, and the breaker never
+                        # hears about the failure. Exceptions are data here.
+                        await queue.put(exc)
                     finally:
                         await queue.put(None)
 
@@ -1085,6 +1098,8 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                             continue
                         if item is None:
                             break
+                        if isinstance(item, Exception):
+                            raise item
                         kind, text = item
                         if kind == "usage":
                             try:
@@ -1139,14 +1154,14 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             # this comparison used to raise and turn a network failure into a
             # 500 with no explanation.
             message = final_message(exc.status_code, upstream.label, exc.message)
-            yield sse("error", {"message": message})
+            yield sse("error", error_payload(message, status=exc.status_code))
         except asyncio.CancelledError:
             cancelled = True
             raise
         except Exception:  # noqa: BLE001 - never leak internals to the client
             failed = True
             logger.exception("unexpected chat error ip=%s", ip)
-            yield sse("error", {"message": "服务出现了一点意外，请稍后重试。"})
+            yield sse("error", error_payload("服务出现了一点意外，请稍后重试。"))
         finally:
             # One estimate for the whole turn: the counters, the done event and
             # the log all read the same number. Passing cost=None here would mark
