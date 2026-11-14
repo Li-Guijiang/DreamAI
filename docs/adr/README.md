@@ -28,3 +28,4 @@ New decisions should be added as numbered Markdown files, e.g.
 | [0014](./0014-cache-aware-accounting.md) | Cache-aware accounting: the same tokens, the right price |
 | [0015](./0015-finishing-a-stream.md) | Finishing a stream: know why it stopped |
 | [0016](./0016-recovery-and-continuity.md) | Recovery and continuity: bad minutes and restarts |
+| [0017](./0017-config-checks-and-error-contract.md) | Startup checks, a typed error contract, and failures that arrive |
