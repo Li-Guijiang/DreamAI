@@ -296,3 +296,46 @@ DREAMAI_USAGE_STATE=/var/lib/dreamai/usage.json
    「今天服务重启过几次」和「本周累计花了多少钱」是两个问题。
 6. 快照只适合单实例。多副本部署时须为每个实例配置不同路径，否则后写者覆盖前者。
 
+## 12. 启动自检与错误分类
+
+### 12.1 配置自检
+
+服务启动时执行 `validation.check_settings()`，结果同时写入日志与
+`/api/health` 的 `configChecks` 数组。判定要点：
+
+1. 日志首行 `config checks: clean` 表示无发现；否则为
+   `config checks: N warning(s), M info`，随后每条一行
+   `config check <code>: <说明>`。
+2. `severity=warning` 表示配置可用但存在隐患，**不会阻止启动**；
+   `severity=info` 只是记录某个开关的状态。
+3. 常见 code 与处置：
+
+   | code | 含义 | 处置 |
+   |---|---|---|
+   | `fallback_partial` | 备用上游只配了部分字段 | 补全 base URL、Key、模型三者，或全部留空 |
+   | `cooldown_shorter_than_timeout` | 熔断冷却远短于一次读超时 | 调大 `DREAMAI_BREAKER_COOLDOWN` |
+   | `daily_below_window` | 日限额低于单窗口限额 | 确认这是有意为之，否则调大 `DREAMAI_DAILY_LIMIT` |
+   | `system_prompt_empty` | 身份与安全规则为空 | 立即恢复 `DREAMAI_SYSTEM_PROMPT` |
+   | `price_overrides_invalid` | 价格修正条目被忽略 | 按 `模型=输入,输出[,缓存]` 格式修正 |
+   | `cache_capacity_low` / `rate_window_short` / `max_concurrency_over_limit` | 数值配置失当 | 对照默认值复核 |
+
+4. `configChecks` 不含任何密钥、带凭据的 URL 或系统提示词内容，可安全展示。
+
+### 12.2 错误事件的分类
+
+SSE 的 `error` 事件除 `message` 外还带 `code`、`status`、`retryable`，
+完整取值与处置见 `docs/API.md` 第 4 节。排障时按 `code` 而非中文句子判断：
+
+- `auth` / `address`：配置问题，重试无意义；
+- `payload`：请求参数或长度问题；
+- `rate_limit` / `breaker` / `upstream`：等待后重试，`retryable=true`；
+- `internal`：服务内部异常，查日志中的 `chat failed` 行与 `status=` 字段。
+
+重要变更：上游失败现在**一定**产生 `error` 事件，并计入熔断器失败数，
+不再以 `chars=0` 的 `done` 收尾。若仍观察到「空白回答但事件是 done」，
+说明运行的是旧版本或异常未从流式泵传播，应先核对 `/api/health` 的 `version`。
+
+私有档案会话（有效 owner cookie）的回答不会写入共享响应缓存，
+因此 `X-Cache` 对同一问题连续两次均为 `MISS` 属于预期行为。
+
+
