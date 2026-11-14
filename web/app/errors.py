@@ -77,7 +77,9 @@ def error_payload(
     failures that have no upstream status, such as an open breaker.
     """
     return {
-        "message": message,
+        # An empty sentence renders as a blank bubble. Keep the fallback in the
+        # payload builder rather than trusting every caller to remember it.
+        "message": (message or "").strip() or GENERIC,
         "code": code or error_code(status),
         "status": status,
         "retryable": is_retryable(status) if retryable is None else retryable,
