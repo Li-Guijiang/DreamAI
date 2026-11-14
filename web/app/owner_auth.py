@@ -62,6 +62,11 @@ def verify_cookie(value: str, now: int | None = None) -> bool:
         expires = int(raw_expires)
     except ValueError:
         return False
+    # A signed cookie with a non-positive expiry is never legitimate. The
+    # signature already protects this field, but a boundary that is explicitly
+    # refused is easier to reason about than one that merely fails `< now`.
+    if expires <= 0:
+        return False
     if expires < (now if now is not None else time.time()):
         return False
     payload = str(expires)
