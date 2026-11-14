@@ -948,7 +948,10 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
     # A turn that tripped the guard is answered with a hardened prompt. It is
     # cheap to keep such answers out of the cache entirely: they are rare, and a
     # security-sensitive reply should never be replayed to a later visitor.
-    if _cache.enabled and injection is None and temperature <= 0.3:
+    # Owner turns carry the private dossier in their system prompt. That text is
+    # already part of the key, but a private answer should not live in a shared
+    # in-memory cache at all, and an edited dossier must never risk replay.
+    if _cache.enabled and injection is None and not owner and temperature <= 0.3:
         cache_key = make_key(upstream.provider.id, model, messages, temperature, budget)
         cached_text = _cache.get(cache_key)
 
