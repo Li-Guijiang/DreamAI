@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Startup checks, error contract and failure propagation
+
+- **Fixed:** an upstream failure that exhausted its retries stayed inside the
+  queue-pump task. The visitor saw a clean `done` with `chars=0` instead of an
+  `error` frame, and the circuit breaker never recorded the failure. The pump now
+  puts the exception on the queue and the request loop re-raises it.
+- SSE `error` events keep `message` and add `code`, `status` and `retryable`.
+  `code` is derived from the status (`auth`, `payload`, `rate_limit`, `address`,
+  `upstream`, `internal`, or `breaker`), and `retryable` reuses the server's own
+  retry policy. An empty sentence falls back to the generic one.
+- `validation.check_settings()` reports a partial fallback, an implausible
+  breaker cooldown, a daily cap below one rate window, an empty system prompt,
+  impossible concurrency, a tiny cache, a short rate window, and three
+  informational switch states at startup. Findings are non-blocking,
+  secret-free, and published as `/api/health.configChecks`.
+- `pricing.invalid_price_overrides()` names the corrections the parsers would
+  otherwise skip, so a stale price cannot fail silently.
+- Owner conversations no longer enter the shared response cache, and a signed
+  cookie with a non-positive expiry is refused.
+- `docs/API.md` is now the field contract; `tests/test_api_contract.py` compares
+  its event list and error-code table with the running code.
+
 ### Recovery and continuity
 
 - Read timeouts are now reported as HTTP 408 and other transport failures as 503,
