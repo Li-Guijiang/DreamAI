@@ -57,6 +57,7 @@ from .safety import classify_injection, harden_system_prompt
 from .state_store import load_snapshot, save_snapshot
 from .stats import UsageStats
 from .telemetry import format_breaker_log, format_recovery_log, format_turn_log
+from .validation import WARNING, check_settings, format_checks
 
 logging.basicConfig(
     level=logging.INFO,
@@ -71,10 +72,14 @@ MAX_BODY_BYTES = 512 * 1024
 # Write the counters every N turns as well as on shutdown, so a hard kill loses
 # at most N-1 turns instead of the whole process lifetime.
 USAGE_SAVE_EVERY = 25
+# Recomputed on startup and published read-only on /api/health. An operator
+# should not have to grep the boot log to learn that a fallback is half-set.
+_config_checks: list[dict[str, str]] = []
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global _config_checks
     logger.info(
         "Dream AI web %s starting (free=%s model=%s, byok=%s)",
         VERSION,
@@ -87,6 +92,12 @@ async def lifespan(app: FastAPI):
     applied = configure_prices(settings.price_overrides)
     if applied:
         logger.info("price overrides: %s", ", ".join(sorted(applied)))
+    issues = check_settings(settings)
+    _config_checks = [check.as_dict() for check in issues]
+    logger.info(format_checks(issues))
+    for check in issues:
+        log = logger.warning if check.severity == WARNING else logger.info
+        log("config check %s: %s", check.code, check.message)
     logger.info(describe_routing(settings.model_by_tier, settings.free_model))
     unknown = unknown_targets(settings.model_by_tier, {m.id for m in settings.models})
     if unknown:
@@ -650,6 +661,7 @@ async def health() -> JSONResponse:
             "limiter": limiter.stats(),
             "maxConcurrency": settings.max_concurrency,
             "features": ["memory", "knowledge", "canvas", "reader"],
+            "configChecks": _config_checks,
         }
     )
 
