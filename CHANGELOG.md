@@ -16,6 +16,9 @@
   `style`, each `memory` entry, `context` and `maxTokens`, and requires the last
   message to be from the user. Failures keep the existing 400 / `invalid_body`
   shape; `docs/API.md` §2.1 records every bound.
+- Request validation failures now carry a short Chinese reason instead of
+  Pydantic's English `Value error, …` / `Input should be …` text; custom
+  validators raise Chinese sentences and the handler maps common error types.
 - `pricing.check_price_tables()` detects non-finite or negative prices,
   malformed pairs, cached prices above the input price, and cached prices with
   no base price. It is published as the `price_table_inconsistent` startup
