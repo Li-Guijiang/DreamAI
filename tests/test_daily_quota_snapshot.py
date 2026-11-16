@@ -144,6 +144,19 @@ def test_an_unlimited_daily_budget_restores_no_count(harness, monkeypatch):
     assert main._daily_state["count"] == 0
 
 
+def test_a_new_day_resets_the_counter(harness):
+    import asyncio
+
+    main, _, _ = harness
+    main._daily_state["date"] = "2020-01-01"
+    main._daily_state["count"] = 99
+
+    assert asyncio.run(main.consume_daily_budget()) is True
+
+    assert main._daily_state["date"] == TODAY
+    assert main._daily_state["count"] == 1
+
+
 def test_a_restart_through_the_lifespan_keeps_the_quota(harness, monkeypatch):
     main, client, path = harness
     for _ in range(3):
