@@ -22,6 +22,25 @@
 `/api/chat` 的响应头：`X-Request-Id`、`X-Cache`（`HIT` / `MISS`）、
 `X-RateLimit-Remaining`、`Cache-Control: no-cache, no-transform`。
 
+### 2.1 `/api/chat` 请求体约束
+
+| 字段 | 约束 |
+|---|---|
+| `messages` | 1–40 条；每条 `role` 只能是 `user` / `assistant`，`content` 去空白后 1–20000 字符；**最后一条必须是 `user`** |
+| `model` | 可选，不超过 128 字符 |
+| `provider` | 可选，不超过 64 字符，默认 `free` |
+| `apiKey` | 可选，不超过 200 字符 |
+| `temperature` | 可选，0.0–2.0 |
+| `maxTokens` | 可选，128–8192 |
+| `memory` | 可选，不超过 30 条，每条不超过 500 字符 |
+| `context` | 可选，不超过 20000 字符 |
+| `style` | 可选，不超过 32 字符 |
+| `thinking` | 布尔值 |
+
+校验失败返回 HTTP 400，响应体为
+`{"error": 中文句子（含字段位置）, "code": "invalid_body"}`，
+不使用 FastAPI 默认的 422 与 pydantic 错误数组。
+
 ## 3. SSE 事件
 
 <!-- EVENTS
