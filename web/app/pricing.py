@@ -172,6 +172,50 @@ def parse_cache_overrides(raw: str) -> dict[str, float]:
     return result
 
 
+def _finite_number(value: object) -> bool:
+    """One price: a non-negative finite number, never a bool."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        and value >= 0
+    )
+
+
+def check_price_tables() -> list[str]:
+    """Named inconsistencies in the two module tables.
+
+    An operator override can introduce a price the parsers accept but the cost
+    model cannot sensibly use: a nan, a cached price higher than the list input
+    price, or a cached price for a model with no base price at all. Finding that
+    at startup is cheaper than explaining a bill that went down as usage rose.
+    """
+    issues: list[str] = []
+    for model, pair in PRICES.items():
+        if (
+            not isinstance(pair, tuple)
+            or len(pair) != 2
+            or not all(_finite_number(value) for value in pair)
+        ):
+            issues.append(f"{model}: invalid price pair")
+    for model, cached in CACHE_PRICES.items():
+        if not _finite_number(cached):
+            issues.append(f"{model}: invalid cached price")
+            continue
+        pair = PRICES.get(model)
+        if pair is None:
+            issues.append(f"{model}: cached price without a base price")
+            continue
+        if (
+            isinstance(pair, tuple)
+            and len(pair) == 2
+            and _finite_number(pair[0])
+            and cached > pair[0]
+        ):
+            issues.append(f"{model}: cached price exceeds input price")
+    return issues
+
+
 def configure_prices(raw: str) -> dict[str, tuple[float, float]]:
     """Apply operator overrides to the module tables and return what was applied."""
     overrides = parse_price_overrides(raw)
