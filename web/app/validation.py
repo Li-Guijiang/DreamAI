@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .pricing import invalid_price_overrides
+from .pricing import check_price_tables, invalid_price_overrides
 
 WARNING = "warning"
 INFO = "info"
@@ -118,6 +118,16 @@ def check_settings(settings) -> list[Check]:
                 "price_overrides_invalid",
                 WARNING,
                 "Price overrides ignored: " + ", ".join(ignored[:3]) + ".",
+            )
+        )
+
+    inconsistent = check_price_tables()
+    if inconsistent:
+        checks.append(
+            Check(
+                "price_table_inconsistent",
+                WARNING,
+                "Price table: " + ", ".join(inconsistent[:3]) + ".",
             )
         )
 
