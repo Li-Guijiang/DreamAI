@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Quota continuity and input boundaries
+
+- **Fixed:** the daily free quota was guarded by `upstream.kind == "free"`, but
+  `kind` is the wire protocol (`openai` / `anthropic` / `google`) while the free
+  provider's `id` is `"free"`. The limit never applied. It now checks
+  `upstream.provider.id`, with end-to-end tests proving consumption and the 429.
+- **Fixed:** a restart reset the daily allowance even when usage counters were
+  restored from a snapshot. The snapshot now carries `daily.date` and
+  `daily.count`; only today's value is restored, and a hand-edited count is
+  clipped to `DREAMAI_DAILY_LIMIT`.
+- `ChatRequest` now bounds `temperature` (0–2), `model`, `provider`, `apiKey`,
+  `style`, each `memory` entry, `context` and `maxTokens`, and requires the last
+  message to be from the user. Failures keep the existing 400 / `invalid_body`
+  shape; `docs/API.md` §2.1 records every bound.
+- `pricing.check_price_tables()` detects non-finite or negative prices,
+  malformed pairs, cached prices above the input price, and cached prices with
+  no base price. It is published as the `price_table_inconsistent` startup
+  finding.
+- `docs/API.md` now also documents request limits; contract tests compare its
+  field list and error shape with the running code.
+
 ### Startup checks, error contract and failure propagation
 
 - **Fixed:** an upstream failure that exhausted its retries stayed inside the
