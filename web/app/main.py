@@ -111,10 +111,16 @@ async def lifespan(app: FastAPI):
             logger.info("usage snapshot: none at %s", settings.usage_state)
         elif _stats.import_counters(restored):
             logger.info("usage snapshot restored: %s requests", _stats.requests)
+            if restore_daily_quota(restored):
+                logger.info(
+                    "daily quota restored: %s/%s",
+                    _daily_state["count"],
+                    settings.daily_limit,
+                )
         else:
             logger.warning("usage snapshot rejected: %s", settings.usage_state)
     yield
-    if settings.usage_state and not save_snapshot(settings.usage_state, _stats.export_counters()):
+    if settings.usage_state and not save_snapshot(settings.usage_state, snapshot_payload()):
         logger.warning("usage snapshot could not be written: %s", settings.usage_state)
     await llm.close_client()
 
@@ -206,6 +212,47 @@ _semaphore = asyncio.Semaphore(settings.max_concurrency)
 
 _daily_lock = asyncio.Lock()
 _daily_state = {"date": time.strftime("%Y-%m-%d"), "count": 0}
+
+#: The daily quota rides along in the usage snapshot's counter payload. It is
+#: deliberately an extra key rather than a UsageStats field: the quota is a
+#: per-day admission counter, not a lifetime traffic statistic.
+SNAPSHOT_DAILY_KEY = "daily"
+
+
+def snapshot_payload() -> dict:
+    """Everything the next process needs to continue counting."""
+    payload = _stats.export_counters()
+    payload[SNAPSHOT_DAILY_KEY] = {
+        "date": _daily_state["date"],
+        "count": _daily_state["count"],
+    }
+    return payload
+
+
+def restore_daily_quota(payload: dict | None) -> bool:
+    """Restore today's used quota from a snapshot; return whether it applied.
+
+    A restart otherwise hands out a fresh daily allowance, which contradicts a
+    persisted counter file: the totals continue but the cap silently resets.
+    Only today's value is trusted, and a hand-edited count is clipped to the
+    configured limit so a file cannot grant unlimited requests.
+    """
+    if not isinstance(payload, dict):
+        return False
+    daily = payload.get(SNAPSHOT_DAILY_KEY)
+    if not isinstance(daily, dict):
+        return False
+    today = time.strftime("%Y-%m-%d")
+    if daily.get("date") != today:
+        return False
+    count = daily.get("count")
+    if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+        return False
+    _daily_state["date"] = today
+    _daily_state["count"] = min(count, settings.daily_limit) if settings.daily_limit > 0 else 0
+    _daily_state["warned"] = False
+    return True
+
 
 _breaker = CircuitBreaker(threshold=settings.breaker_threshold, cooldown=settings.breaker_cooldown)
 _cache = ResponseCache(max_items=settings.cache_max_items, ttl=settings.cache_ttl)
@@ -844,7 +891,10 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
     except UpstreamError as exc:
         return JSONResponse({"error": exc.message, "code": exc.code}, status_code=exc.status)
 
-    if upstream.kind == "free" and not await consume_daily_budget():
+    # `kind` is the wire protocol (openai / anthropic / google), not who pays.
+    # The quota protects the site's own key, so it belongs to the free provider
+    # id. Comparing against `kind` meant the daily limit never applied at all.
+    if upstream.provider.id == "free" and not await consume_daily_budget():
         return JSONResponse(
             {
                 "error": "今天的免费额度已经用完啦，明天再来，或在设置中填写自己的 Key。",
@@ -1241,7 +1291,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             if settings.usage_state and _stats.requests and _stats.requests % USAGE_SAVE_EVERY == 0:
                 # Small file, one synchronous write every 25 turns. A failure is
                 # not worth failing (or even logging from) a visitor's request.
-                save_snapshot(settings.usage_state, _stats.export_counters())
+                save_snapshot(settings.usage_state, snapshot_payload())
 
     return StreamingResponse(
         event_stream(),
