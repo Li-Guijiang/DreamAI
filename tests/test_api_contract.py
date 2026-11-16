@@ -96,3 +96,38 @@ def test_the_validation_error_shape_matches_the_document():
 
     assert response.status_code == 400
     assert response.json()["code"] == "invalid_body"
+
+
+def test_every_config_check_code_is_documented(monkeypatch):
+    import dataclasses
+
+    from app import pricing
+    from app.config import load_settings
+    from app.validation import check_settings
+
+    block = re.search(r"<!-- CHECK_CODES\s*\n(.*?)\n-->", _read("docs/API.md"), re.S)
+    assert block, "docs/API.md lost its machine-readable check-code list"
+    documented = {line.strip() for line in block.group(1).splitlines() if line.strip()}
+
+    broken = dataclasses.replace(
+        load_settings(),
+        fallback_base_url="https://example.test/v1",
+        breaker_cooldown=1.0,
+        upstream_read_timeout=900.0,
+        daily_limit=1,
+        rate_limit=30,
+        system_prompt="",
+        max_concurrency=50,
+        cache_max_items=2,
+        rate_window=30,
+        price_overrides="broken",
+        stream_usage=False,
+        cache_ttl=300.0,
+        usage_state="state.json",
+    )
+    produced = {check.code for check in check_settings(broken)}
+    produced |= {check.code for check in check_settings(dataclasses.replace(broken, cache_ttl=0))}
+    monkeypatch.setattr(pricing, "CACHE_PRICES", {**pricing.CACHE_PRICES, "ghost": 0.5})
+    produced |= {check.code for check in check_settings(broken)}
+
+    assert documented == produced
