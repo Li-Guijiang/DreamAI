@@ -346,4 +346,38 @@ SSE 的 `error` 事件除 `message` 外还带 `code`、`status`、`retryable`，
 私有档案会话（有效 owner cookie）的回答不会写入共享响应缓存，
 因此 `X-Cache` 对同一问题连续两次均为 `MISS` 属于预期行为。
 
+## 13. 免费额度与请求边界
+
+### 13.1 免费额度现在真正生效
+
+此前日限判断误用了 `Upstream.kind`（协议类型 `openai`），而免费上游的
+标识是 `provider.id == "free"`，因此 `DREAMAI_DAILY_LIMIT` 一直没有生效。
+修复后的判定要点：
+
+1. `/api/usage` 的 `daily.count` 与 `/api/health` 的 `freeRemaining`
+   会随免费请求变化；长期不动说明请求走的是 BYOK，或版本仍为旧版。
+2. 达到上限后返回 HTTP 429，响应体 `code=daily_limit`；
+   BYOK 请求不消耗免费额度，不受该上限影响。
+3. 开启 `DREAMAI_USAGE_STATE` 后，同一天重启会从快照恢复已用额度，
+   **不会重新发放一次配额**；跨天自动归零。
+4. 快照中的 `daily.count` 会被裁剪到 `DREAMAI_DAILY_LIMIT`，
+   手工编辑文件无法放大额度；若快照日期不是今天，恢复逻辑直接忽略。
+5. 若部署中原本依赖「日限不生效」，升级后会首次出现 429；
+   应先核对 `DREAMAI_DAILY_LIMIT` 与预期流量，再决定是否调大。
+
+### 13.2 请求被拒时的定位
+
+`/api/chat` 的参数校验失败返回 HTTP 400 与 `code=invalid_body`，
+`error` 中带字段位置。常见触发：
+
+| 现象 | 原因 |
+|---|---|
+| `temperature` 相关 | 超出 0.0–2.0 |
+| `messages` 相关且末条为 assistant | 历史最后一条必须是 user |
+| `memory` / `context` / `style` 相关 | 单条长度或条数超过上限 |
+| `maxTokens` 相关 | 不在 128–8192 之间 |
+
+完整字段约束见 `docs/API.md` 第 2.1 节。客户端不应依赖中文句子判断
+失败原因，应读取 `code` 与字段位置。
+
 
