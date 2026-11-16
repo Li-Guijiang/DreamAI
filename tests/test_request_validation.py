@@ -45,7 +45,7 @@ def test_a_valid_temperature_is_accepted(temperature):
 
 
 def test_the_last_message_must_be_from_the_user():
-    with pytest.raises(ValidationError, match="last message"):
+    with pytest.raises(ValidationError, match="最后一条消息"):
         _parse(messages=[USER, {"role": "assistant", "content": "你好"}])
 
 
