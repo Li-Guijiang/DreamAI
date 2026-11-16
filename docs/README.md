@@ -15,7 +15,7 @@ All project documentation lives here. The repository ships three runnable forms 
 | [../README.md](../README.md) | Positioning, capabilities, quick start, repository layout | Anyone visiting the repository |
 | [GUIDE.md](./GUIDE.md) | Guided walkthrough: environment setup, every command, common errors | First-time users |
 | [SETUP.md](./SETUP.md) | Local installation (Windows first, macOS / Linux notes) | Users running it locally |
-| [API.md](./API.md) | SSE events, error codes and HTTP field contract | Client developers, deployers |
+| [API.md](./API.md) | SSE events, error codes, request limits and HTTP field contract | Client developers, deployers |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Layers, module responsibilities, both data flows | Developers reading or extending the code |
 | [KNOWLEDGE-MAP.md](./KNOWLEDGE-MAP.md) | The networking, protocol and engineering knowledge under the code, with one experiment per topic | Anyone who wants to understand why it works, not just what it does |
 | [OPERATIONS.md](./OPERATIONS.md) | Daily checks, how to read every status field, and failure procedures | Whoever keeps the site running |
