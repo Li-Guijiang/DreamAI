@@ -518,3 +518,51 @@ if isinstance(item, Exception):
 ```bash
 python -m pytest tests/test_error_events_route.py tests/test_api_contract.py -v
 ```
+
+---
+
+## 15. 一个字段名叫 kind，不等于它表示「谁付钱」
+
+`Upstream` 对象里有两组容易混淆的信息：
+
+| 字段 | 含义 | 取值 |
+|---|---|---|
+| `provider.id` | 这一次请求用的是哪一家的额度 | `free` / `deepseek` / `anthropic`… |
+| `kind` | 用哪种线协议解析响应 | `openai` / `anthropic` / `google` |
+
+日限额保护的是站点自己的 Key，正确判断应是
+`upstream.provider.id == "free"`。旧代码写成
+`upstream.kind == "free"`，而 `kind` 永远不会等于 `free`
+——于是限额代码一直在、测试也测了 `consume_daily_budget()` 本身，
+但真实请求从来没有进入过它。
+
+这类 bug 的两个教训：
+
+1. **单元测试可以全绿而功能完全没接通**。原测试直接调用
+   `consume_daily_budget()`，绕过了调用点的条件；补一个端到端断言
+   「免费请求之后计数增加、达到上限返回 429」才是有效的回归保护。
+2. **枚举值别用泛称**。`kind` 适合叫 `protocol`，`provider.id` 适合叫
+   `payer`；命名改不动时，至少在判断处写明「这里比较的是付费方，不是协议」。
+
+### 15.1 持久化要分清「哪些状态该跨重启」
+
+用量快照恢复了累计 token 与成本，却漏了日限计数。结果是仪表盘上的
+总数连续、准入额度却重置——对保护 Key 来说恰好反了。判断一个状态该不该
+持久化，可以问三个问题：
+
+1. 它描述的是**累计事实**（总请求数、总花费）还是**当前窗口**（限流滑动窗口）？
+   前者该恢复，后者重启重置反而更安全。
+2. 它有没有**自然过期条件**？日限额有日期，`daily.date` 不等于今天就应丢弃，
+   而不是照搬。
+3. 外部文件能不能**放大权限**？恢复时要把计数裁剪到配置上限，
+   否则编辑一个 JSON 就等于改了配额。
+
+再看两个容易忽略的一致性：缓存输入单价不应高于原价（否则用得越多账单越小），
+价格修正条目写错时解析器会静默跳过。两者现在都在启动时自检，
+因为「语法合法」和「语义合理」是两件事。
+
+动手验证：
+
+```bash
+python -m pytest tests/test_daily_quota_snapshot.py tests/test_price_table_checks.py -v
+```
