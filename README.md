@@ -252,6 +252,9 @@ reaches the screen. Both are now explicit.
 | Error contract | SSE errors carry `code`, `status` and `retryable` alongside the sentence | `errors.py`, `docs/API.md` |
 | Failure propagation | A failed upstream yields an error frame and counts toward the breaker | `main.py`, `tests/test_error_events_route.py` |
 | Private cache isolation | Owner answers never enter the shared cache | `main.py`, `owner_auth.py` |
+| Daily quota | Free-tier limit is enforced and survives a same-day restart | `main.py`, `snapshot_payload()` |
+| Request bounds | Temperature, field lengths and final-message role are validated | `ChatRequest`, `docs/API.md` |
+| Price integrity | Non-finite, inverted or orphaned prices are reported at startup | `pricing.check_price_tables()` |
 | Real usage | Token counts from all three wire formats, one usage event per stream | `usage_from_chunk()`, `DREAMAI_STREAM_USAGE` |
 | Price corrections | `DREAMAI_PRICE_OVERRIDES` fixes a stale price without a release | `pricing.configure_prices()` |
 | Provider view | `/api/usage` groups turns per vendor, not just per model | `byProvider` |
