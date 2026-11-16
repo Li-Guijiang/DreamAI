@@ -317,9 +317,17 @@ DREAMAI_USAGE_STATE=/var/lib/dreamai/usage.json
    | `daily_below_window` | 日限额低于单窗口限额 | 确认这是有意为之，否则调大 `DREAMAI_DAILY_LIMIT` |
    | `system_prompt_empty` | 身份与安全规则为空 | 立即恢复 `DREAMAI_SYSTEM_PROMPT` |
    | `price_overrides_invalid` | 价格修正条目被忽略 | 按 `模型=输入,输出[,缓存]` 格式修正 |
-   | `cache_capacity_low` / `rate_window_short` / `max_concurrency_over_limit` | 数值配置失当 | 对照默认值复核 |
+   | `price_table_inconsistent` | 价格表内部矛盾 | 见下方第 5 点 |
+   | `cache_capacity_low` | 缓存容量过小 | 调大 `DREAMAI_CACHE_MAX_ITEMS` |
+   | `rate_window_short` | 限流窗口不足一分钟 | 调大 `DREAMAI_RATE_WINDOW` |
+   | `max_concurrency_over_limit` | 并发数超过限流额度 | 降低 `DREAMAI_MAX_CONCURRENCY` |
 
 4. `configChecks` 不含任何密钥、带凭据的 URL 或系统提示词内容，可安全展示。
+5. `price_table_inconsistent` 表示价格表本身矛盾：价格不是有限非负数、
+   缓存输入单价高于原价、或某模型只有缓存价没有原价。多由
+   `DREAMAI_PRICE_OVERRIDES` 的第三个数字写错引起；修正后重启即可。
+   `stream_usage_off` / `cache_off` / `usage_state_on` 三条为 `severity=info`，
+   仅记录开关状态，无需处置。
 
 ### 12.2 错误事件的分类
 
