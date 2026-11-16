@@ -79,12 +79,16 @@ def test_uncached_response_is_marked_as_a_miss(client):
 def test_the_daily_budget_logs_once_per_day_not_once_per_refusal(monkeypatch):
     import asyncio
     import importlib
+    import time
 
     monkeypatch.syspath_prepend("web")
     monkeypatch.setenv("DREAMAI_FREE_API_KEY", "test-key")
     monkeypatch.setenv("DREAMAI_DAILY_LIMIT", "2")
     main = importlib.import_module("app.main")
     monkeypatch.setattr(main, "settings", main.load_settings())
+    # The quota is global and now actually consumed by free turns. Isolate this
+    # test from requests made by earlier tests in the same process.
+    monkeypatch.setattr(main, "_daily_state", {"date": time.strftime("%Y-%m-%d"), "count": 0})
 
     lines: list[str] = []
 
