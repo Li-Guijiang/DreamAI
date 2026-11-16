@@ -102,6 +102,23 @@ def test_valid_price_overrides_are_not_reported():
     assert "price_overrides_invalid" not in codes(price_overrides="new-model=1,2,0.5;gpt-4o=2.5,10")
 
 
+def test_a_broken_price_table_is_reported(monkeypatch):
+    from app import pricing
+
+    monkeypatch.setattr(pricing, "CACHE_PRICES", {**pricing.CACHE_PRICES, "ghost": 0.5})
+
+    assert "price_table_inconsistent" in codes()
+
+
+def test_a_clean_price_table_is_not_reported(monkeypatch):
+    from app import pricing
+
+    monkeypatch.setattr(pricing, "PRICES", dict(pricing.PRICES))
+    monkeypatch.setattr(pricing, "CACHE_PRICES", dict(pricing.CACHE_PRICES))
+
+    assert "price_table_inconsistent" not in codes()
+
+
 @pytest.mark.parametrize(
     ("overrides", "expected"),
     [
