@@ -97,3 +97,14 @@ def test_every_finding_has_the_same_three_fields(main_module, monkeypatch):
 
     assert checks
     assert all(set(check) == {"code", "severity", "message"} for check in checks)
+
+
+def test_a_broken_price_table_is_published_at_startup(main_module, monkeypatch):
+    from app import pricing
+
+    monkeypatch.setattr(pricing, "CACHE_PRICES", {**pricing.CACHE_PRICES, "ghost": 0.5})
+
+    with TestClient(main_module.app) as client:
+        checks = client.get("/api/health").json()["configChecks"]
+
+    assert any(check["code"] == "price_table_inconsistent" for check in checks)
