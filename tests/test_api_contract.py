@@ -67,3 +67,32 @@ def test_the_health_and_usage_endpoints_honour_the_documented_fields():
     assert set(("configChecks",)) <= set(health)
     assert {"usagePersisted", "truncated", "truncatedByTier", "byFinish"} <= set(usage)
     assert all(set(check) == {"code", "severity", "message"} for check in health["configChecks"])
+
+
+def test_every_request_field_is_documented():
+    from app.main import ChatRequest
+
+    section = _read("docs/API.md").split("### 2.1")[1].split("## 3.")[0]
+    documented = set(re.findall(r"^\| `([a-zA-Z]+)` \|", section, re.M))
+
+    assert documented == set(ChatRequest.model_fields)
+
+
+def test_the_validation_error_shape_matches_the_document():
+    import dataclasses
+
+    from fastapi.testclient import TestClient
+
+    main = __import__("app.main", fromlist=["app"])
+    original = main.settings
+    try:
+        main.settings = dataclasses.replace(original, free_api_key="test-key")
+        response = TestClient(main.app).post(
+            "/api/chat",
+            json={"messages": [{"role": "user", "content": "在吗"}], "temperature": 9.0},
+        )
+    finally:
+        main.settings = original
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "invalid_body"
