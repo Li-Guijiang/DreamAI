@@ -119,6 +119,30 @@ def user_message(status: int, label: str = "") -> str:
     return "请求没有成功，请稍后重试。"
 
 
+#: Pydantic's own messages are English and name its internal types ("Input
+#: should be..."). The visitor gets a short Chinese phrase plus the field path
+#: instead; a custom validator's own sentence is kept as written.
+VALIDATION_HINTS = {
+    "greater_than_equal": "数值低于允许的下限",
+    "less_than_equal": "数值超过允许的上限",
+    "string_too_long": "内容太长",
+    "string_too_short": "内容太短",
+    "too_long": "条目太多",
+    "too_short": "条目太少",
+    "literal_error": "取值不在允许范围内",
+    "missing": "缺少必填字段",
+}
+
+
+def validation_reason(error: dict) -> str:
+    """One readable phrase for the first validation error."""
+    hint = VALIDATION_HINTS.get(error.get("type", ""))
+    if hint:
+        return hint
+    raw = (error.get("msg") or "").strip().removeprefix("Value error, ")
+    return raw or "字段不合法"
+
+
 def usable_detail(raw: str, limit: int = 160) -> bool:
     """Whether the provider's own words are worth repeating to a visitor."""
     body = (raw or "").strip()

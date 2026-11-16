@@ -32,7 +32,7 @@ from . import llm, owner_auth, owner_store
 from .adapters import FINISH_LENGTH
 from .cache import ResponseCache, make_key
 from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
-from .errors import error_payload, final_message
+from .errors import error_payload, final_message, validation_reason
 from .guard import CircuitBreaker
 from .insight import (
     classify_intent,
@@ -515,7 +515,7 @@ class ChatMessage(BaseModel):
     def strip_content(cls, value: str) -> str:
         value = value.strip()
         if not value:
-            raise ValueError("empty message")
+            raise ValueError("消息内容不能为空")
         return value
 
 
@@ -535,7 +535,7 @@ class ChatRequest(BaseModel):
     def last_message_is_from_the_user(self) -> ChatRequest:
         """The pipeline reads messages[-1] as the question to answer."""
         if self.messages[-1].role != "user":
-            raise ValueError("the last message must come from the user")
+            raise ValueError("最后一条消息必须来自用户")
         return self
 
 
@@ -1380,7 +1380,7 @@ async def bad_request(request: Request, exc: RequestValidationError) -> JSONResp
     """
     first = exc.errors()[0] if exc.errors() else {}
     where = ".".join(str(part) for part in first.get("loc", ()) if part != "body")
-    reason = first.get("msg") or "字段不合法"
+    reason = validation_reason(first)
     detail = f"{where}: {reason}" if where else reason
     return JSONResponse(
         {"error": f"请求体不符合要求（{detail}）", "code": "invalid_body"},
