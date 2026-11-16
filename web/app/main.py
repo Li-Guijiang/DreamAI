@@ -18,7 +18,7 @@ from collections import defaultdict, deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from html.parser import HTMLParser
-from typing import Literal
+from typing import Annotated, Literal
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -26,7 +26,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from . import llm, owner_auth, owner_store
 from .adapters import FINISH_LENGTH
@@ -521,15 +521,22 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1, max_length=40)
-    model: str | None = None
-    provider: str = "free"
+    model: str | None = Field(default=None, max_length=128)
+    provider: str = Field(default="free", max_length=64)
     apiKey: str | None = Field(default=None, max_length=200)
-    temperature: float | None = None
+    temperature: float | None = Field(default=None, ge=0.0, le=2.0)
     maxTokens: int | None = Field(default=None, ge=128, le=8192)
-    memory: list[str] | None = Field(default=None, max_length=30)
+    memory: list[Annotated[str, Field(max_length=500)]] | None = Field(default=None, max_length=30)
     context: str | None = Field(default=None, max_length=20000)
     thinking: bool = False
-    style: str | None = None
+    style: str | None = Field(default=None, max_length=32)
+
+    @model_validator(mode="after")
+    def last_message_is_from_the_user(self) -> ChatRequest:
+        """The pipeline reads messages[-1] as the question to answer."""
+        if self.messages[-1].role != "user":
+            raise ValueError("the last message must come from the user")
+        return self
 
 
 class UpstreamError(Exception):
