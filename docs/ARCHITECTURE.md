@@ -209,6 +209,14 @@ SSE。pump 捕获的异常会作为一条数据放入同一队列，由主协程
 `validation.check_settings()` 结果发布在 `/api/health.configChecks`；
 有效 owner cookie 的会话不进入共享响应缓存。
 
+配额与请求边界：日限只在 `upstream.provider.id == "free"` 时消耗
+（`Upstream.kind` 是线协议，不是付费方）。启用快照后，`daily.date` 与
+`daily.count` 随累计计数一起写入，重启时仅同日恢复并裁剪到配置上限；
+跨天由 `consume_daily_budget()` 自行归零。`ChatRequest` 在进入流水线前
+校验 temperature 范围、各字段长度与「末条消息必须为 user」，失败统一走
+400 / `invalid_body`。`pricing.check_price_tables()` 在启动时检查价格表的
+数值合法性与缓存价不高于原价，结果并入 `configChecks`。
+
 限流器也有自己的快照：`/api/health` 的 `limiter.tracked` 是正在被观察的客户端数——
 只有数量，不含 IP；`X-RateLimit-Remaining` 头把剩余额度告诉客户端，
 让它能在被拒绝之前自己降速。
