@@ -104,3 +104,23 @@ done
 | `/api/usage` | `cachedTokens`, `cachedShare` | 提示词缓存命中的输入及其占比 |
 
 `configChecks` 中不包含任何密钥、URL 凭据或系统提示词内容。
+
+### 6.1 `configChecks` 的 code 取值
+
+<!-- CHECK_CODES
+fallback_partial
+cooldown_shorter_than_timeout
+daily_below_window
+system_prompt_empty
+max_concurrency_over_limit
+cache_capacity_low
+rate_window_short
+price_overrides_invalid
+price_table_inconsistent
+stream_usage_off
+cache_off
+usage_state_on
+-->
+
+前九项为 `severity=warning`，后三项为 `severity=info`（仅记录开关状态）。
+各 code 的含义与处置见 `docs/OPERATIONS.md` 第 12.1 节。
