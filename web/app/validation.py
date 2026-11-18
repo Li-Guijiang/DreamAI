@@ -101,6 +101,16 @@ def check_settings(settings) -> list[Check]:
             )
         )
 
+    if settings.cache_ttl > 0 and 0 < settings.cache_max_bytes < 64 * 1024:
+        checks.append(
+            Check(
+                "cache_bytes_small",
+                WARNING,
+                f"Cache byte budget ({settings.cache_max_bytes}) is under 64 KiB; "
+                "most answers will be evicted or never cached.",
+            )
+        )
+
     if settings.rate_window < 60:
         checks.append(
             Check(
