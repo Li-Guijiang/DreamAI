@@ -217,6 +217,15 @@ SSE。pump 捕获的异常会作为一条数据放入同一队列，由主协程
 400 / `invalid_body`。`pricing.check_price_tables()` 在启动时检查价格表的
 数值合法性与缓存价不高于原价，结果并入 `configChecks`。
 
+流式背压与内存边界：`event_stream()` 的队列由 `stream_queue()` 创建，
+容量取 `DREAMAI_STREAM_QUEUE_SIZE`。泵在队列满时阻塞于 `put()`，
+把慢客户端的压力传回上游生成器；心跳仍由消费者一侧的
+`wait_for(queue.get(), 12)` 产生。`ResponseCache` 同时受条目数与 UTF-8
+字节预算约束，字节超限按 LRU 淘汰，单条大于预算者不入缓存；
+`byteEvictions` 与 `byteFull` 让仪表盘区分两种淘汰原因。
+失败日志经 `telemetry.mask_ip()` 只写网段，限流器仍用完整地址做键。
+状态端点返回 `no-store`，流式端点额外返回 `no-transform`。
+
 限流器也有自己的快照：`/api/health` 的 `limiter.tracked` 是正在被观察的客户端数——
 只有数量，不含 IP；`X-RateLimit-Remaining` 头把剩余额度告诉客户端，
 让它能在被拒绝之前自己降速。
