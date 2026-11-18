@@ -132,3 +132,18 @@ def test_every_config_check_code_is_documented(monkeypatch):
     produced |= {check.code for check in check_settings(broken)}
 
     assert documented == produced
+
+
+def test_the_cache_byte_fields_are_published_on_both_status_endpoints():
+    pytest.importorskip("fastapi", reason="web dependencies are not installed")
+    from fastapi.testclient import TestClient
+
+    main = __import__("app.main", fromlist=["app"])
+    client = TestClient(main.app)
+    documented = {"maxBytes", "byteEvictions", "byteFull"}
+    section = _read("docs/API.md").split("## 6. 状态端点新增字段")[1]
+
+    assert all(f"`cache.{field}`" in section for field in documented)
+    for endpoint in ("/api/health", "/api/usage"):
+        published = set(client.get(endpoint).json()["cache"])
+        assert documented <= published
