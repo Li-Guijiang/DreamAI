@@ -517,7 +517,11 @@ async def security_headers(request: Request, call_next):
     if path.startswith("/assets/"):
         response.headers["Cache-Control"] = "public, max-age=604800"
     elif path.startswith("/api/"):
-        response.headers["Cache-Control"] = "no-store"
+        # no-store covers every API reply. A streamed answer also needs
+        # no-transform: a proxy that buffers or rewrites the body breaks SSE.
+        response.headers["Cache-Control"] = (
+            "no-store, no-transform" if path == "/api/chat" else "no-store"
+        )
     return response
 
 
@@ -736,7 +740,8 @@ async def health() -> JSONResponse:
             "maxConcurrency": settings.max_concurrency,
             "features": ["memory", "knowledge", "canvas", "reader"],
             "configChecks": _config_checks,
-        }
+        },
+        headers={"Cache-Control": "no-store"},
     )
 
 
@@ -778,7 +783,8 @@ async def usage() -> JSONResponse:
             "daily": _daily_state,
             "dailyLimit": settings.daily_limit,
             "usagePersisted": bool(settings.usage_state),
-        }
+        },
+        headers={"Cache-Control": "no-store"},
     )
 
 
@@ -812,7 +818,7 @@ def _local_chat(text: str, *, extra_headers: dict[str, str] | None = None) -> St
         )
 
     headers = {
-        "Cache-Control": "no-cache, no-transform",
+        "Cache-Control": "no-store, no-transform",
         "Connection": "keep-alive",
         "X-Accel-Buffering": "no",
         "X-Request-Id": request_id,
@@ -1326,7 +1332,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         event_stream(),
         media_type="text/event-stream; charset=utf-8",
         headers={
-            "Cache-Control": "no-cache, no-transform",
+            "Cache-Control": "no-store, no-transform",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
             "X-Request-Id": request_id,
