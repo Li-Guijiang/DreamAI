@@ -380,4 +380,55 @@ SSE 的 `error` 事件除 `message` 外还带 `code`、`status`、`retryable`，
 完整字段约束见 `docs/API.md` 第 2.1 节。客户端不应依赖中文句子判断
 失败原因，应读取 `code` 与字段位置。
 
+## 14. 背压、缓存内存与日志边界
+
+### 14.1 流式队列
+
+| 变量 | 默认值 | 作用 |
+|---|---|---|
+| `DREAMAI_STREAM_QUEUE_SIZE` | `64` | 上游泵与 SSE 写入器之间的队列容量，允许范围 8～512 |
+
+队列有界后，慢读者会让泵暂停读取上游，而不是让待发送 token 无限堆积。
+运维判据：
+
+1. 客户端长期不读时，上游生成变慢属于预期，不应伴随 RSS 持续上涨。
+2. 心跳仍为每 12 秒一次 `: ping`；若心跳也消失，问题在泵或上游，不在队列。
+3. 不要把容量调到 8 试图「减少延迟」；太小会让正常网络抖动触发背压。
+
+### 14.2 缓存的内存上限
+
+`DREAMAI_CACHE_MAX_BYTES` 默认 4194304（4 MiB），`0` 表示仅按条数限制，
+上限 64 MiB。`/api/usage` 与 `/api/health` 的 `cache` 对象新增三个字段：
+
+| 字段 | 含义 |
+|---|---|
+| `maxBytes` | 当前字节预算，0 表示未启用 |
+| `byteEvictions` | 因字节预算淘汰的条目数（与按条数淘汰分开计数） |
+| `byteFull` | 当前占用是否已达预算 |
+
+排查要点：
+
+1. `items` 远小于 `capacity` 却不断 miss，先看 `byteEvictions`；
+   字节预算先于条数上限触发是正常的。
+2. 单条回答超过整个预算时不会被缓存，也不淘汰任何已有条目；
+   长回答类请求持续 miss 属于预期。
+3. 启动时出现 `cache_bytes_small` 说明预算低于 64 KiB，
+   先确认是否由 `DREAMAI_CACHE_MAX_BYTES` 误填导致。
+4. `bytes` 统计 UTF-8 字节而非字符数；中文回答的字节数约为字符数的三倍。
+
+### 14.3 日志中的客户端地址
+
+失败日志只记录网段：`ip=203.0.x.x id=req_...`。IPv4 保留前两段，
+IPv6 保留前两段十六进制；限流仍按完整地址计数，行为不变。
+排障时用 `id` 关联同一请求的多条日志，用网段判断某片网络是否异常。
+完整 IP 不再出现在 `chat failed`、`circuit open` 与
+`unexpected chat error` 三类日志中。
+
+### 14.4 响应缓存头
+
+`/api/health` 与 `/api/usage` 返回 `Cache-Control: no-store`；
+`/api/chat` 返回 `Cache-Control: no-store, no-transform`。
+`no-transform` 禁止代理改写流式响应体，若自建反向代理启用了压缩或缓冲，
+应先确认它没有忽略该指令。
+
 
