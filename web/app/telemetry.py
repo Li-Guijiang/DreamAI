@@ -14,6 +14,28 @@ by eye without reading the labels.
 from __future__ import annotations
 
 
+def mask_ip(value: str) -> str:
+    """Keep a client's network prefix; drop the host part.
+
+    The rate limiter still keys on the full address - that is its job. Logs are
+    read to notice that one network is misbehaving, not to identify a person,
+    so the last two IPv4 octets and the tail of an IPv6 address are dropped.
+    Unrecognised values (a proxy name, "unknown") pass through unchanged.
+    """
+    raw = (value or "").strip()
+    if not raw:
+        return "unknown"
+    body = raw[1:].split("]", 1)[0] if raw.startswith("[") else raw
+    if body.count(":") > 1:  # IPv6 (one colon means an IPv4 address with a port)
+        parts = body.split(":")
+        return ":".join(parts[:2]) + "::" if parts and parts[0] else body
+    host = body.split(":", 1)[0]  # IPv4 with an optional port
+    parts = host.split(".")
+    if len(parts) == 4 and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
+        return ".".join(parts[:2]) + ".x.x"
+    return raw
+
+
 def format_turn_log(
     request_id: str,
     *,
