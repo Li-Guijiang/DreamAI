@@ -255,7 +255,11 @@ def restore_daily_quota(payload: dict | None) -> bool:
 
 
 _breaker = CircuitBreaker(threshold=settings.breaker_threshold, cooldown=settings.breaker_cooldown)
-_cache = ResponseCache(max_items=settings.cache_max_items, ttl=settings.cache_ttl)
+_cache = ResponseCache(
+    max_items=settings.cache_max_items,
+    ttl=settings.cache_ttl,
+    max_bytes=settings.cache_max_bytes,
+)
 
 _stats = UsageStats(started_at=STARTED_AT)
 

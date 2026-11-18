@@ -279,6 +279,10 @@ class Settings:
     breaker_cooldown: float = 30.0
     cache_ttl: float = 300.0
     cache_max_items: int = 128
+    # Byte ceiling for cached answers (UTF-8, not characters). 0 disables it.
+    # Counting entries alone cannot bound memory: one long answer can outweigh
+    # a hundred short ones. 4 MiB is enough for roughly a thousand short turns.
+    cache_max_bytes: int = 4 * 1024 * 1024
     # Optional second upstream, used only when the first fails before any token.
     fallback_base_url: str = ""
     fallback_api_key: str = ""
@@ -420,6 +424,10 @@ def load_settings() -> Settings:
         breaker_cooldown=_env_float("DREAMAI_BREAKER_COOLDOWN", 30.0),
         cache_ttl=_env_float("DREAMAI_CACHE_TTL", 300.0),
         cache_max_items=_env_int("DREAMAI_CACHE_MAX_ITEMS", 128, 1),
+        cache_max_bytes=min(
+            64 * 1024 * 1024,
+            _env_int("DREAMAI_CACHE_MAX_BYTES", 4 * 1024 * 1024),
+        ),
         model_by_tier=_parse_tier_map(_env("DREAMAI_MODEL_BY_TIER", "")),
         price_overrides=_env("DREAMAI_PRICE_OVERRIDES", ""),
         fallback_base_url=_env("DREAMAI_FALLBACK_BASE_URL", ""),
