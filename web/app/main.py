@@ -56,7 +56,12 @@ from .routing import choose_model, describe_routing, unknown_targets
 from .safety import classify_injection, harden_system_prompt
 from .state_store import load_snapshot, save_snapshot
 from .stats import UsageStats
-from .telemetry import format_breaker_log, format_recovery_log, format_turn_log
+from .telemetry import (
+    format_breaker_log,
+    format_recovery_log,
+    format_turn_log,
+    mask_ip,
+)
 from .validation import WARNING, check_settings, format_checks
 
 logging.basicConfig(
@@ -1085,7 +1090,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             )
             return
         if not _breaker.allow():
-            logger.warning("circuit open, rejecting ip=%s id=%s", ip, request_id)
+            logger.warning("circuit open, rejecting ip=%s id=%s", mask_ip(ip), request_id)
             _stats.record_blocked()
             yield sse(
                 "error",
@@ -1213,7 +1218,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             _breaker.record_failure()
             if _breaker.openings > openings_before:
                 logger.warning(format_breaker_log(_breaker.stats()))
-            logger.info("chat failed ip=%s kind=%s: %s", ip, upstream.kind, exc)
+            logger.info("chat failed ip=%s kind=%s: %s", mask_ip(ip), upstream.kind, exc)
             logger.info(
                 format_turn_log(
                     request_id,
@@ -1237,7 +1242,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             raise
         except Exception:  # noqa: BLE001 - never leak internals to the client
             failed = True
-            logger.exception("unexpected chat error ip=%s", ip)
+            logger.exception("unexpected chat error ip=%s", mask_ip(ip))
             yield sse("error", error_payload("服务出现了一点意外，请稍后重试。"))
         finally:
             # One estimate for the whole turn: the counters, the done event and
