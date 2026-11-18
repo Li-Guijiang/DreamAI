@@ -103,6 +103,7 @@ done
 | `/api/usage` | `usagePersisted` | 是否启用用量快照持久化 |
 | `/api/usage` | `truncated`, `truncatedByTier`, `byFinish` | 截断计数、按难度分布、结束原因分布 |
 | `/api/usage` | `cachedTokens`, `cachedShare` | 提示词缓存命中的输入及其占比 |
+| `/api/health`, `/api/usage` | `cache.maxBytes`, `cache.byteEvictions`, `cache.byteFull` | 缓存字节预算、按字节淘汰数、当前是否达到预算 |
 
 `configChecks` 中不包含任何密钥、URL 凭据或系统提示词内容。
 
