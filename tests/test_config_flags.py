@@ -5,6 +5,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 WEB = str(Path(__file__).resolve().parent.parent / "web")
 if WEB not in sys.path:
     sys.path.insert(0, WEB)
@@ -58,3 +60,33 @@ def test_the_usage_snapshot_switch_is_off_by_default(monkeypatch):
 
     monkeypatch.setenv("DREAMAI_USAGE_STATE", " /var/lib/dreamai/usage.json ")
     assert load_settings().usage_state == "/var/lib/dreamai/usage.json"
+
+
+def test_the_cache_byte_budget_is_four_mib_by_default(monkeypatch):
+    monkeypatch.delenv("DREAMAI_CACHE_MAX_BYTES", raising=False)
+
+    assert load_settings().cache_max_bytes == 4 * 1024 * 1024
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("0", 0),
+        ("1024", 1024),
+        ("-5", 0),
+        ("999999999", 64 * 1024 * 1024),
+        ("garbage", 4 * 1024 * 1024),
+    ],
+)
+def test_the_cache_byte_budget_is_clamped(monkeypatch, raw, expected):
+    monkeypatch.setenv("DREAMAI_CACHE_MAX_BYTES", raw)
+
+    assert load_settings().cache_max_bytes == expected
+
+
+def test_the_parsed_budget_reaches_a_cache_instance(monkeypatch):
+    from app.cache import ResponseCache
+
+    monkeypatch.setenv("DREAMAI_CACHE_MAX_BYTES", "2048")
+
+    assert ResponseCache(max_bytes=load_settings().cache_max_bytes).stats()["maxBytes"] == 2048
