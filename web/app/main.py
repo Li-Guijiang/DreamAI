@@ -264,6 +264,17 @@ _cache = ResponseCache(
 _stats = UsageStats(started_at=STARTED_AT)
 
 
+def stream_queue() -> asyncio.Queue:
+    """The bounded channel between the upstream pump and the SSE writer.
+
+    An unbounded queue lets a fast provider push tokens faster than a slow
+    reader consumes them, so memory grows for the whole length of an answer.
+    With a ceiling, ``put()`` waits and the pump stops reading upstream until
+    the writer catches up - ordinary back-pressure, no extra bookkeeping.
+    """
+    return asyncio.Queue(maxsize=settings.stream_queue_size)
+
+
 async def consume_daily_budget() -> bool:
     """Global per-process daily request budget (protects the API key)."""
     if settings.daily_limit <= 0:
@@ -1117,8 +1128,10 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
 
                 # A queue and a pump, so a silent upstream can be covered by a
                 # comment line every few seconds instead of leaving the browser
-                # staring at a stalled connection behind a proxy.
-                queue: asyncio.Queue = asyncio.Queue()
+                # staring at a stalled connection behind a proxy. The queue is
+                # bounded: a slow reader back-pressures the pump rather than
+                # accumulating an unbounded list of undelivered tokens.
+                queue: asyncio.Queue = stream_queue()
 
                 async def _secondary() -> AsyncIterator[tuple[str, str]]:
                     async for item in llm.stream_completion(
