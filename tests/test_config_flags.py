@@ -90,3 +90,19 @@ def test_the_parsed_budget_reaches_a_cache_instance(monkeypatch):
     monkeypatch.setenv("DREAMAI_CACHE_MAX_BYTES", "2048")
 
     assert ResponseCache(max_bytes=load_settings().cache_max_bytes).stats()["maxBytes"] == 2048
+
+
+def test_the_stream_queue_holds_64_items_by_default(monkeypatch):
+    monkeypatch.delenv("DREAMAI_STREAM_QUEUE_SIZE", raising=False)
+
+    assert load_settings().stream_queue_size == 64
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [("1", 8), ("32", 32), ("9999", 512), ("garbage", 64)],
+)
+def test_the_stream_queue_size_is_clamped(monkeypatch, raw, expected):
+    monkeypatch.setenv("DREAMAI_STREAM_QUEUE_SIZE", raw)
+
+    assert load_settings().stream_queue_size == expected
