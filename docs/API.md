@@ -20,7 +20,8 @@
 | GET | `/api/download/*` | 静态下载资源 |
 
 `/api/chat` 的响应头：`X-Request-Id`、`X-Cache`（`HIT` / `MISS`）、
-`X-RateLimit-Remaining`、`Cache-Control: no-cache, no-transform`。
+`X-RateLimit-Remaining`、`Cache-Control: no-store, no-transform`（禁止缓存，
+也禁止代理改写流式响应体）。
 
 ### 2.1 `/api/chat` 请求体约束
 
