@@ -90,6 +90,18 @@ def test_a_tiny_cache_is_not_reported_when_the_cache_is_off():
     assert "cache_capacity_low" not in codes(cache_max_items=2, cache_ttl=0)
 
 
+def test_a_tiny_byte_budget_is_reported():
+    assert "cache_bytes_small" in codes(cache_max_bytes=1024)
+
+
+def test_a_disabled_byte_budget_is_not_reported():
+    assert "cache_bytes_small" not in codes(cache_max_bytes=0)
+
+
+def test_a_tiny_byte_budget_does_not_matter_when_the_cache_is_off():
+    assert "cache_bytes_small" not in codes(cache_max_bytes=1024, cache_ttl=0)
+
+
 def test_a_short_rate_window_is_reported():
     assert "rate_window_short" in codes(rate_window=30)
 
