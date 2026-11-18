@@ -441,9 +441,7 @@ def load_settings() -> Settings:
         rate_window=_env_int("DREAMAI_RATE_WINDOW", 600, 30),
         daily_limit=_env_int("DREAMAI_DAILY_LIMIT", 2000, 0),
         max_concurrency=_env_int("DREAMAI_MAX_CONCURRENCY", 6, 1),
-        stream_queue_size=min(
-            512, max(8, _env_int("DREAMAI_STREAM_QUEUE_SIZE", 64, 8))
-        ),
+        stream_queue_size=min(512, max(8, _env_int("DREAMAI_STREAM_QUEUE_SIZE", 64, 8))),
         max_input_chars=_env_int("DREAMAI_MAX_INPUT_CHARS", 12000, 500),
         max_history_messages=_env_int("DREAMAI_MAX_HISTORY_MESSAGES", 30, 2),
         max_history_chars=_env_int("DREAMAI_MAX_HISTORY_CHARS", 60000, 2000),
