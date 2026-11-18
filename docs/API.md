@@ -114,6 +114,7 @@ daily_below_window
 system_prompt_empty
 max_concurrency_over_limit
 cache_capacity_low
+cache_bytes_small
 rate_window_short
 price_overrides_invalid
 price_table_inconsistent
