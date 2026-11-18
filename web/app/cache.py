@@ -6,7 +6,9 @@ boring thing - the same provider, model, messages and parameters must hash to th
 same key - and is only used for deterministic settings.
 
 Entries expire on a TTL and are evicted least-recently-used first, so a long-lived
-process cannot grow without bound.
+process cannot grow without bound. Two independent ceilings apply: a number of
+entries and a number of UTF-8 bytes. Counting entries alone is not enough - one
+cached essay can weigh as much as a hundred cached greetings.
 
 A TTL of zero (or less) turns the cache off entirely: gets and puts become no-ops
 that cost one attribute check. This is the documented way to disable caching when a
@@ -49,6 +51,9 @@ def _size(value: str) -> int:
     return len(value.encode("utf-8"))
 
 
+DEFAULT_MAX_BYTES = 4 * 1024 * 1024
+
+
 class ResponseCache:
     """Small TTL + LRU cache; values are finished answers, not deltas."""
 
@@ -57,10 +62,13 @@ class ResponseCache:
         max_items: int = 128,
         ttl: float = 300.0,
         clock: Callable[[], float] = time.monotonic,
+        max_bytes: int = DEFAULT_MAX_BYTES,
     ) -> None:
         self.max_items = max(1, max_items)
         self.ttl = max(0.0, ttl)
         self.enabled = self.ttl > 0
+        # Zero disables the byte ceiling; anything else is a hard budget.
+        self.max_bytes = max(0, max_bytes)
         self._clock = clock
         self._items: OrderedDict[str, tuple[str, float]] = OrderedDict()
         self.hits = 0
@@ -74,6 +82,9 @@ class ResponseCache:
         # cache is too small or the TTL too short.
         self.expired = 0
         self.evictions = 0
+        # Evictions caused by the byte budget, separated from the ones caused by
+        # the item count: they point at different knobs to turn.
+        self.byte_evictions = 0
 
     def get(self, key: str) -> str | None:
         if not self.enabled:
@@ -96,16 +107,26 @@ class ResponseCache:
     def put(self, key: str, value: str) -> None:
         if not self.enabled or not value:
             return
+        size = _size(value)
+        if self.max_bytes and size > self.max_bytes:
+            # One answer larger than the whole budget must not evict every other
+            # entry just to hold a single one. Skip it and keep serving misses.
+            return
         old = self._items.get(key)
         if old is not None:
             self._bytes -= _size(old[0])
         self._items[key] = (value, self._clock() + self.ttl)
-        self._bytes += _size(value)
+        self._bytes += size
         self._items.move_to_end(key)
-        while len(self._items) > self.max_items:
+        while len(self._items) > self.max_items or (
+            self.max_bytes and self._bytes > self.max_bytes
+        ):
+            over_bytes = bool(self.max_bytes and self._bytes > self.max_bytes)
             _, (evicted, _) = self._items.popitem(last=False)
             self._bytes -= _size(evicted)
             self.evictions += 1
+            if over_bytes:
+                self.byte_evictions += 1
 
     def stats(self) -> dict:
         """What both status endpoints report about the cache."""
@@ -115,6 +136,8 @@ class ResponseCache:
             "items": len(self._items),
             "capacity": self.max_items,
             "bytes": self._bytes,
+            "maxBytes": self.max_bytes,
+            "byteEvictions": self.byte_evictions,
             "avgBytes": round(self._bytes / len(self._items), 1) if self._items else 0,
             "ttl": self.ttl,
             "hits": self.hits,
@@ -124,6 +147,7 @@ class ResponseCache:
             # Share of answers that cost nothing; 0.0 before anything is asked.
             "hitRate": round(self.hits / asked, 3) if asked else 0.0,
             "full": len(self._items) >= self.max_items,
+            "byteFull": bool(self.max_bytes and self._bytes >= self.max_bytes),
         }
 
     def clear(self) -> None:
