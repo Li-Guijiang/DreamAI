@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Back-pressure, memory and log privacy
+
+- The SSE queue is now bounded by `DREAMAI_STREAM_QUEUE_SIZE` (default 64,
+  clamped to 8..512). A slow reader back-pressures the pump instead of growing
+  an unbounded queue; the 12-second heartbeat is unchanged.
+- `ResponseCache` enforces a UTF-8 byte ceiling (`DREAMAI_CACHE_MAX_BYTES`,
+  default 4 MiB, 0 = off, max 64 MiB) alongside the item count. Answers larger
+  than the whole budget are not stored, and byte-driven evictions are counted
+  separately. Stats gain `maxBytes`, `byteEvictions` and `byteFull`; startup
+  checks warn on a budget under 64 KiB.
+- Failed-turn, circuit-open and unexpected-error logs now record the client's
+  network prefix (`203.0.x.x`, `2001:db8::`) instead of the full address. Rate
+  limiting still keys on the full IP.
+- `/api/health` and `/api/usage` send `Cache-Control: no-store`. `/api/chat`
+  sends `no-store, no-transform` so a proxy cannot rewrite a streamed body;
+  the previous middleware silently dropped `no-transform`.
+- `docs/API.md` records the new cache fields and the corrected header.
+
 ### Quota continuity and input boundaries
 
 - **Fixed:** the daily free quota was guarded by `upstream.kind == "free"`, but
