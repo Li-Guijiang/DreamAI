@@ -56,6 +56,25 @@ def test_findings_never_contain_a_secret():
     assert all("SUPER-SECRET-KEY" not in check.message for check in checks)
 
 
+def test_an_invalid_base_url_is_reported():
+    assert "base_url_invalid" in codes(byok_base_url="api.example.com/v1")
+
+
+def test_a_partly_broken_key_url_is_reported():
+    assert "base_url_invalid" in codes(free_key_url="https://")
+
+
+def test_valid_urls_are_not_reported():
+    assert "base_url_invalid" not in codes()
+
+
+def test_url_findings_do_not_echo_a_credential():
+    checks = check_settings(settings_with(free_base_url="https://u:SUPER-SECRET@host.test/v1"))
+    finding = next(check for check in checks if check.code == "base_url_invalid")
+
+    assert "SUPER-SECRET" not in finding.message
+
+
 def test_a_cooldown_far_shorter_than_one_timeout_is_reported():
     assert "cooldown_shorter_than_timeout" in codes(
         breaker_cooldown=10.0, upstream_read_timeout=900.0
