@@ -431,4 +431,54 @@ IPv6 保留前两段十六进制；限流仍按完整地址计数，行为不变
 `no-transform` 禁止代理改写流式响应体，若自建反向代理启用了压缩或缓冲，
 应先确认它没有忽略该指令。
 
+## 15. 按模型统计的上限与配置自检补充
+
+### 15.1 模型名与 other 桶
+
+| 变量 | 默认值 | 作用 |
+|---|---|---|
+| `DREAMAI_MAX_TRACKED_MODELS` | `64` | 按模型统计表的条目上限，允许范围 2～512 |
+
+自定义模型名按原样接受（网关的模型清单无法枚举），但统计表不能因此无限增长。
+超出上限的模型统一计入 `byModel.other`，token、费用与请求数都在该行累加。
+
+判读要点：
+
+1. `requests` **不是** `byModel` 各行之和；`blocked` 的请求从未到达模型，
+   没有对应的模型行。
+2. `other` 行占比高，说明正在使用大量自定义模型名；若关心具体分布，
+   调大 `DREAMAI_MAX_TRACKED_MODELS` 后重启，但旧快照中的明细已经归并，
+   无法回溯拆分。
+3. 启动时出现 `tracked_models_low`，说明上限低于 4，绝大多数模型会落进
+   `other`，应核对变量是否误填。
+4. 快照来自更高上限的进程时，导入会自动压缩到当前上限且保持总量不变。
+
+### 15.2 URL 与系统提示词
+
+新增三条启动发现：
+
+| code | 含义 | 处置 |
+|---|---|---|
+| `base_url_invalid` | 某个 base URL 或 Key 链接缺少 scheme、缺少 host、含空格、含凭据或带 query/fragment | 改为 `https://host/path` 形式；凭据应放在独立的 Key 变量中 |
+| `system_prompt_long` | 系统提示词超过 8000 字符 | 缩短；它每轮都重发，会挤占回答预算 |
+| `tracked_models_low` | 见上一节 | 调大模型表上限 |
+
+`base_url_invalid` 的 message 只写**变量名与原因**，不回显 URL 本身，
+因此即使误把密码写进 URL，也不会泄漏到日志或 `/api/health.configChecks`。
+自检只报告、不阻止启动；配置错误仍会在下一次真实请求中表现为失败。
+
+### 15.3 统计不变量
+
+排障时可以用以下关系判断计数是否自洽：
+
+```
+requests     == sum(byModel.requests) + blocked
+failures     == sum(byModel.failures) + blocked
+truncated    == sum(byModel.truncated) == sum(truncatedByTier)
+promptTokens == sum(byModel.promptTokens)
+```
+
+`tests/test_stats_invariants.py` 在实时快照、快照往返和超限归并三种情况下
+都会验证这些等式；若修改统计代码后等式不再成立，应先修统计再发版。
+
 
