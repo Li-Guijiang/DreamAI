@@ -270,6 +270,9 @@ class Settings:
     # Optional file for /api/usage counters to survive a restart. Empty = off.
     # Only aggregate counters are ever written; no IP, message or request id.
     usage_state: str = ""
+    # Ceiling on distinct model names kept in the per-model table. One slot is
+    # reserved for an "other" bucket that folds rare custom ids together.
+    max_tracked_models: int = 64
     # Seconds to wait for the next byte of a streamed reply. A slow reasoning
     # model needs more than a chat model; 240 is a compromise, and a gateway
     # that streams never faster than 5 minutes needs a higher value.
@@ -420,6 +423,7 @@ def load_settings() -> Settings:
         stream_usage=_env_bool("DREAMAI_STREAM_USAGE", True),
         prompt_cache=_env_bool("DREAMAI_PROMPT_CACHE", True),
         usage_state=_env("DREAMAI_USAGE_STATE", ""),
+        max_tracked_models=min(512, _env_int("DREAMAI_MAX_TRACKED_MODELS", 64, 2)),
         upstream_read_timeout=max(
             10.0,
             min(900.0, _env_float("DREAMAI_UPSTREAM_READ_TIMEOUT", 240.0)),
