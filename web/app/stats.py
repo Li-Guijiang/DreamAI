@@ -15,6 +15,12 @@ from __future__ import annotations
 import math
 import time
 
+#: A custom model id is accepted as-is, so a caller can invent an unlimited
+#: number of them. One reserved bucket keeps the per-model table - and the
+#: snapshot file - bounded even when a client cycles through random names.
+DEFAULT_MAX_TRACKED_MODELS = 64
+OTHER_MODEL = "other"
+
 #: Everything a snapshot carries. ``started_at`` is deliberately absent: uptime
 #: belongs to the process that is running now, not to the one that wrote the file.
 _NUMBER_FIELDS = (
@@ -66,8 +72,13 @@ def _valid_model_map(value: object) -> bool:
 class UsageStats:
     """Totals for this process, optionally restored from a previous one."""
 
-    def __init__(self, started_at: float | None = None) -> None:
+    def __init__(
+        self,
+        started_at: float | None = None,
+        max_tracked_models: int = DEFAULT_MAX_TRACKED_MODELS,
+    ) -> None:
         self.started_at = started_at if started_at is not None else time.time()
+        self.max_tracked_models = max(2, max_tracked_models)
         self.requests = 0
         self.failures = 0
         self.prompt_tokens = 0
@@ -115,9 +126,20 @@ class UsageStats:
         # and nothing was delivered either.
         self.cancelled = 0
 
+    def _target_name(self, model: str) -> str:
+        """Which bucket a model name belongs to, without creating anything."""
+        name = model or "unknown"
+        if name != OTHER_MODEL and name not in self._by_model:
+            # One slot is reserved for the overflow bucket. Without it, the
+            # bucket itself would push the table one entry past its ceiling.
+            named = sum(1 for key in self._by_model if key != OTHER_MODEL)
+            if named >= self.max_tracked_models - 1:
+                return OTHER_MODEL
+        return name
+
     def _slot(self, model: str) -> dict[str, float]:
         return self._by_model.setdefault(
-            model or "unknown",
+            self._target_name(model),
             {
                 "requests": 0,
                 "failures": 0,
@@ -274,11 +296,19 @@ class UsageStats:
         for name in _MAP_FIELDS:
             setattr(self, name, dict(counters[name]))
         self._by_model = {}
+        assigned: set[str] = set()
         for model, row in counters["_by_model"].items():
-            slot = self._slot(model)
+            target = self._target_name(model)
+            slot = self._slot(target)
+            # Several imported models may land in the same overflow bucket.
+            # The first supplies its values; later ones add to them, otherwise
+            # the snapshot would silently lose every model but the last.
+            overwrite = target not in assigned
+            assigned.add(target)
             for key, value in row.items():
-                if key in slot:
-                    slot[key] = value
+                if key not in slot:
+                    continue
+                slot[key] = value if overwrite else slot[key] + value
         return True
 
     def snapshot(self) -> dict:
