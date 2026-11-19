@@ -226,6 +226,12 @@ SSE。pump 捕获的异常会作为一条数据放入同一队列，由主协程
 失败日志经 `telemetry.mask_ip()` 只写网段，限流器仍用完整地址做键。
 状态端点返回 `no-store`，流式端点额外返回 `no-transform`。
 
+按模型统计有上限（`DREAMAI_MAX_TRACKED_MODELS`）：超出的自定义模型名写入
+预留的 `other` 桶，计数与费用仍在 totals 中；快照导入时若多个来源模型
+落到同一桶，首次赋值、后续累加。`requests` 与 `byModel` 各行的差额
+恰为 `blocked`——被拒请求从未到达模型。`validation.check_base_url()` 在
+启动时检查上游与 Key 链接，只报告变量名和原因，不回显可能含凭据的 URL。
+
 限流器也有自己的快照：`/api/health` 的 `limiter.tracked` 是正在被观察的客户端数——
 只有数量，不含 IP；`X-RateLimit-Remaining` 头把剩余额度告诉客户端，
 让它能在被拒绝之前自己降速。
