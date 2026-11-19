@@ -115,6 +115,7 @@ done
 
 <!-- CHECK_CODES
 fallback_partial
+base_url_invalid
 cooldown_shorter_than_timeout
 daily_below_window
 system_prompt_empty
