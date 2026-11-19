@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Bounded counters and early configuration checks
+
+- `DREAMAI_MAX_TRACKED_MODELS` (default 64, clamped to 2..512) bounds the
+  per-model table. Custom ids beyond the capacity are folded into
+  `byModel.other` with their counts, tokens and cost preserved.
+- Fixed a snapshot-import bug: several models merged into the overflow bucket
+  used to overwrite one another, leaving only the last one's numbers. Later
+  entries now add to the bucket.
+- Startup checks now report `base_url_invalid` (bad scheme, missing host,
+  whitespace, embedded credentials, query or fragment across the three base
+  URLs and two key URLs), `system_prompt_long` (over 8000 characters) and
+  `tracked_models_low`. URL findings quote the variable name and reason, never
+  the value, so a misplaced password cannot reach a log or `/api/health`.
+- `tests/test_stats_invariants.py` asserts that totals reconcile with their
+  breakdowns before and after a snapshot round trip and after compaction.
+- `docs/API.md` records `byModel.other` and the new finding codes.
+
 ### Back-pressure, memory and log privacy
 
 - The SSE queue is now bounded by `DREAMAI_STREAM_QUEUE_SIZE` (default 64,
