@@ -266,7 +266,7 @@ _cache = ResponseCache(
     max_bytes=settings.cache_max_bytes,
 )
 
-_stats = UsageStats(started_at=STARTED_AT)
+_stats = UsageStats(started_at=STARTED_AT, max_tracked_models=settings.max_tracked_models)
 
 
 def stream_queue() -> asyncio.Queue:
