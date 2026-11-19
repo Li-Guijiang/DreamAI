@@ -97,6 +97,18 @@ def test_an_empty_system_prompt_is_reported():
     assert "system_prompt_empty" in codes(system_prompt="   ")
 
 
+def test_an_overlong_system_prompt_is_reported():
+    assert "system_prompt_long" in codes(system_prompt="x" * 8001)
+
+
+def test_a_normal_system_prompt_is_not_reported():
+    assert "system_prompt_long" not in codes()
+
+
+def test_an_empty_prompt_is_not_also_reported_as_long():
+    assert "system_prompt_long" not in codes(system_prompt="")
+
+
 def test_concurrency_above_the_rate_limit_is_reported():
     assert "max_concurrency_over_limit" in codes(max_concurrency=50, rate_limit=30)
 
