@@ -98,6 +98,14 @@ def test_a_disabled_byte_budget_is_not_reported():
     assert "cache_bytes_small" not in codes(cache_max_bytes=0)
 
 
+def test_a_tiny_model_table_is_reported():
+    assert "tracked_models_low" in codes(max_tracked_models=2)
+
+
+def test_the_default_model_table_is_not_reported():
+    assert "tracked_models_low" not in codes()
+
+
 def test_a_tiny_byte_budget_does_not_matter_when_the_cache_is_off():
     assert "cache_bytes_small" not in codes(cache_max_bytes=1024, cache_ttl=0)
 
