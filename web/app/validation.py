@@ -15,6 +15,7 @@ Two rules matter:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from urllib.parse import urlparse
 
 from .pricing import check_price_tables, invalid_price_overrides
 
@@ -30,6 +31,32 @@ class Check:
 
     def as_dict(self) -> dict[str, str]:
         return {"code": self.code, "severity": self.severity, "message": self.message}
+
+
+def check_base_url(value: str) -> str | None:
+    """Why an operator-supplied URL cannot be used, or None when it can.
+
+    An empty value is legal: the fallback upstream is optional. The returned
+    reason never includes the value itself, so a URL with embedded credentials
+    cannot leak them into a log line or into `/api/health.configChecks`.
+    """
+    if not value:
+        return None
+    if any(character.isspace() for character in value):
+        return "contains whitespace"
+    try:
+        parsed = urlparse(value)
+    except ValueError:
+        return "cannot be parsed"
+    if parsed.scheme.lower() not in ("http", "https"):
+        return "scheme must be http or https"
+    if not parsed.netloc:
+        return "has no host"
+    if "@" in parsed.netloc:
+        return "must not embed credentials"
+    if parsed.query or parsed.fragment:
+        return "must not carry a query or fragment"
+    return None
 
 
 def check_settings(settings) -> list[Check]:
