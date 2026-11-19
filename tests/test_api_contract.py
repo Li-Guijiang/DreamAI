@@ -112,6 +112,7 @@ def test_every_config_check_code_is_documented(monkeypatch):
     broken = dataclasses.replace(
         load_settings(),
         fallback_base_url="https://example.test/v1",
+        byok_base_url="not-a-url",
         breaker_cooldown=1.0,
         upstream_read_timeout=900.0,
         daily_limit=1,
