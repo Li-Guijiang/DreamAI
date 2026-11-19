@@ -104,6 +104,10 @@ done
 | `/api/usage` | `truncated`, `truncatedByTier`, `byFinish` | 截断计数、按难度分布、结束原因分布 |
 | `/api/usage` | `cachedTokens`, `cachedShare` | 提示词缓存命中的输入及其占比 |
 | `/api/health`, `/api/usage` | `cache.maxBytes`, `cache.byteEvictions`, `cache.byteFull` | 缓存字节预算、按字节淘汰数、当前是否达到预算 |
+| `/api/usage` | `byModel.other` | 超出 `DREAMAI_MAX_TRACKED_MODELS` 的自定义模型名合并到该桶，计数与费用累加 |
+
+`byModel` 的条目数有上限，超出部分的请求计入 `other` 行；
+`requests` 是总量，不应按 `byModel` 各行重新求和来推算。
 
 `configChecks` 中不包含任何密钥、URL 凭据或系统提示词内容。
 
@@ -117,6 +121,7 @@ system_prompt_empty
 max_concurrency_over_limit
 cache_capacity_low
 cache_bytes_small
+tracked_models_low
 rate_window_short
 price_overrides_invalid
 price_table_inconsistent
