@@ -130,6 +130,10 @@ def test_every_config_check_code_is_documented(monkeypatch):
     )
     produced = {check.code for check in check_settings(broken)}
     produced |= {check.code for check in check_settings(dataclasses.replace(broken, cache_ttl=0))}
+    produced |= {
+        check.code
+        for check in check_settings(dataclasses.replace(broken, system_prompt="x" * 8001))
+    }
     monkeypatch.setattr(pricing, "CACHE_PRICES", {**pricing.CACHE_PRICES, "ghost": 0.5})
     produced |= {check.code for check in check_settings(broken)}
 
