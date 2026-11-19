@@ -108,3 +108,21 @@ def test_a_broken_price_table_is_published_at_startup(main_module, monkeypatch):
         checks = client.get("/api/health").json()["configChecks"]
 
     assert any(check["code"] == "price_table_inconsistent" for check in checks)
+
+
+def test_a_bad_url_is_published_without_echoing_the_value(main_module, monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "settings",
+        dataclasses.replace(
+            main_module.settings,
+            free_api_key="test-key",
+            byok_base_url="https://user:SUPER-SECRET@host.test/v1",
+        ),
+    )
+
+    with TestClient(main_module.app) as client:
+        checks = client.get("/api/health").json()["configChecks"]
+
+    assert any(check["code"] == "base_url_invalid" for check in checks)
+    assert "SUPER-SECRET" not in str(checks)
