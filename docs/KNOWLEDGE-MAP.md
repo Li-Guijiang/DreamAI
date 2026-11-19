@@ -616,3 +616,46 @@ python -m pytest tests/test_daily_quota_snapshot.py tests/test_price_table_check
 python -m pytest tests/test_cache_bytes.py tests/test_stream_backpressure.py -v
 python -m pytest tests/test_ip_masking.py tests/test_ip_logging.py -v
 ```
+
+---
+
+## 17. 有界集合需要一个「其它」出口
+
+给一个集合加上限很容易，难的是不丢信息。把超出的模型名直接丢弃，
+`requests` 与 `byModel` 之和就不再相等，账单总数与明细对不上；
+把新名字塞进固定槽位覆盖旧值，同样会丢数据。
+
+可用的模式是**预留一个归并桶**：
+
+```
+真实模型槽位 = 上限 - 1（留给 "other"）
+未知名字 → 若真实槽位已满 → 写入 other
+```
+
+这样上界固定，而 token、费用、请求数都留在 totals 里，
+只是分辨率变粗。这是常见的「基数截断」思路：日志级别、指标标签、
+IP 网段统计都用同一招。
+
+导入旧数据时还要多想一步：多个来源模型可能落进同一个归并桶。
+此时第一次出现应**赋值**，后续应**累加**。本项目的
+`UsageStats.import_counters()` 早期只做赋值，结果 20 个模型归并后
+只剩最后一个的计数——有界却失真，比无界更难发现，因为表格看起来很合理。
+
+### 17.1 校验信息不要回显被校验的值
+
+`base_url_invalid` 的 message 只写变量名与原因：
+
+```
+DREAMAI_BYOK_BASE_URL: must not embed credentials
+```
+
+不写原始 URL。原因有两个：一是 URL 可能含 `user:password@`，
+回显等于把密钥写进日志；二是 `/api/health.configChecks` 是读端点，
+任何能访问状态页的人都会看到。规则是**报告原因，不报告载荷**。
+
+动手验证：
+
+```bash
+python -m pytest tests/test_model_cardinality.py tests/test_stats_invariants.py -v
+python -m pytest tests/test_url_validation.py -v
+```
