@@ -119,6 +119,7 @@ base_url_invalid
 cooldown_shorter_than_timeout
 daily_below_window
 system_prompt_empty
+system_prompt_long
 max_concurrency_over_limit
 cache_capacity_low
 cache_bytes_small
