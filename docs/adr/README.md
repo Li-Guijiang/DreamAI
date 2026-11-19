@@ -31,3 +31,4 @@ New decisions should be added as numbered Markdown files, e.g.
 | [0017](./0017-config-checks-and-error-contract.md) | Startup checks, a typed error contract, and failures that arrive |
 | [0018](./0018-quota-continuity-and-input-boundaries.md) | Quota continuity and input boundaries |
 | [0019](./0019-backpressure-memory-and-log-privacy.md) | Back-pressure, a real memory ceiling, and network-only logs |
+| [0020](./0020-bounded-counters-and-early-config-checks.md) | Bounded counters and configuration errors found at boot |
