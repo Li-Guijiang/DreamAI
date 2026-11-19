@@ -106,3 +106,19 @@ def test_the_stream_queue_size_is_clamped(monkeypatch, raw, expected):
     monkeypatch.setenv("DREAMAI_STREAM_QUEUE_SIZE", raw)
 
     assert load_settings().stream_queue_size == expected
+
+
+def test_the_model_table_keeps_64_names_by_default(monkeypatch):
+    monkeypatch.delenv("DREAMAI_MAX_TRACKED_MODELS", raising=False)
+
+    assert load_settings().max_tracked_models == 64
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [("1", 2), ("16", 16), ("99999", 512), ("bad", 64)],
+)
+def test_the_model_table_limit_is_clamped(monkeypatch, raw, expected):
+    monkeypatch.setenv("DREAMAI_MAX_TRACKED_MODELS", raw)
+
+    assert load_settings().max_tracked_models == expected
