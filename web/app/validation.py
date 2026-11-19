@@ -138,6 +138,15 @@ def check_settings(settings) -> list[Check]:
                 "DREAMAI_SYSTEM_PROMPT is empty; identity and safety rules are gone.",
             )
         )
+    elif len(settings.system_prompt) > 8000:
+        checks.append(
+            Check(
+                "system_prompt_long",
+                WARNING,
+                f"System prompt is {len(settings.system_prompt)} characters; it is "
+                "resent on every turn and will crowd out the answer budget.",
+            )
+        )
 
     if settings.max_concurrency > settings.rate_limit:
         checks.append(
