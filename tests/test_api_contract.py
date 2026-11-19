@@ -120,6 +120,7 @@ def test_every_config_check_code_is_documented(monkeypatch):
         max_concurrency=50,
         cache_max_items=2,
         cache_max_bytes=1024,
+        max_tracked_models=2,
         rate_window=30,
         price_overrides="broken",
         stream_usage=False,
