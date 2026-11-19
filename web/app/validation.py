@@ -72,6 +72,16 @@ def check_settings(settings) -> list[Check]:
             )
         )
 
+    if settings.max_tracked_models < 4:
+        checks.append(
+            Check(
+                "tracked_models_low",
+                WARNING,
+                f"Per-model table keeps only {settings.max_tracked_models} names; "
+                "most models will be folded into the 'other' bucket.",
+            )
+        )
+
     if not settings.system_prompt.strip():
         checks.append(
             Check(
