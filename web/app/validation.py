@@ -78,6 +78,27 @@ def check_settings(settings) -> list[Check]:
             )
         )
 
+    urls = {
+        "DREAMAI_FREE_BASE_URL": settings.free_base_url,
+        "DREAMAI_BYOK_BASE_URL": settings.byok_base_url,
+        "DREAMAI_FALLBACK_BASE_URL": settings.fallback_base_url,
+        "DREAMAI_FREE_KEY_URL": settings.free_key_url,
+        "DREAMAI_BYOK_KEY_URL": settings.byok_key_url,
+    }
+    bad_urls = [
+        f"{name}: {reason}"
+        for name, value in urls.items()
+        if (reason := check_base_url(value)) is not None
+    ]
+    if bad_urls:
+        checks.append(
+            Check(
+                "base_url_invalid",
+                WARNING,
+                "Invalid URL - " + "; ".join(bad_urls[:2]) + ".",
+            )
+        )
+
     if settings.breaker_cooldown * 10 < settings.upstream_read_timeout:
         checks.append(
             Check(
