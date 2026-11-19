@@ -258,6 +258,8 @@ reaches the screen. Both are now explicit.
 | Stream back-pressure | A bounded queue stops fast upstreams filling memory | `DREAMAI_STREAM_QUEUE_SIZE` |
 | Cache memory ceiling | UTF-8 byte budget with LRU eviction, not just an item count | `DREAMAI_CACHE_MAX_BYTES` |
 | Log privacy | Failed-turn logs keep the network prefix, not the host | `telemetry.mask_ip()` |
+| Bounded model table | Custom ids beyond the cap fold into `byModel.other` | `DREAMAI_MAX_TRACKED_MODELS` |
+| Early URL checks | Malformed upstream URLs and overlong prompts are reported at boot | `validation.py`, `configChecks` |
 | Real usage | Token counts from all three wire formats, one usage event per stream | `usage_from_chunk()`, `DREAMAI_STREAM_USAGE` |
 | Price corrections | `DREAMAI_PRICE_OVERRIDES` fixes a stale price without a release | `pricing.configure_prices()` |
 | Provider view | `/api/usage` groups turns per vendor, not just per model | `byProvider` |
