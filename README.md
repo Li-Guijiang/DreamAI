@@ -260,6 +260,8 @@ reaches the screen. Both are now explicit.
 | Log privacy | Failed-turn logs keep the network prefix, not the host | `telemetry.mask_ip()` |
 | Bounded model table | Custom ids beyond the cap fold into `byModel.other` | `DREAMAI_MAX_TRACKED_MODELS` |
 | Early URL checks | Malformed upstream URLs and overlong prompts are reported at boot | `validation.py`, `configChecks` |
+| Admission deadline | Queued requests fail fast with a typed error | `DREAMAI_ADMISSION_TIMEOUT` |
+| Counted recovery | Retries, fallbacks and queueing time are measured separately | `on_retry` / `on_fallback`, `/api/usage` |
 | Real usage | Token counts from all three wire formats, one usage event per stream | `usage_from_chunk()`, `DREAMAI_STREAM_USAGE` |
 | Price corrections | `DREAMAI_PRICE_OVERRIDES` fixes a stale price without a release | `pricing.configure_prices()` |
 | Provider view | `/api/usage` groups turns per vendor, not just per model | `byProvider` |
