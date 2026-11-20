@@ -481,4 +481,48 @@ promptTokens == sum(byModel.promptTokens)
 `tests/test_stats_invariants.py` 在实时快照、快照往返和超限归并三种情况下
 都会验证这些等式；若修改统计代码后等式不再成立，应先修统计再发版。
 
+## 16. 心跳、并发准入与重试
+
+### 16.1 时序配置
+
+| 变量 | 默认值 | 作用 |
+|---|---|---|
+| `DREAMAI_HEARTBEAT_SECONDS` | `12` | 上游静默多久后发送 `: ping`，允许 1～120 秒 |
+| `DREAMAI_ADMISSION_TIMEOUT` | `10` | 等待并发槽位的秒数；`0` 表示无限等待（旧行为） |
+
+判据：
+
+1. 浏览器一直收不到首个 token，但每 12 秒有一条 `: ping`：连接正常，
+   上游在思考或响应很慢。
+2. `admissionTimeouts` 上升且 SSE 收到 `code=concurrency_limit`：
+   请求在队列里超时，未到上游。应检查是否有客户端长期占用连接，
+   或调大 `DREAMAI_MAX_CONCURRENCY`。
+3. `heartbeat_long` 表示心跳超过 60 秒，常见反向代理会先关闭连接，
+   应把心跳调短。
+4. `admission_timeout_short`（0～1 秒）通常意味着正常排队也被误判为拒绝，
+   除非明确需要快速失败，否则应调大。
+
+### 16.2 新增统计字段
+
+`/api/usage` 新增：
+
+| 字段 | 含义 |
+|---|---|
+| `admissionWaitAvg` / `admissionWaitMax` / `admissionWaitSamples` | 等待并发槽位的平均、最大时长与样本数（秒） |
+| `admissionTimeouts` | 等待超时次数；计入 `blocked` |
+| `retries` / `retriesByStatus` | 上游重试次数及按 HTTP 状态分组（`none` 表示无状态码） |
+| `fallbacks` | 主用上游失败后切换备用模型的次数 |
+
+`admissionWait*` 与 `avgTtft` 是两种不同的时间：前者发生在请求进入上游之前，
+后者从请求开始算到首个 token。慢在排队还是慢在上游，靠这两个字段区分。
+
+`retries` 与 `fallbacks` 是额外的**上游**请求，不计入 `requests`。
+若供应商账单里的调用次数高于 `requests`，先看这两个字段再怀疑计费错误。
+
+### 16.3 模型名自检
+
+`model_id_invalid` 表示免费模型、备用模型或某个 BYOK 模型的 id 为空、
+含空白、超过 128 字符或含控制字符。message 只写原因，不回显模型名。
+模型名会被原样发送给供应商，启动阶段发现拼写问题比第一次聊天再失败更省事。
+
 
