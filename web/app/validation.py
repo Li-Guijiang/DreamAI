@@ -120,6 +120,16 @@ def check_settings(settings) -> list[Check]:
             )
         )
 
+    if 0 < settings.admission_timeout < 1:
+        checks.append(
+            Check(
+                "admission_timeout_short",
+                WARNING,
+                f"Admission timeout ({settings.admission_timeout:g}s) is under a "
+                "second; ordinary queueing may be reported as a refusal.",
+            )
+        )
+
     if settings.heartbeat_seconds > 60:
         checks.append(
             Check(
