@@ -60,6 +60,14 @@ def test_an_invalid_base_url_is_reported():
     assert "base_url_invalid" in codes(byok_base_url="api.example.com/v1")
 
 
+def test_an_invalid_model_id_is_reported():
+    assert "model_id_invalid" in codes(free_model="bad model")
+
+
+def test_valid_model_ids_are_not_reported():
+    assert "model_id_invalid" not in codes()
+
+
 def test_a_partly_broken_key_url_is_reported():
     assert "base_url_invalid" in codes(free_key_url="https://")
 
