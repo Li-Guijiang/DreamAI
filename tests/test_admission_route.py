@@ -107,3 +107,12 @@ def test_a_normal_turn_records_its_wait(harness):
     assert response.status_code == 200
     assert main._stats.snapshot()["admissionWaitSamples"] == 1
     assert main._stats.snapshot()["admissionTimeouts"] == 0
+
+
+def test_a_normal_turn_still_ends_with_done(harness):
+    _, client = harness
+
+    response = client.post("/api/chat", json=BODY)
+
+    assert "event: done" in response.text
+    assert "event: error" not in response.text
