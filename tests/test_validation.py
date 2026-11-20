@@ -129,6 +129,14 @@ def test_a_disabled_byte_budget_is_not_reported():
     assert "cache_bytes_small" not in codes(cache_max_bytes=0)
 
 
+def test_a_long_heartbeat_is_reported():
+    assert "heartbeat_long" in codes(heartbeat_seconds=120.0)
+
+
+def test_the_default_heartbeat_is_not_reported():
+    assert "heartbeat_long" not in codes()
+
+
 def test_a_tiny_model_table_is_reported():
     assert "tracked_models_low" in codes(max_tracked_models=2)
 
