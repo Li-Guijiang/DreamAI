@@ -38,6 +38,8 @@ _NUMBER_FIELDS = (
     "_admission_wait_count",
     "_admission_wait_max",
     "admission_timeouts",
+    "retries",
+    "fallbacks",
     "local_answers",
     "blocked",
     "cancelled",
@@ -48,6 +50,7 @@ _MAP_FIELDS = (
     "_by_provider",
     "_by_finish",
     "_truncated_by_tier",
+    "_retries_by_status",
 )
 
 
@@ -112,6 +115,11 @@ class UsageStats:
         self._admission_wait_count = 0
         self._admission_wait_max = 0.0
         self.admission_timeouts = 0
+        # A retry that succeeded still cost an extra request upstream. Counting
+        # them explains why provider-side traffic exceeds `requests`.
+        self.retries = 0
+        self._retries_by_status: dict[str, int] = {}
+        self.fallbacks = 0
         # Tier is the only thing that explains a model mix: light turns should
         # far outnumber deep ones, or the router is not earning its keep.
         self._by_tier: dict[str, int] = {}
@@ -206,6 +214,16 @@ class UsageStats:
             self._by_tier[tier] = self._by_tier.get(tier, 0) + 1
         self._slot("local")["requests"] += 1
         self._by_provider["local"] = self._by_provider.get("local", 0) + 1
+
+    def record_retry(self, status: int | None) -> None:
+        """One upstream attempt repeated before any token was shown."""
+        self.retries += 1
+        key = str(status) if status is not None else "none"
+        self._retries_by_status[key] = self._retries_by_status.get(key, 0) + 1
+
+    def record_fallback(self) -> None:
+        """The primary failed before any token and the secondary was used."""
+        self.fallbacks += 1
 
     def record_admission_wait(self, seconds: float) -> None:
         """How long a request waited for a concurrency slot."""
@@ -356,6 +374,9 @@ class UsageStats:
             "admissionWaitSamples": self._admission_wait_count,
             "admissionWaitMax": round(self._admission_wait_max, 3),
             "admissionTimeouts": self.admission_timeouts,
+            "retries": self.retries,
+            "retriesByStatus": dict(self._retries_by_status),
+            "fallbacks": self.fallbacks,
             "local": self.local_answers,
             "blocked": self.blocked,
             "cancelled": self.cancelled,
