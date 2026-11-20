@@ -34,6 +34,10 @@ _NUMBER_FIELDS = (
     "_ttft_total",
     "_ttft_count",
     "_ttft_max",
+    "_admission_wait_total",
+    "_admission_wait_count",
+    "_admission_wait_max",
+    "admission_timeouts",
     "local_answers",
     "blocked",
     "cancelled",
@@ -102,6 +106,12 @@ class UsageStats:
         # The average hides a single 40-second turn behind a hundred fast ones;
         # the worst case is what a visitor actually screenshots.
         self._ttft_max = 0.0
+        # Waiting for a concurrency slot is not upstream latency. Tracking it
+        # separately tells a queueing problem from a slow provider.
+        self._admission_wait_total = 0.0
+        self._admission_wait_count = 0
+        self._admission_wait_max = 0.0
+        self.admission_timeouts = 0
         # Tier is the only thing that explains a model mix: light turns should
         # far outnumber deep ones, or the router is not earning its keep.
         self._by_tier: dict[str, int] = {}
@@ -196,6 +206,17 @@ class UsageStats:
             self._by_tier[tier] = self._by_tier.get(tier, 0) + 1
         self._slot("local")["requests"] += 1
         self._by_provider["local"] = self._by_provider.get("local", 0) + 1
+
+    def record_admission_wait(self, seconds: float) -> None:
+        """How long a request waited for a concurrency slot."""
+        self._admission_wait_total += seconds
+        self._admission_wait_count += 1
+        self._admission_wait_max = max(self._admission_wait_max, seconds)
+
+    def record_admission_timeout(self) -> None:
+        """A request that gave up before it ever reached the provider."""
+        self.admission_timeouts += 1
+        self.record_blocked()
 
     def record_blocked(self) -> None:
         """Count a turn the breaker refused before any work was done."""
@@ -329,6 +350,12 @@ class UsageStats:
             "avgTtft": round(self.avg_ttft(), 2),
             "ttftSamples": self._ttft_count,
             "ttftMax": round(self._ttft_max, 2),
+            "admissionWaitAvg": round(self._admission_wait_total / self._admission_wait_count, 3)
+            if self._admission_wait_count
+            else 0.0,
+            "admissionWaitSamples": self._admission_wait_count,
+            "admissionWaitMax": round(self._admission_wait_max, 3),
+            "admissionTimeouts": self.admission_timeouts,
             "local": self.local_answers,
             "blocked": self.blocked,
             "cancelled": self.cancelled,
