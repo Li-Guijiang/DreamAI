@@ -60,6 +60,10 @@ done
 | `reasoning` | `t` | 思考过程片段；与正文分开渲染 |
 | `usage` | `prompt_tokens`, `completion_tokens`, `cached_tokens` | 上游实际计数，缺省字段表示上游未报告 |
 | `error` | `message`, `code`, `status`, `retryable` | 见第 4 节 |
+| `: ping` | 注释行，无数据字段 | 上游静默超过 `DREAMAI_HEARTBEAT_SECONDS`（默认 12 秒）时发送 |
+
+`error` 出现后不再发送 `done`。心跳是 SSE 注释行而不是事件，
+旧客户端会忽略它；它只用于让代理与浏览器保持连接。
 | `done` | `tier`, `intent`, `requestId`, `chars`, `elapsed`, `model`, `truncated` | 可选：`finish`、`usage`、`cost` |
 
 `done.finish` 取值 `length` / `stop` / `filter` / `other`；`done.truncated`
@@ -125,6 +129,7 @@ cache_capacity_low
 cache_bytes_small
 tracked_models_low
 rate_window_short
+heartbeat_long
 price_overrides_invalid
 price_table_inconsistent
 stream_usage_off
