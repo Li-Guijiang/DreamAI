@@ -123,6 +123,7 @@ def test_every_config_check_code_is_documented(monkeypatch):
         cache_max_bytes=1024,
         max_tracked_models=2,
         rate_window=30,
+        heartbeat_seconds=120.0,
         price_overrides="broken",
         stream_usage=False,
         cache_ttl=300.0,
