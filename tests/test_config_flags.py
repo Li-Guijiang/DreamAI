@@ -108,6 +108,22 @@ def test_the_stream_queue_size_is_clamped(monkeypatch, raw, expected):
     assert load_settings().stream_queue_size == expected
 
 
+def test_the_heartbeat_is_twelve_seconds_by_default(monkeypatch):
+    monkeypatch.delenv("DREAMAI_HEARTBEAT_SECONDS", raising=False)
+
+    assert load_settings().heartbeat_seconds == 12.0
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [("0", 1.0), ("5", 5.0), ("999", 120.0), ("bad", 12.0)],
+)
+def test_the_heartbeat_is_clamped(monkeypatch, raw, expected):
+    monkeypatch.setenv("DREAMAI_HEARTBEAT_SECONDS", raw)
+
+    assert load_settings().heartbeat_seconds == expected
+
+
 def test_the_model_table_keeps_64_names_by_default(monkeypatch):
     monkeypatch.delenv("DREAMAI_MAX_TRACKED_MODELS", raising=False)
 
