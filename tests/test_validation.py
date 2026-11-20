@@ -137,6 +137,18 @@ def test_the_default_heartbeat_is_not_reported():
     assert "heartbeat_long" not in codes()
 
 
+def test_a_very_short_admission_timeout_is_reported():
+    assert "admission_timeout_short" in codes(admission_timeout=0.2)
+
+
+def test_an_unlimited_admission_wait_is_not_reported():
+    assert "admission_timeout_short" not in codes(admission_timeout=0)
+
+
+def test_the_default_admission_timeout_is_not_reported():
+    assert "admission_timeout_short" not in codes()
+
+
 def test_a_tiny_model_table_is_reported():
     assert "tracked_models_low" in codes(max_tracked_models=2)
 
