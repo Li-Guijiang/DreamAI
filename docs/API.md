@@ -92,6 +92,7 @@ done
 | `upstream` | 408 / 425 / 5xx 及其它 | 稍后重试 |
 | `internal` | 无状态的服务内部异常 | 稍后重试；若持续出现请查日志 |
 | `breaker` | 熔断器打开，请求未发往上游 | 等待冷却后重试 |
+| `concurrency_limit` | 等待并发槽位超过 `DREAMAI_ADMISSION_TIMEOUT` | 稍后重试；同时检查是否有人长期占用连接 |
 
 ## 5. 非流式错误响应
 
@@ -108,7 +109,10 @@ done
 | `/api/usage` | `truncated`, `truncatedByTier`, `byFinish` | 截断计数、按难度分布、结束原因分布 |
 | `/api/usage` | `cachedTokens`, `cachedShare` | 提示词缓存命中的输入及其占比 |
 | `/api/health`, `/api/usage` | `cache.maxBytes`, `cache.byteEvictions`, `cache.byteFull` | 缓存字节预算、按字节淘汰数、当前是否达到预算 |
+| `/api/usage` | `admissionWaitAvg`, `admissionWaitSamples`, `admissionWaitMax`, `admissionTimeouts` | 等待并发槽位的时长与超时次数；与 TTFT 分开统计 |
 | `/api/usage` | `byModel.other` | 超出 `DREAMAI_MAX_TRACKED_MODELS` 的自定义模型名合并到该桶，计数与费用累加 |
+
+`admissionTimeouts` 计入 `blocked`：请求从未到达模型，因此没有 `byModel` 行。
 
 `byModel` 的条目数有上限，超出部分的请求计入 `other` 行；
 `requests` 是总量，不应按 `byModel` 各行重新求和来推算。
@@ -130,6 +134,7 @@ cache_bytes_small
 tracked_models_low
 rate_window_short
 heartbeat_long
+admission_timeout_short
 price_overrides_invalid
 price_table_inconsistent
 stream_usage_off
