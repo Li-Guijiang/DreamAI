@@ -232,6 +232,14 @@ SSE。pump 捕获的异常会作为一条数据放入同一队列，由主协程
 恰为 `blocked`——被拒请求从未到达模型。`validation.check_base_url()` 在
 启动时检查上游与 Key 链接，只报告变量名和原因，不回显可能含凭据的 URL。
 
+请求时序与恢复计数：`admit_request()` 是持有并发槽位的异步上下文管理器，
+在 `acquire()` 前后计时并按 `DREAMAI_ADMISSION_TIMEOUT` 设截止时间；
+超时产生的 `AdmissionTimeout` 在流内变成 `code=concurrency_limit` 的
+`error` 事件并计入 `blocked`，不触发熔断器。SSE 心跳的等待时长来自
+`DREAMAI_HEARTBEAT_SECONDS`。`llm.stream_with_retry()` 与
+`stream_with_fallback()` 的可选回调把额外上游尝试写入 `UsageStats`；
+它们与 `requests` 分开计数，因为访客只发起了一轮对话。
+
 限流器也有自己的快照：`/api/health` 的 `limiter.tracked` 是正在被观察的客户端数——
 只有数量，不含 IP；`X-RateLimit-Remaining` 头把剩余额度告诉客户端，
 让它能在被拒绝之前自己降速。
