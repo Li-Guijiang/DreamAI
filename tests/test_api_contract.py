@@ -36,7 +36,10 @@ def test_every_error_code_in_the_document_is_reachable():
     section = _read("docs/API.md").split("`code` 取值：")[1].split("## 5.")[0]
     documented = set(re.findall(r"^\| `([a-z_]+)` \|", section, re.M))
     statuses = (None, 400, 401, 402, 403, 404, 408, 410, 413, 422, 425, 429, 500, 503, 504)
-    reachable = {error_code(status) for status in statuses} | {"breaker"}
+    reachable = {error_code(status) for status in statuses} | {
+        "breaker",
+        "concurrency_limit",
+    }
 
     assert documented == reachable
 
@@ -124,6 +127,7 @@ def test_every_config_check_code_is_documented(monkeypatch):
         max_tracked_models=2,
         rate_window=30,
         heartbeat_seconds=120.0,
+        admission_timeout=0.2,
         price_overrides="broken",
         stream_usage=False,
         cache_ttl=300.0,
