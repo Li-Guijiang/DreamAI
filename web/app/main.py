@@ -269,6 +269,34 @@ _cache = ResponseCache(
 _stats = UsageStats(started_at=STARTED_AT, max_tracked_models=settings.max_tracked_models)
 
 
+class AdmissionTimeout(Exception):
+    """No concurrency slot became available before the configured deadline."""
+
+
+@asynccontextmanager
+async def admit_request():
+    """Hold a concurrency slot for one turn, with a deadline and accounting.
+
+    An unbounded semaphore wait looks like a slow provider from the outside:
+    the client sees neither an answer nor an error. A deadline turns it into a
+    fast, honest refusal, and the wait time is counted separately from TTFT.
+    """
+    started = time.monotonic()
+    try:
+        if settings.admission_timeout > 0:
+            await asyncio.wait_for(_semaphore.acquire(), timeout=settings.admission_timeout)
+        else:
+            await _semaphore.acquire()
+    except TimeoutError:
+        _stats.record_admission_timeout()
+        raise AdmissionTimeout from None
+    _stats.record_admission_wait(time.monotonic() - started)
+    try:
+        yield
+    finally:
+        _semaphore.release()
+
+
 def stream_queue() -> asyncio.Queue:
     """The bounded channel between the upstream pump and the SSE writer.
 
@@ -1049,6 +1077,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
         produced = 0
         failed = False
         cancelled = False
+        admission_refused = False
         usage_payload: dict | None = None
         # Empty means the provider never said why it stopped. "length" means the
         # answer was cut off at the token budget; both are reported, never mixed
@@ -1119,7 +1148,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             )
             return
         try:
-            async with _semaphore:
+            async with admit_request():
 
                 async def _primary() -> AsyncIterator[tuple[str, str]]:
                     async for item in llm.stream_completion(
@@ -1220,6 +1249,17 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                     answered.append(patch)
                     produced += len(patch)
                     yield sse("delta", {"t": patch})
+        except AdmissionTimeout:
+            admission_refused = True
+            failed = True
+            yield sse(
+                "error",
+                error_payload(
+                    "当前并发请求过多，请稍后重试。",
+                    code="concurrency_limit",
+                    retryable=True,
+                ),
+            )
         except llm.LLMError as exc:
             failed = True
             openings_before = _breaker.openings
@@ -1269,7 +1309,11 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 _stats.record_usage(
                     model, prompt_tokens, completion_tokens, cost, cached=cached_tokens
                 )
-            if cancelled:
+            if admission_refused:
+                # record_admission_timeout() already counted this request;
+                # it never reached a model, so there is no turn to record.
+                pass
+            elif cancelled:
                 _stats.record_cancelled(model)
             else:
                 _stats.record_turn(
