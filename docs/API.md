@@ -127,6 +127,7 @@ done
 
 <!-- CHECK_CODES
 fallback_partial
+model_id_invalid
 base_url_invalid
 cooldown_shorter_than_timeout
 daily_below_window
