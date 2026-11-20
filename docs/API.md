@@ -42,6 +42,18 @@
 `{"error": 中文句子（含字段位置）, "code": "invalid_body"}`，
 不使用 FastAPI 默认的 422 与 pydantic 错误数组。
 
+### 2.2 时序配置
+
+| 变量 | 默认值 | 影响 |
+|---|---|---|
+| `DREAMAI_HEARTBEAT_SECONDS` | `12` | 上游静默时 `: ping` 的间隔，允许 1～120 秒 |
+| `DREAMAI_ADMISSION_TIMEOUT` | `10` | 等待并发槽位的秒数；`0` 表示无限等待 |
+
+等待并发槽位超时时，SSE 发送 `error` 事件
+（`code=concurrency_limit`，`retryable=true`），不发送 `done`。
+该请求计入 `blocked` 与 `admissionTimeouts`，不进入 `byModel`，
+也不会计入熔断器的失败数。
+
 ## 3. SSE 事件
 
 <!-- EVENTS
