@@ -659,3 +659,42 @@ DREAMAI_BYOK_BASE_URL: must not embed credentials
 python -m pytest tests/test_model_cardinality.py tests/test_stats_invariants.py -v
 python -m pytest tests/test_url_validation.py -v
 ```
+
+---
+
+## 18. 排队时间不是响应时间
+
+一个请求花掉的时间至少有两段：
+
+```
+总耗时 = 等待并发槽位 + 上游生成 + 网络回传
+```
+
+若只记录总耗时（或 TTFT），队列拥堵与上游变慢在数据上完全一样，
+运维会去优化错误的那一层。把它们分开记录是最低成本的可观测性改进：
+在信号量 `acquire()` 前后各取一次时间，写入独立计数器。
+
+第二段工程设计是**等待也要有上限**。无限等待的语义是「系统忙时，
+请求永远挂着」；对浏览器来说，挂着和断线没有区别，用户只会反复刷新，
+进一步增加负载。一个明确的超时 + 可机器识别的错误码，让客户端能决定
+稍后重试，也让服务端能在统计中区分「被拒绝」与「失败」。
+
+被拒请求没有到达模型，因此在 `byModel` 中没有行。这不是数据缺失，
+而是分类事实：它与 `blocked` 一一对应，`requests - sum(byModel) == blocked`
+正好描述了这件事。**不变量不是额外写上去的等式，而是对事件顺序的描述。**
+
+### 18.1 成功路径上的失败也要计数
+
+重试成功时，访客看到一次成功，供应商看到两次调用。若计数器只有
+`requests`，账单与仪表盘会永久对不上。解决方式是把「额外上游尝试」
+单独计数（`retries`、`retriesByStatus`、`fallbacks`），并且明确它们
+不是新一轮对话，不计入 `requests`。
+
+在通用重试函数上暴露可选回调（`on_retry`、`on_fallback`）是低成本做法：
+不传回调时行为完全不变，传了就能把事件接入任何统计系统。
+
+动手验证：
+
+```bash
+python -m pytest tests/test_admission_route.py tests/test_retry_stats.py -v
+```
