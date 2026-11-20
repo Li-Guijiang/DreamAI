@@ -1189,8 +1189,12 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
 
                 def _chain():
                     if settings.fallback_configured:
-                        return llm.stream_with_fallback(_primary, _secondary)
-                    return llm.stream_with_retry(_primary)
+                        return llm.stream_with_fallback(
+                            _primary,
+                            _secondary,
+                            on_fallback=_stats.record_fallback,
+                        )
+                    return llm.stream_with_retry(_primary, on_retry=_stats.record_retry)
 
                 async def _pump() -> None:
                     try:
