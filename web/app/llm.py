@@ -11,7 +11,7 @@ import asyncio
 import json
 import logging
 import random
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 import httpx
 
@@ -280,7 +280,10 @@ def retry_delay(delay: float, attempt: int) -> float:
 
 
 async def stream_with_retry(
-    factory, attempts: int = 2, delay: float = 0.6
+    factory,
+    attempts: int = 2,
+    delay: float = 0.6,
+    on_retry: Callable[[int | None], None] | None = None,
 ) -> AsyncIterator[tuple[str, str]]:
     """Run ``factory()`` and retry a transient upstream failure once.
 
@@ -298,11 +301,17 @@ async def stream_with_retry(
             retryable = is_retryable(error.status_code)
             if produced or not retryable or attempt == attempts:
                 raise
+            if on_retry is not None:
+                on_retry(error.status_code)
             logger.info("upstream %s, retrying (%s/%s)", error.status_code, attempt, attempts)
             await asyncio.sleep(retry_delay(delay, attempt))
 
 
-async def stream_with_fallback(primary, fallback) -> AsyncIterator[tuple[str, str]]:
+async def stream_with_fallback(
+    primary,
+    fallback,
+    on_fallback: Callable[[], None] | None = None,
+) -> AsyncIterator[tuple[str, str]]:
     """Use the fallback only when the primary fails before producing anything.
 
     Once a token has been shown to the user, switching providers would splice two
@@ -317,5 +326,7 @@ async def stream_with_fallback(primary, fallback) -> AsyncIterator[tuple[str, st
     except LLMError:
         if produced or fallback is None:
             raise
+    if on_fallback is not None:
+        on_fallback()
     async for item in fallback():
         yield item
