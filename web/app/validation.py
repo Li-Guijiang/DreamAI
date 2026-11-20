@@ -120,6 +120,16 @@ def check_settings(settings) -> list[Check]:
             )
         )
 
+    if settings.heartbeat_seconds > 60:
+        checks.append(
+            Check(
+                "heartbeat_long",
+                WARNING,
+                f"Heartbeat is {settings.heartbeat_seconds:g}s; many proxies close "
+                "an idle SSE connection before the first comment line.",
+            )
+        )
+
     if settings.max_tracked_models < 4:
         checks.append(
             Check(
