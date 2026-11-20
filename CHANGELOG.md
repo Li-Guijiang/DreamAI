@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Request lifecycle observability
+
+- `DREAMAI_HEARTBEAT_SECONDS` (default 12, clamped to 1..120) replaces the
+  hard-coded SSE heartbeat timeout. Values over 60 produce `heartbeat_long`.
+- `DREAMAI_ADMISSION_TIMEOUT` (default 10s, `0` = wait indefinitely) bounds
+  the concurrency-slot wait. A timeout yields an `error` frame with
+  `code=concurrency_limit` and `retryable=true`, never a `done`.
+- `/api/usage` gains `admissionWaitAvg`, `admissionWaitSamples`,
+  `admissionWaitMax`, `admissionTimeouts`, `retries`, `retriesByStatus` and
+  `fallbacks`. Admission timeouts count as `blocked`; retries and fallbacks are
+  extra upstream calls and do not change `requests`.
+- `stream_with_retry()` and `stream_with_fallback()` take optional
+  `on_retry` / `on_fallback` hooks, wired to the counters by the chat route.
+  Existing callers are unaffected.
+- Startup checks reject impossible configured model ids (`model_id_invalid`)
+  and a sub-second admission timeout (`admission_timeout_short`).
+
 ### Bounded counters and early configuration checks
 
 - `DREAMAI_MAX_TRACKED_MODELS` (default 64, clamped to 2..512) bounds the
