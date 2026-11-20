@@ -126,3 +126,16 @@ def test_a_bad_url_is_published_without_echoing_the_value(main_module, monkeypat
 
     assert any(check["code"] == "base_url_invalid" for check in checks)
     assert "SUPER-SECRET" not in str(checks)
+
+
+def test_an_impossible_model_id_is_published_at_startup(main_module, monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "settings",
+        dataclasses.replace(main_module.settings, free_api_key="test-key", free_model="bad model"),
+    )
+
+    with TestClient(main_module.app) as client:
+        checks = client.get("/api/health").json()["configChecks"]
+
+    assert any(check["code"] == "model_id_invalid" for check in checks)
