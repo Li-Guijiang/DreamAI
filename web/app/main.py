@@ -1180,7 +1180,9 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
                 try:
                     while True:
                         try:
-                            item = await asyncio.wait_for(queue.get(), timeout=12)
+                            item = await asyncio.wait_for(
+                                queue.get(), timeout=settings.heartbeat_seconds
+                            )
                         except TimeoutError:
                             yield b": ping\n\n"
                             continue
