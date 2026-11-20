@@ -33,6 +33,19 @@ class Check:
         return {"code": self.code, "severity": self.severity, "message": self.message}
 
 
+def check_model_id(value: str) -> str | None:
+    """Why a configured model id cannot be used, or None when it can."""
+    if not value or not value.strip():
+        return "is empty"
+    if any(character.isspace() for character in value):
+        return "contains whitespace"
+    if len(value) > 128:
+        return "is longer than 128 characters"
+    if any(ord(character) < 32 or ord(character) == 127 for character in value):
+        return "contains control characters"
+    return None
+
+
 def check_base_url(value: str) -> str | None:
     """Why an operator-supplied URL cannot be used, or None when it can.
 
@@ -75,6 +88,19 @@ def check_settings(settings) -> list[Check]:
                 WARNING,
                 "Fallback is only partly configured (base URL, key and model are all "
                 "required); it will not be used when the primary fails.",
+            )
+        )
+
+    models = [settings.free_model, *(model.id for model in settings.byok_models)]
+    if settings.fallback_model:
+        models.append(settings.fallback_model)
+    reasons = [reason for value in models if (reason := check_model_id(value)) is not None]
+    if reasons:
+        checks.append(
+            Check(
+                "model_id_invalid",
+                WARNING,
+                "Model id " + ", ".join(reasons[:2]) + ".",
             )
         )
 
