@@ -300,6 +300,9 @@ class Settings:
     rate_window: int = 600
     daily_limit: int = 2000
     max_concurrency: int = 6
+    # Seconds between ": ping" comment lines while the upstream is silent.
+    # A proxy that closes idle connections sooner needs a smaller value.
+    heartbeat_seconds: float = 12.0
     # Bounded channel between the upstream pump and the SSE writer. A fast
     # provider and a slow reader otherwise grow an unbounded queue until the
     # process runs out of memory; a ceiling makes put() apply back-pressure.
@@ -446,6 +449,7 @@ def load_settings() -> Settings:
         daily_limit=_env_int("DREAMAI_DAILY_LIMIT", 2000, 0),
         max_concurrency=_env_int("DREAMAI_MAX_CONCURRENCY", 6, 1),
         stream_queue_size=min(512, max(8, _env_int("DREAMAI_STREAM_QUEUE_SIZE", 64, 8))),
+        heartbeat_seconds=min(120.0, max(1.0, _env_float("DREAMAI_HEARTBEAT_SECONDS", 12.0))),
         max_input_chars=_env_int("DREAMAI_MAX_INPUT_CHARS", 12000, 500),
         max_history_messages=_env_int("DREAMAI_MAX_HISTORY_MESSAGES", 30, 2),
         max_history_chars=_env_int("DREAMAI_MAX_HISTORY_CHARS", 60000, 2000),
