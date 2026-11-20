@@ -138,3 +138,19 @@ def test_the_model_table_limit_is_clamped(monkeypatch, raw, expected):
     monkeypatch.setenv("DREAMAI_MAX_TRACKED_MODELS", raw)
 
     assert load_settings().max_tracked_models == expected
+
+
+def test_admission_waits_ten_seconds_by_default(monkeypatch):
+    monkeypatch.delenv("DREAMAI_ADMISSION_TIMEOUT", raising=False)
+
+    assert load_settings().admission_timeout == 10.0
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [("0", 0.0), ("0.5", 0.5), ("999", 120.0), ("bad", 10.0)],
+)
+def test_the_admission_timeout_is_clamped(monkeypatch, raw, expected):
+    monkeypatch.setenv("DREAMAI_ADMISSION_TIMEOUT", raw)
+
+    assert load_settings().admission_timeout == expected
