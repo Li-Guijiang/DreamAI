@@ -226,5 +226,29 @@ def test_a_missing_service_worker_is_reported(tmp_path):
     assert any("missing" in item for item in check_site.check_site(site)["issues"]["serviceWorker"])
 
 
+def test_the_json_result_has_a_stable_shape():
+    result = check_site.check_site(SITE)
+
+    assert set(result) == {
+        "pages",
+        "assetReferences",
+        "pageLinks",
+        "issues",
+        "ok",
+    }
+    assert set(result["issues"]) == {
+        "missing",
+        "conflicts",
+        "unversioned",
+        "brokenPages",
+        "brokenAnchors",
+        "css",
+        "metadata",
+        "markup",
+        "serviceWorker",
+        "manifest",
+    }
+
+
 def test_the_published_service_worker_matches_the_app():
     assert check_site.check_site(SITE)["issues"]["serviceWorker"] == []
