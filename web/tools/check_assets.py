@@ -78,8 +78,12 @@ def version_conflicts(references: list[AssetRef]) -> list[str]:
     )
 
 
-def check(root: Path) -> dict:
-    """Machine-readable result for one site root."""
+def check(root: Path, strict: bool = False) -> dict:
+    """Machine-readable result for one site root.
+
+    ``strict`` promotes unversioned local assets to a failure. It is opt-in
+    because favicons and inline SVGs are commonly served without a version.
+    """
     references = scan_assets(root)
     issues = {
         "missing": missing_assets(references, root),
@@ -90,9 +94,10 @@ def check(root: Path) -> dict:
         "pages": len(list(root.glob("*.html"))),
         "references": len(references),
         "issues": issues,
-        # An unversioned asset is a warning: it may be an intentional relative
-        # reference. Missing files and conflicting versions are hard failures.
-        "ok": not issues["missing"] and not issues["conflicts"],
+        # An unversioned asset is a warning by default; --strict promotes it.
+        "ok": not issues["missing"]
+        and not issues["conflicts"]
+        and not (strict and issues["unversioned"]),
     }
 
 
@@ -113,13 +118,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT)
     parser.add_argument("--json", action="store_true", help="emit JSON instead of text")
+    parser.add_argument("--strict", action="store_true", help="also fail on unversioned assets")
     args = parser.parse_args(argv)
 
     if not args.root.is_dir():
         print(f"assets: site root not found: {args.root}", file=sys.stderr)
         return 2
 
-    result = check(args.root)
+    result = check(args.root, strict=args.strict)
     print(json.dumps(result, ensure_ascii=False, indent=2) if args.json else _format(result))
     return 0 if result["ok"] else 1
 
