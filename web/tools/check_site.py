@@ -14,6 +14,7 @@ import argparse
 import json
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 
 from check_assets import DEFAULT_ROOT
@@ -26,6 +27,8 @@ CSS_URL = re.compile(r'url\(\s*["\']?([^\)"\']+)["\']?\s*\)')
 LANG = re.compile(r"<html[^>]*\blang=\"([^\"]+)\"", re.I)
 TITLE = re.compile(r"<title>\s*\S", re.I)
 DESCRIPTION = re.compile(r'<meta\s+name="description"\s+content="\s*\S', re.I)
+BLANK_LINK = re.compile(r"<a\b[^>]*target=\"_blank\"[^>]*>", re.I)
+NOOPENER = re.compile(r"\brel=\"[^\"]*\bnoopener\b", re.I)
 SW_CACHE = re.compile(r'const\s+CACHE\s*=\s*["\']dreamai-shell-v(\d+\.\d+\.\d+)["\']')
 APP_VERSION = re.compile(r'^VERSION\s*=\s*"([^"]+)"', re.M)
 SEMVER = re.compile(r"\d+\.\d+\.\d+")
@@ -95,6 +98,20 @@ def metadata_issues(root: Path) -> list[str]:
         if not DESCRIPTION.search(text):
             issues.append(f"{page.name}: missing description")
     return issues
+
+
+def markup_issues(root: Path) -> list[str]:
+    """Duplicate ids and new-window links without ``rel=noopener``."""
+    issues: list[str] = []
+    for page in sorted(root.glob("*.html")):
+        text = page.read_text(encoding="utf-8")
+        for name, count in Counter(ID_ATTR.findall(text)).items():
+            if count > 1:
+                issues.append(f"{page.name}: duplicate id #{name} ({count}x)")
+        for tag in BLANK_LINK.findall(text):
+            if not NOOPENER.search(tag):
+                issues.append(f"{page.name}: target=_blank without rel=noopener")
+    return sorted(issues)
 
 
 def sw_issues(root: Path) -> list[str]:
@@ -172,6 +189,7 @@ def check_site(root: Path) -> dict:
         "brokenAnchors": broken_anchors(root),
         "css": css_issues(root),
         "metadata": metadata_issues(root),
+        "markup": markup_issues(root),
         "serviceWorker": sw_issues(root),
         "manifest": manifest_issues(root),
     }
@@ -182,6 +200,7 @@ def check_site(root: Path) -> dict:
         "brokenAnchors",
         "css",
         "metadata",
+        "markup",
         "serviceWorker",
         "manifest",
     )
@@ -206,6 +225,7 @@ def _format(result: dict) -> str:
         ("brokenAnchors", "BROKEN ANCHOR"),
         ("css", "MISSING CSS ASSET"),
         ("metadata", "MISSING METADATA"),
+        ("markup", "BAD MARKUP"),
         ("serviceWorker", "STALE SERVICE WORKER"),
         ("manifest", "BAD MANIFEST"),
         ("unversioned", "unversioned (warning)"),
