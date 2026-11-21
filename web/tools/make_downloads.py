@@ -41,7 +41,9 @@ def digest(path: Path, algorithm: str = "sha256") -> bytes:
     return hasher.digest()
 
 
-def build_manifest(version: str, installer: Path | None, notes: str, previous: dict | None = None) -> dict:
+def build_manifest(
+    version: str, installer: Path | None, notes: str, previous: dict | None = None
+) -> dict:
     """Describe a release, reusing verified hashes when the build is not here.
 
     The repository does not carry the 120 MB installer, so a manifest that is
@@ -107,7 +109,10 @@ def main() -> int:
             print("latest.json is missing", file=sys.stderr)
             return 1
         if previous.get("version") != version:
-            print(f"latest.json says {previous.get('version')}, package.json says {version}", file=sys.stderr)
+            print(
+                f"latest.json says {previous.get('version')}, package.json says {version}",
+                file=sys.stderr,
+            )
             return 1
         if previous.get("file") != f"DreamAI-Setup-{version}.exe":
             print("latest.json points at the wrong installer name", file=sys.stderr)
@@ -115,7 +120,9 @@ def main() -> int:
         print(f"latest.json is current ({version})")
         return 0
 
-    manifest = build_manifest(version, installer, args.notes or (previous or {}).get("notes", ""), previous)
+    manifest = build_manifest(
+        version, installer, args.notes or (previous or {}).get("notes", ""), previous
+    )
 
     if manifest.get("pending") and not args.allow_pending:
         print(
@@ -126,7 +133,9 @@ def main() -> int:
         return 1
 
     DOWNLOADS.mkdir(parents=True, exist_ok=True)
-    JSON_PATH.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    JSON_PATH.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
     # latest.yml is electron-builder's format and needs sha512. Without a build
     # in this checkout there is nothing to hash, so the previous file is left
@@ -134,7 +143,11 @@ def main() -> int:
     if manifest.get("sha512"):
         YML_PATH.write_text(to_yml(manifest), encoding="utf-8")
 
-    state = "pending" if manifest.get("pending") else f"{manifest['size']} bytes, sha256 {manifest['sha256'][:12]}…"
+    state = (
+        "pending"
+        if manifest.get("pending")
+        else f"{manifest['size']} bytes, sha256 {manifest['sha256'][:12]}…"
+    )
     print(f"wrote {JSON_PATH.relative_to(ROOT)}: v{version}, {state}")
     return 0
 
