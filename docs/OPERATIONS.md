@@ -525,4 +525,31 @@ promptTokens == sum(byModel.promptTokens)
 含空白、超过 128 字符或含控制字符。message 只写原因，不回显模型名。
 模型名会被原样发送给供应商，启动阶段发现拼写问题比第一次聊天再失败更省事。
 
+## 17. 发布前的一致性检查
+
+以下两条命令在 CI 每条推送上运行，发布前应再手动执行一次：
+
+```bash
+python web/tools/check_assets.py
+python web/tools/check_site.py
+```
+
+第一条检查静态资源文件是否存在、同一资源的 `?v=` 是否一致；
+第二条在此基础上检查页面链接、`#anchor`、重复 `id`、
+`target="_blank"` 的安全属性、页面元信息、CSS 本地引用、
+service worker 缓存版本与下载清单。
+
+常见失败与处置：
+
+| 输出标签 | 含义 | 处置 |
+|---|---|---|
+| `MISSING ASSET` | HTML 引用了不存在的 CSS/JS | 补文件，或修正路径 |
+| `VERSION CONFLICT` | 两个页面给同一个文件标了不同版本 | 统一到最新 `?v=`，并确认该版本文件已更新 |
+| `BROKEN PAGE LINK` / `BROKEN ANCHOR` | 页面或锚点目标不存在 | 同步修改导航或 `id` |
+| `STALE SERVICE WORKER` | `sw.js` 的缓存版本低于服务端 `VERSION` | 提升 `dreamai-shell-vX.Y.Z`，否则访客会继续拿到旧页面 |
+| `BAD MANIFEST` | 下载清单的版本、文件名、哈希、大小或日期不自洽 | 修正 `downloads/latest.json` |
+| `unversioned (warning)` | 本地图片没有 `?v=` | 默认不阻断；需要全量管控时用 `--strict` |
+
+完整的发布顺序、三个版本号的关系与发布后验证见 `docs/RELEASE.md`。
+
 
