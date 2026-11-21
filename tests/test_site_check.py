@@ -33,6 +33,10 @@ def make_site(tmp_path: Path, page: str, manifest: dict | None = None) -> Path:
         encoding="utf-8",
     )
     (tmp_path / "here.html").write_text("ok", encoding="utf-8")
+    (tmp_path / "sw.js").write_text('const CACHE = "dreamai-shell-v2.0.0";', encoding="utf-8")
+    app = tmp_path / "app"
+    app.mkdir()
+    (app / "config.py").write_text('VERSION = "1.0.0"\n', encoding="utf-8")
     return tmp_path
 
 
@@ -173,3 +177,29 @@ def test_a_bad_manifest_date_is_reported(tmp_path):
     )
 
     assert any("date" in item for item in check_site.check_site(site)["issues"]["manifest"])
+
+
+def test_a_service_worker_older_than_the_app_is_reported(tmp_path):
+    site = make_site(tmp_path, "")
+    (site / "sw.js").write_text('const CACHE = "dreamai-shell-v0.9.0";', encoding="utf-8")
+
+    issues = check_site.check_site(site)["issues"]["serviceWorker"]
+
+    assert any("0.9.0" in item and "1.0.0" in item for item in issues)
+
+
+def test_a_current_service_worker_passes(tmp_path):
+    site = make_site(tmp_path, "")
+
+    assert check_site.check_site(site)["issues"]["serviceWorker"] == []
+
+
+def test_a_missing_service_worker_is_reported(tmp_path):
+    site = make_site(tmp_path, "")
+    (site / "sw.js").unlink()
+
+    assert any("missing" in item for item in check_site.check_site(site)["issues"]["serviceWorker"])
+
+
+def test_the_published_service_worker_matches_the_app():
+    assert check_site.check_site(SITE)["issues"]["serviceWorker"] == []
