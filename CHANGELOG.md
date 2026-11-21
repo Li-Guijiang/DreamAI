@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Delivery consistency gates
+
+- Fixed a real asset drift: `download.css` was pinned at `?v=1.0.0` on
+  `changelog.html` and `offline.html` but `?v=2.0.3` on `download.html`.
+  All three now use `2.0.3`; `offline.html` also gained a meta description.
+- Added `web/tools/check_assets.py`: finds missing local CSS/JS, detects
+  version conflicts across pages, warns on unversioned assets and supports
+  `--strict` and `--json`.
+- Added `web/tools/check_site.py`: reuses the asset checks and adds page
+  links, anchors, duplicate ids, `target="_blank"` safety, page metadata,
+  CSS `url()` targets, service-worker cache age and download-manifest fields.
+- Both tools run in CI before pytest. `docs/RELEASE.md` records the full
+  pre-publication procedure and the meaning of the three version numbers.
+
 ### Request lifecycle observability
 
 - `DREAMAI_HEARTBEAT_SECONDS` (default 12, clamped to 1..120) replaces the
