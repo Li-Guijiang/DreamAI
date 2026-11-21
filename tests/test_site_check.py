@@ -27,6 +27,7 @@ def make_site(tmp_path: Path, page: str, manifest: dict | None = None) -> Path:
                 "file": "DreamAI-Setup-1.2.3.exe",
                 "size": 1024,
                 "sha256": "a" * 64,
+                "date": "2026-10-31",
             }
         ),
         encoding="utf-8",
@@ -118,4 +119,57 @@ def test_the_cli_prints_parseable_json_and_succeeds():
     payload = json.loads(done.stdout)
     assert done.returncode == 0
     assert payload["ok"] is True
-    assert set(payload["issues"]) >= {"brokenPages", "brokenAnchors", "manifest"}
+    assert set(payload["issues"]) >= {"brokenPages", "brokenAnchors", "manifest", "css", "metadata"}
+
+
+def test_the_published_site_has_clean_css_and_metadata():
+    issues = check_site.check_site(SITE)["issues"]
+
+    assert issues["css"] == []
+    assert issues["metadata"] == []
+
+
+def test_a_missing_css_reference_is_reported(tmp_path):
+    site = make_site(tmp_path, "")
+    css_dir = site / "assets" / "css"
+    css_dir.mkdir(parents=True)
+    (css_dir / "site.css").write_text('a{background:url("../img/gone.png")}', encoding="utf-8")
+
+    issues = check_site.check_site(site)["issues"]["css"]
+
+    assert any("gone.png" in item for item in issues)
+
+
+def test_an_svg_fragment_reference_is_not_a_missing_file(tmp_path):
+    site = make_site(tmp_path, "")
+    css_dir = site / "assets" / "css"
+    css_dir.mkdir(parents=True)
+    (css_dir / "site.css").write_text("a{fill:url(%23n)}", encoding="utf-8")
+
+    assert check_site.check_site(site)["issues"]["css"] == []
+
+
+def test_a_page_without_metadata_is_reported(tmp_path):
+    site = make_site(tmp_path, "<html><body>x</body></html>")
+
+    issues = check_site.check_site(site)["issues"]["metadata"]
+
+    assert any("lang" in item for item in issues)
+    assert any("title" in item for item in issues)
+    assert any("description" in item for item in issues)
+
+
+def test_a_bad_manifest_date_is_reported(tmp_path):
+    site = make_site(
+        tmp_path,
+        "",
+        {
+            "version": "2.0.0",
+            "file": "x-2.0.0.exe",
+            "size": 1,
+            "sha256": "a" * 64,
+            "date": "昨天",
+        },
+    )
+
+    assert any("date" in item for item in check_site.check_site(site)["issues"]["manifest"])
