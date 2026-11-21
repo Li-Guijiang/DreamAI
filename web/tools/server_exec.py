@@ -52,7 +52,11 @@ def run(client: paramiko.SSHClient, command: str) -> int:
         if channel.recv_stderr_ready():
             sys.stderr.write(channel.recv_stderr(65536).decode("utf-8", "replace"))
             sys.stderr.flush()
-        if channel.exit_status_ready() and not channel.recv_ready() and not channel.recv_stderr_ready():
+        if (
+            channel.exit_status_ready()
+            and not channel.recv_ready()
+            and not channel.recv_stderr_ready()
+        ):
             break
     code = channel.recv_exit_status()
     print(f"\n[exit {code}]")

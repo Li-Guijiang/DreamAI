@@ -72,7 +72,12 @@ def gradient_text(text: str, font, size: tuple[int, int]) -> Image.Image:
     mask = Image.new("L", size, 0)
     ImageDraw.Draw(mask).text((0, 0), text, font=font, fill=255)
     width, height = size
-    stops = [(0.0, (94, 234, 212)), (0.42, (124, 156, 255)), (0.76, (183, 156, 255)), (1.0, (240, 166, 200))]
+    stops = [
+        (0.0, (94, 234, 212)),
+        (0.42, (124, 156, 255)),
+        (0.76, (183, 156, 255)),
+        (1.0, (240, 166, 200)),
+    ]
     x = np.linspace(0, 1, width)[None, :]
     y = np.linspace(0, 1, height)[:, None]
     t = np.clip(x * 0.85 + y * 0.15, 0, 1)

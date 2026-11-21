@@ -103,7 +103,9 @@ async def completions(request: Request):
     model = str(body.get("model", ""))
     last = str((body.get("messages") or [{}])[-1].get("content", ""))
     if "任务规划器" in last:
-        text = '{"title":"准备产品发布会","steps":["梳理目标与受众","撰写开场文案","检查语气与长度"]}'
+        text = (
+            '{"title":"准备产品发布会","steps":["梳理目标与受众","撰写开场文案","检查语气与长度"]}'
+        )
     elif "最终答复" in last:
         text = "## 最终结果\n\n已完成三步：\n\n1. 明确了目标与受众；\n2. 写出了一版克制、有画面感的开场文案；\n3. 检查了语气与长度，控制在 200 字内。"
     elif "当前步骤" in last:

@@ -44,7 +44,13 @@ def rounded_icon(size: int, pad_ratio: float = 0.16) -> Image.Image:
     return canvas.resize((size, size), Image.LANCZOS)
 
 
-def radial_layer(size: tuple[int, int], color: tuple[int, int, int], center: tuple[float, float], radius: float, alpha: float) -> Image.Image:
+def radial_layer(
+    size: tuple[int, int],
+    color: tuple[int, int, int],
+    center: tuple[float, float],
+    radius: float,
+    alpha: float,
+) -> Image.Image:
     width, height = size
     ys, xs = np.mgrid[0:height, 0:width]
     cx = center[0] * width
