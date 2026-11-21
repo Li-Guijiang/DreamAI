@@ -22,6 +22,10 @@ from check_assets import check as check_assets
 LOCAL_PAGE = re.compile(r'(?:href|src)="(/[^"#?]+\.html)(?:[?#][^"]*)?"')
 ANCHOR = re.compile(r'href="#([A-Za-z][A-Za-z0-9_-]*)"')
 ID_ATTR = re.compile(r'\bid="([^"]+)"')
+CSS_URL = re.compile(r'url\(\s*["\']?([^\)"\']+)["\']?\s*\)')
+LANG = re.compile(r"<html[^>]*\blang=\"([^\"]+)\"", re.I)
+TITLE = re.compile(r"<title>\s*\S", re.I)
+DESCRIPTION = re.compile(r'<meta\s+name="description"\s+content="\s*\S', re.I)
 SEMVER = re.compile(r"\d+\.\d+\.\d+")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 
@@ -54,6 +58,43 @@ def broken_anchors(root: Path) -> list[str]:
     return sorted(issues)
 
 
+def css_issues(root: Path) -> list[str]:
+    """Local files referenced from CSS that are not in the build.
+
+    Data URLs, remote URLs and SVG fragment references ("%23" is an encoded
+    '#') are not files and must not be reported as missing.
+    """
+    issues: list[str] = []
+    css_dir = root / "assets" / "css"
+    if not css_dir.is_dir():
+        return issues
+    for css in sorted(css_dir.glob("*.css")):
+        for url in CSS_URL.findall(css.read_text(encoding="utf-8", errors="replace")):
+            if url.startswith(("data:", "http://", "https://", "//", "#")) or "%23" in url:
+                continue
+            path = url.split("#", 1)[0].split("?", 1)[0]
+            if not path:
+                continue
+            target = (css.parent / path).resolve()
+            if not target.is_file() or not target.is_relative_to(root.resolve()):
+                issues.append(f"{css.relative_to(root)}: {url}")
+    return sorted(issues)
+
+
+def metadata_issues(root: Path) -> list[str]:
+    """Pages missing the metadata a published page should always carry."""
+    issues: list[str] = []
+    for page in sorted(root.glob("*.html")):
+        text = page.read_text(encoding="utf-8")
+        if not LANG.search(text):
+            issues.append(f"{page.name}: missing html lang")
+        if not TITLE.search(text):
+            issues.append(f"{page.name}: missing title")
+        if not DESCRIPTION.search(text):
+            issues.append(f"{page.name}: missing description")
+    return issues
+
+
 def manifest_issues(root: Path) -> list[str]:
     """A download manifest that cannot describe a real, complete artefact.
 
@@ -82,6 +123,8 @@ def manifest_issues(root: Path) -> list[str]:
     size = data.get("size")
     if not isinstance(size, int) or isinstance(size, bool) or size <= 0:
         issues.append("size: expected a positive integer")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(data.get("date", ""))):
+        issues.append("date: expected YYYY-MM-DD")
     return issues
 
 
@@ -95,6 +138,8 @@ def check_site(root: Path) -> dict:
         "unversioned": assets["issues"]["unversioned"],
         "brokenPages": broken_page_links(root, links),
         "brokenAnchors": broken_anchors(root),
+        "css": css_issues(root),
+        "metadata": metadata_issues(root),
         "manifest": manifest_issues(root),
     }
     hard = (
@@ -102,6 +147,8 @@ def check_site(root: Path) -> dict:
         "conflicts",
         "brokenPages",
         "brokenAnchors",
+        "css",
+        "metadata",
         "manifest",
     )
     return {
@@ -123,6 +170,8 @@ def _format(result: dict) -> str:
         ("conflicts", "VERSION CONFLICT"),
         ("brokenPages", "BROKEN PAGE LINK"),
         ("brokenAnchors", "BROKEN ANCHOR"),
+        ("css", "MISSING CSS ASSET"),
+        ("metadata", "MISSING METADATA"),
         ("manifest", "BAD MANIFEST"),
         ("unversioned", "unversioned (warning)"),
     ):
