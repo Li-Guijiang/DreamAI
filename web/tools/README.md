@@ -20,6 +20,12 @@ the environment comes from `web/requirements.txt`, and some scripts additionally
 | `mock_upstream.py` | Local mock of an OpenAI-compatible streaming endpoint | Developing the UI without an API key |
 | `server_exec.py` | Generic SSH helper (`exec` / `put` / `get` / `shell`) | Running a command or moving a file on the server |
 
+Both checks print a human-readable summary; `--json` emits a machine-readable
+result. `check_assets.py --strict` also fails on local assets without a
+`?v=` pin. See [docs/RELEASE.md](../../docs/RELEASE.md) for the full
+pre-publication procedure and the relationship between the three version
+numbers.
+
 Examples:
 
 ```bash
