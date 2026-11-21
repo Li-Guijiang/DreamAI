@@ -1,0 +1,151 @@
+"""Guard local page links, anchors and the download manifest.
+
+``check_assets`` covers versioned static files. This tool covers the other
+things a browser can follow to a 404: a link to a page that is not in the
+build, an ``#anchor`` whose target id was renamed, and a download manifest
+whose file name disagrees with its own version.
+
+All checks are read-only and fail CI when the published site would be broken.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+
+from check_assets import DEFAULT_ROOT
+from check_assets import check as check_assets
+
+LOCAL_PAGE = re.compile(r'(?:href|src)="(/[^"#?]+\.html)(?:[?#][^"]*)?"')
+ANCHOR = re.compile(r'href="#([A-Za-z][A-Za-z0-9_-]*)"')
+ID_ATTR = re.compile(r'\bid="([^"]+)"')
+SEMVER = re.compile(r"\d+\.\d+\.\d+")
+SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
+def scan_page_links(root: Path) -> list[tuple[str, str]]:
+    """(page, absolute local html path) for every navigation link."""
+    links: list[tuple[str, str]] = []
+    for page in sorted(root.glob("*.html")):
+        for target in LOCAL_PAGE.findall(page.read_text(encoding="utf-8")):
+            links.append((page.name, target))
+    return links
+
+
+def broken_page_links(root: Path, links: list[tuple[str, str]]) -> list[str]:
+    """Links to pages that are not part of the build."""
+    return sorted(
+        f"{page}: {target}" for page, target in links if not (root / target.lstrip("/")).is_file()
+    )
+
+
+def broken_anchors(root: Path) -> list[str]:
+    """In-page links whose target id no longer exists."""
+    issues: list[str] = []
+    for page in sorted(root.glob("*.html")):
+        text = page.read_text(encoding="utf-8")
+        ids = set(ID_ATTR.findall(text))
+        for anchor in ANCHOR.findall(text):
+            if anchor not in ids:
+                issues.append(f"{page}: #{anchor}")
+    return sorted(issues)
+
+
+def manifest_issues(root: Path) -> list[str]:
+    """A download manifest that cannot describe a real, complete artefact.
+
+    The installer itself is uploaded separately and is not expected in the
+    repository; only the manifest's internal consistency is checked here.
+    """
+    path = root / "downloads" / "latest.json"
+    if not path.is_file():
+        return ["downloads/latest.json: missing"]
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as exc:
+        return [f"downloads/latest.json: unreadable ({type(exc).__name__})"]
+    if not isinstance(data, dict):
+        return ["downloads/latest.json: not an object"]
+
+    issues: list[str] = []
+    version = str(data.get("version", ""))
+    if not SEMVER.fullmatch(version):
+        issues.append("version: expected three numeric components")
+    name = str(data.get("file", ""))
+    if version not in name:
+        issues.append("file: name does not contain the manifest version")
+    if not SHA256.fullmatch(str(data.get("sha256", ""))):
+        issues.append("sha256: expected 64 lowercase hex characters")
+    size = data.get("size")
+    if not isinstance(size, int) or isinstance(size, bool) or size <= 0:
+        issues.append("size: expected a positive integer")
+    return issues
+
+
+def check_site(root: Path) -> dict:
+    """Machine-readable result for the whole published site."""
+    assets = check_assets(root)
+    links = scan_page_links(root)
+    issues = {
+        "missing": assets["issues"]["missing"],
+        "conflicts": assets["issues"]["conflicts"],
+        "unversioned": assets["issues"]["unversioned"],
+        "brokenPages": broken_page_links(root, links),
+        "brokenAnchors": broken_anchors(root),
+        "manifest": manifest_issues(root),
+    }
+    hard = (
+        "missing",
+        "conflicts",
+        "brokenPages",
+        "brokenAnchors",
+        "manifest",
+    )
+    return {
+        "pages": assets["pages"],
+        "assetReferences": assets["references"],
+        "pageLinks": len(links),
+        "issues": issues,
+        "ok": not any(issues[key] for key in hard),
+    }
+
+
+def _format(result: dict) -> str:
+    lines = [
+        f"site: {result['pages']} pages, "
+        f"{result['assetReferences']} assets, {result['pageLinks']} page links"
+    ]
+    for key, label in (
+        ("missing", "MISSING ASSET"),
+        ("conflicts", "VERSION CONFLICT"),
+        ("brokenPages", "BROKEN PAGE LINK"),
+        ("brokenAnchors", "BROKEN ANCHOR"),
+        ("manifest", "BAD MANIFEST"),
+        ("unversioned", "unversioned (warning)"),
+    ):
+        for item in result["issues"][key]:
+            lines.append(f"  {label}: {item}")
+    lines.append("site: OK" if result["ok"] else "site: FAILED")
+    return "\n".join(lines)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", type=Path, default=DEFAULT_ROOT)
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args(argv)
+
+    if not args.root.is_dir():
+        print(f"site: root not found: {args.root}", file=sys.stderr)
+        return 2
+
+    result = check_site(args.root)
+    print(json.dumps(result, ensure_ascii=False, indent=2) if args.json else _format(result))
+    return 0 if result["ok"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
