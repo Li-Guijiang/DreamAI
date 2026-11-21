@@ -26,6 +26,8 @@ CSS_URL = re.compile(r'url\(\s*["\']?([^\)"\']+)["\']?\s*\)')
 LANG = re.compile(r"<html[^>]*\blang=\"([^\"]+)\"", re.I)
 TITLE = re.compile(r"<title>\s*\S", re.I)
 DESCRIPTION = re.compile(r'<meta\s+name="description"\s+content="\s*\S', re.I)
+SW_CACHE = re.compile(r'const\s+CACHE\s*=\s*["\']dreamai-shell-v(\d+\.\d+\.\d+)["\']')
+APP_VERSION = re.compile(r'^VERSION\s*=\s*"([^"]+)"', re.M)
 SEMVER = re.compile(r"\d+\.\d+\.\d+")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 
@@ -95,6 +97,36 @@ def metadata_issues(root: Path) -> list[str]:
     return issues
 
 
+def sw_issues(root: Path) -> list[str]:
+    """The offline shell must not be older than the server build.
+
+    Browsers keep the old service worker until its cache name changes. If the
+    app version moves forward without it, visitors keep receiving yesterday's
+    HTML after a deployment.
+    """
+    sw = root / "sw.js"
+    if not sw.is_file():
+        return ["sw.js: missing"]
+    match = SW_CACHE.search(sw.read_text(encoding="utf-8"))
+    if not match:
+        return ["sw.js: CACHE constant is missing or not semantic"]
+    config = root.parent / "app" / "config.py"
+    if not config.is_file():
+        config = root / "app" / "config.py"
+    if not config.is_file():
+        return []
+    app_match = APP_VERSION.search(config.read_text(encoding="utf-8"))
+    if not app_match:
+        return ["config.py: VERSION is missing or not semantic"]
+
+    def parts(value: str) -> tuple[int, int, int]:
+        return tuple(int(piece) for piece in value.split("."))  # type: ignore[return-value]
+
+    if parts(match.group(1)) < parts(app_match.group(1)):
+        return [f"sw.js: cache v{match.group(1)} is older than app v{app_match.group(1)}"]
+    return []
+
+
 def manifest_issues(root: Path) -> list[str]:
     """A download manifest that cannot describe a real, complete artefact.
 
@@ -140,6 +172,7 @@ def check_site(root: Path) -> dict:
         "brokenAnchors": broken_anchors(root),
         "css": css_issues(root),
         "metadata": metadata_issues(root),
+        "serviceWorker": sw_issues(root),
         "manifest": manifest_issues(root),
     }
     hard = (
@@ -149,6 +182,7 @@ def check_site(root: Path) -> dict:
         "brokenAnchors",
         "css",
         "metadata",
+        "serviceWorker",
         "manifest",
     )
     return {
@@ -172,6 +206,7 @@ def _format(result: dict) -> str:
         ("brokenAnchors", "BROKEN ANCHOR"),
         ("css", "MISSING CSS ASSET"),
         ("metadata", "MISSING METADATA"),
+        ("serviceWorker", "STALE SERVICE WORKER"),
         ("manifest", "BAD MANIFEST"),
         ("unversioned", "unversioned (warning)"),
     ):
