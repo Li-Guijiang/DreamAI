@@ -131,6 +131,31 @@ def test_the_published_site_has_clean_css_and_metadata():
 
     assert issues["css"] == []
     assert issues["metadata"] == []
+    assert issues["markup"] == []
+
+
+def test_duplicate_ids_are_reported(tmp_path):
+    site = make_site(tmp_path, '<div id="x"></div><div id="x"></div>')
+
+    issues = check_site.check_site(site)["issues"]["markup"]
+
+    assert any("duplicate id #x" in item for item in issues)
+
+
+def test_a_new_window_link_without_noopener_is_reported(tmp_path):
+    site = make_site(tmp_path, '<a href="/here.html" target="_blank">x</a>')
+
+    issues = check_site.check_site(site)["issues"]["markup"]
+
+    assert any("noopener" in item for item in issues)
+
+
+def test_a_new_window_link_with_noopener_passes(tmp_path):
+    site = make_site(
+        tmp_path, '<a href="/here.html" target="_blank" rel="noopener noreferrer">x</a>'
+    )
+
+    assert check_site.check_site(site)["issues"]["markup"] == []
 
 
 def test_a_missing_css_reference_is_reported(tmp_path):
