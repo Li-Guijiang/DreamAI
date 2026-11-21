@@ -262,6 +262,7 @@ reaches the screen. Both are now explicit.
 | Early URL checks | Malformed upstream URLs and overlong prompts are reported at boot | `validation.py`, `configChecks` |
 | Admission deadline | Queued requests fail fast with a typed error | `DREAMAI_ADMISSION_TIMEOUT` |
 | Counted recovery | Retries, fallbacks and queueing time are measured separately | `on_retry` / `on_fallback`, `/api/usage` |
+| Delivery gates | CI checks asset pins, links, anchors and the release manifest | `web/tools/check_site.py` |
 | Real usage | Token counts from all three wire formats, one usage event per stream | `usage_from_chunk()`, `DREAMAI_STREAM_USAGE` |
 | Price corrections | `DREAMAI_PRICE_OVERRIDES` fixes a stale price without a release | `pricing.configure_prices()` |
 | Provider view | `/api/usage` groups turns per vendor, not just per model | `byProvider` |
