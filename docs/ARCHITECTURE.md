@@ -240,6 +240,13 @@ SSE。pump 捕获的异常会作为一条数据放入同一队列，由主协程
 `stream_with_fallback()` 的可选回调把额外上游尝试写入 `UsageStats`；
 它们与 `requests` 分开计数，因为访客只发起了一轮对话。
 
+交付守卫是发布链路的一部分，不属于运行时：`check_assets.py` 按路径分组
+扫描所有页面的 `?v=` 版本，`check_site.py` 复用它并检查页面链接、锚点、
+标记、元信息、CSS 本地引用、service worker 缓存版本与下载清单。
+两者在 CI 中先于 pytest 运行，失败即阻断发布。
+三个版本号（服务端 `VERSION`、SW 的 `CACHE`、安装包的 `latest.json`）
+各自独立，唯一约束是 SW 缓存不得低于服务端版本。
+
 限流器也有自己的快照：`/api/health` 的 `limiter.tracked` 是正在被观察的客户端数——
 只有数量，不含 IP；`X-RateLimit-Remaining` 头把剩余额度告诉客户端，
 让它能在被拒绝之前自己降速。
