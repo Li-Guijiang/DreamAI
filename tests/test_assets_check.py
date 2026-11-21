@@ -69,6 +69,13 @@ def test_an_unversioned_image_is_only_a_warning(tmp_path):
     assert len(result["issues"]["unversioned"]) == 1
 
 
+def test_strict_mode_promotes_unversioned_assets_to_a_failure(tmp_path):
+    site = make_site(tmp_path, '<img src="/assets/css/site.css">')
+
+    assert check_assets.check(site)["ok"] is True
+    assert check_assets.check(site, strict=True)["ok"] is False
+
+
 def test_external_urls_are_not_treated_as_local_assets(tmp_path):
     site = make_site(tmp_path, '<link rel="stylesheet" href="https://cdn.test/a.css?v=1">')
 
