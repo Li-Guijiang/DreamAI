@@ -62,6 +62,9 @@ jobs:
       - name: Check the release manifest against the build
         run: python web/tools/make_downloads.py --check
 
+      - name: Check versioned static assets
+        run: python web/tools/check_assets.py
+
       - name: Check site assets, links and download manifest
         run: python web/tools/check_site.py
 
