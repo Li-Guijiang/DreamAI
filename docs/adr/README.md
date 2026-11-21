@@ -33,3 +33,4 @@ New decisions should be added as numbered Markdown files, e.g.
 | [0019](./0019-backpressure-memory-and-log-privacy.md) | Back-pressure, a real memory ceiling, and network-only logs |
 | [0020](./0020-bounded-counters-and-early-config-checks.md) | Bounded counters and configuration errors found at boot |
 | [0021](./0021-request-lifecycle-observability.md) | Heartbeats, admission deadlines and counted recovery |
+| [0022](./0022-delivery-consistency-gates.md) | Delivery consistency gates |
