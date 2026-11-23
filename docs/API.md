@@ -117,7 +117,11 @@ done
 | 端点 | 字段 | 说明 |
 |---|---|---|
 | `/api/health` | `configChecks` | 启动配置自检结果数组，元素为 `{code, severity, message}`；`severity` 为 `warning` / `info` |
-| `/api/usage` | `usagePersisted` | 是否启用用量快照持久化 |
+| `/api/usage` | `usagePersisted`, `usageState` | 是否配置快照，以及读取状态、最后写入时间、写入失败次数 |
+
+`usageState.loadStatus` 的取值：`disabled`、`absent`（首次运行）、
+`valid`、`restored`、`corrupt`、`oversized`、`unreadable` 或
+`rejected`（计数不合法）。只有 `disabled` 与 `absent` 属于正常初始值。
 | `/api/usage` | `truncated`, `truncatedByTier`, `byFinish` | 截断计数、按难度分布、结束原因分布 |
 | `/api/usage` | `cachedTokens`, `cachedShare` | 提示词缓存命中的输入及其占比 |
 | `/api/health`, `/api/usage` | `cache.maxBytes`, `cache.byteEvictions`, `cache.byteFull` | 缓存字节预算、按字节淘汰数、当前是否达到预算 |
