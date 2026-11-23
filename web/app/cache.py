@@ -81,6 +81,9 @@ class ResponseCache:
         # a capacity eviction mean different things; only the last two say the
         # cache is too small or the TTL too short.
         self.expired = 0
+        # Entries removed by prune() rather than by a get() that noticed them.
+        # A high number means many answers are never asked for a second time.
+        self.pruned = 0
         self.evictions = 0
         # Evictions caused by the byte budget, separated from the ones caused by
         # the item count: they point at different knobs to turn.
@@ -104,9 +107,32 @@ class ResponseCache:
         self.hits += 1
         return value
 
+    def prune(self) -> int:
+        """Remove entries nobody will ask for again.
+
+        ``get()`` only expires the key it was asked about. A key that is never
+        requested again keeps its slot until an LRU eviction throws away a
+        *fresh* answer instead. Pruning before an insert keeps capacity for
+        entries that are still alive.
+        """
+        if not self.enabled:
+            return 0
+        now = self._clock()
+        removed = 0
+        for key, (value, expires_at) in list(self._items.items()):
+            if now < expires_at:
+                continue
+            del self._items[key]
+            self._bytes -= _size(value)
+            self.expired += 1
+            self.pruned += 1
+            removed += 1
+        return removed
+
     def put(self, key: str, value: str) -> None:
         if not self.enabled or not value:
             return
+        self.prune()
         size = _size(value)
         if self.max_bytes and size > self.max_bytes:
             # One answer larger than the whole budget must not evict every other
@@ -143,6 +169,7 @@ class ResponseCache:
             "hits": self.hits,
             "misses": self.misses,
             "expired": self.expired,
+            "pruned": self.pruned,
             "evictions": self.evictions,
             # Share of answers that cost nothing; 0.0 before anything is asked.
             "hitRate": round(self.hits / asked, 3) if asked else 0.0,
