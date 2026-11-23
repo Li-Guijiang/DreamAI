@@ -53,3 +53,30 @@ def test_a_leftover_tmp_file_does_not_count_as_a_snapshot(tmp_path):
     (tmp_path / "usage.json.tmp").write_text("{", encoding="utf-8")
 
     assert describe_snapshot(tmp_path / "usage.json") == "absent"
+
+
+def test_an_oversized_file_is_not_parsed(tmp_path):
+    from app.state_store import MAX_SNAPSHOT_BYTES
+
+    path = tmp_path / "usage.json"
+    path.write_bytes(b"x" * (MAX_SNAPSHOT_BYTES + 1))
+
+    assert describe_snapshot(path) == "oversized"
+    assert load_snapshot(path) is None
+
+
+def test_non_finite_counters_are_not_written(tmp_path):
+    import math
+
+    path = tmp_path / "usage.json"
+
+    assert save_snapshot(path, {"cost_usd": math.inf}) is False
+    assert not path.exists()
+
+
+def test_a_valid_file_with_a_huge_padding_is_rejected(tmp_path):
+    path = tmp_path / "usage.json"
+    valid = '{"version":1,"counters":{}}'
+    path.write_text(valid + " " * (9 * 1024 * 1024), encoding="utf-8")
+
+    assert describe_snapshot(path) == "oversized"
