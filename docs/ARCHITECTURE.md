@@ -248,6 +248,12 @@ SSE。pump 捕获的异常会作为一条数据放入同一队列，由主协程
 三个版本号（服务端 `VERSION`、SW 的 `CACHE`、安装包的 `latest.json`）
 各自独立，唯一约束是 SW 缓存不得低于服务端版本。
 
+缓存与快照的完整性：`ResponseCache.prune()` 在写入前回收过期条目，
+`liveItems` 才表示当前可用的容量；`make_key()` 把采样参数纳入哈希。
+`state_store` 为快照写入校验和，区分 `absent` / `corrupt` / `tampered`
+等加载状态；`main.persist_snapshot()` 按 `usage_save_interval` 周期刷新，
+并把 `lastSaveAt` 与 `saveFailures` 发布到 `/api/usage.usageState`。
+
 限流器也有自己的快照：`/api/health` 的 `limiter.tracked` 是正在被观察的客户端数——
 只有数量，不含 IP；`X-RateLimit-Remaining` 头把剩余额度告诉客户端，
 让它能在被拒绝之前自己降速。
