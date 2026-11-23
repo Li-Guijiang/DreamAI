@@ -78,6 +78,20 @@ def test_a_disabled_cache_prunes_nothing():
     assert cache.stats()["pruned"] == 0
 
 
+def test_live_items_excludes_entries_waiting_for_the_next_prune():
+    now = [0.0]
+    cache = make_cache(now, ttl=10)
+    cache.put("a", "A")
+    now[0] = 11.0
+
+    snapshot = cache.stats()
+    assert snapshot["items"] == 1
+    assert snapshot["liveItems"] == 0
+
+    cache.put("b", "B")
+    assert cache.stats()["liveItems"] == 1
+
+
 def test_pruning_twice_does_not_double_count():
     now = [0.0]
     cache = make_cache(now, ttl=10)
