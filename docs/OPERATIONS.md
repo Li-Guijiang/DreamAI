@@ -552,4 +552,36 @@ service worker 缓存版本与下载清单。
 
 完整的发布顺序、三个版本号的关系与发布后验证见 `docs/RELEASE.md`。
 
+## 18. 用量快照的健康状态
+
+`/api/usage.usageState` 是快照持久化的状态，不再只能靠日志判断：
+
+| 字段 | 含义 |
+|---|---|
+| `enabled` | 是否配置了 `DREAMAI_USAGE_STATE` |
+| `loadStatus` | 启动时的读取结果，见下文 |
+| `lastSaveAt` | 最近一次成功写入的 Unix 时间；尚未写入为 `null` |
+| `saveFailures` | 累计写入失败次数 |
+
+`loadStatus` 判读：
+
+1. `disabled` / `absent`：未配置或首次运行，属于正常初始状态。
+2. `restored`：计数与当日配额已恢复。
+3. `corrupt`：JSON 损坏或版本不兼容；文件保留，不会被覆盖读取。
+4. `tampered`：校验和不匹配，文件内容曾被改动。
+5. `oversized`：超过 8 MiB，启动时不解析。
+6. `unreadable`：路径权限导致无法访问。
+7. `rejected`：JSON 合法但计数不合法，未导入。
+
+写入相关：
+
+1. `DREAMAI_USAGE_SAVE_INTERVAL`（默认 60 秒，允许 0～3600）控制周期性刷新；
+   `0` 表示只在关闭时写一次。
+2. `saveFailures` 持续增加通常意味着磁盘满或目录不可写；快照失败不影响聊天，
+   但计数会在重启后丢失最近一段时间的部分数据。
+3. `cache.items` 可能包含尚未清理的过期条目，判断当前可用容量看
+   `cache.liveItems`；`cache.pruned` 是写入前主动清理的数量。
+4. 缓存键包含供应商、模型、消息、温度、`top_p`、`presence_penalty` 与预算；
+   修改采样配置后不会命中旧答案。
+
 
