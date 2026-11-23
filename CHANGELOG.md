@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Cache and snapshot integrity
+
+- `ResponseCache` now prunes expired entries before inserting, reports
+  `cache.pruned` and `cache.liveItems`, and includes `top_p` and
+  `presence_penalty` in the answer key so a sampling change cannot replay an
+  old answer.
+- Snapshot files carry a SHA-256 checksum of their counters. Pre-checksum files
+  remain readable; a mismatch is reported as `tampered`. Files over 8 MiB and
+  non-finite counters are rejected.
+- Snapshot load status, last successful save and cumulative write failures are
+  published as `usageState` on `/api/usage`. A periodic flush
+  (`DREAMAI_USAGE_SAVE_INTERVAL`, default 60s, 0 = shutdown only) limits how
+  much history a crash can lose.
+
 ### Delivery consistency gates
 
 - Fixed a real asset drift: `download.css` was pinned at `?v=1.0.0` on
