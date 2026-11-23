@@ -27,6 +27,9 @@ from pathlib import Path
 from typing import Any
 
 SNAPSHOT_VERSION = 1
+#: A counters file is a few kilobytes. Anything larger is not a snapshot we
+#: should parse into memory during startup.
+MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024
 
 
 def describe_snapshot(path: str | os.PathLike[str] | None) -> str:
@@ -38,10 +41,19 @@ def describe_snapshot(path: str | os.PathLike[str] | None) -> str:
     if not path:
         return "disabled"
     target = Path(path)
-    if not target.exists():
+    try:
+        exists = target.exists()
+    except OSError:
+        return "unreadable"
+    if not exists:
         return "absent"
     if not target.is_file():
         return "corrupt"
+    try:
+        if target.stat().st_size > MAX_SNAPSHOT_BYTES:
+            return "oversized"
+    except OSError:
+        return "unreadable"
     return "valid" if load_snapshot(path) is not None else "corrupt"
 
 
@@ -59,7 +71,12 @@ def save_snapshot(path: str | os.PathLike[str] | None, counters: dict[str, Any])
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         temporary.write_text(
-            json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+            json.dumps(
+                payload,
+                ensure_ascii=False,
+                separators=(",", ":"),
+                allow_nan=False,
+            ),
             encoding="utf-8",
         )
         os.replace(temporary, target)
@@ -78,7 +95,10 @@ def load_snapshot(path: str | os.PathLike[str] | None) -> dict[str, Any] | None:
     if not path:
         return None
     try:
-        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+        raw = Path(path).read_bytes()
+        if len(raw) > MAX_SNAPSHOT_BYTES:
+            return None
+        payload = json.loads(raw)
     except (OSError, ValueError):
         return None
     if not isinstance(payload, dict):
