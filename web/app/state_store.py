@@ -29,6 +29,22 @@ from typing import Any
 SNAPSHOT_VERSION = 1
 
 
+def describe_snapshot(path: str | os.PathLike[str] | None) -> str:
+    """Classify a configured snapshot without mutating it.
+
+    "absent" and "corrupt" need different responses: the first is a fresh
+    install, the second means a previously healthy site lost its counters.
+    """
+    if not path:
+        return "disabled"
+    target = Path(path)
+    if not target.exists():
+        return "absent"
+    if not target.is_file():
+        return "corrupt"
+    return "valid" if load_snapshot(path) is not None else "corrupt"
+
+
 def save_snapshot(path: str | os.PathLike[str] | None, counters: dict[str, Any]) -> bool:
     """Write ``counters`` atomically; return whether it worked."""
     if not path:
