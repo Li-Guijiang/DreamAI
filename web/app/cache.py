@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import random
 import time
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
@@ -72,12 +73,18 @@ class ResponseCache:
         ttl: float = 300.0,
         clock: Callable[[], float] = time.monotonic,
         max_bytes: int = DEFAULT_MAX_BYTES,
+        ttl_jitter: float = 0.0,
+        rng: random.Random | None = None,
     ) -> None:
         self.max_items = max(1, max_items)
         self.ttl = max(0.0, ttl)
         self.enabled = self.ttl > 0
         # Zero disables the byte ceiling; anything else is a hard budget.
         self.max_bytes = max(0, max_bytes)
+        # Answers written in one burst would otherwise all expire together and
+        # send every repeat question upstream at the same instant.
+        self.ttl_jitter = min(0.5, max(0.0, ttl_jitter))
+        self._rng = rng if rng is not None else random.Random()
         self._clock = clock
         self._items: OrderedDict[str, tuple[str, float]] = OrderedDict()
         self.hits = 0
@@ -150,7 +157,8 @@ class ResponseCache:
         old = self._items.get(key)
         if old is not None:
             self._bytes -= _size(old[0])
-        self._items[key] = (value, self._clock() + self.ttl)
+        factor = 1.0 + self._rng.uniform(-self.ttl_jitter, self.ttl_jitter)
+        self._items[key] = (value, self._clock() + self.ttl * factor)
         self._bytes += size
         self._items.move_to_end(key)
         while len(self._items) > self.max_items or (
@@ -180,6 +188,7 @@ class ResponseCache:
             "byteEvictions": self.byte_evictions,
             "avgBytes": round(self._bytes / len(self._items), 1) if self._items else 0,
             "ttl": self.ttl,
+            "ttlJitter": self.ttl_jitter,
             "hits": self.hits,
             "misses": self.misses,
             "expired": self.expired,
