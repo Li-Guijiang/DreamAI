@@ -283,6 +283,7 @@ _cache = ResponseCache(
     max_items=settings.cache_max_items,
     ttl=settings.cache_ttl,
     max_bytes=settings.cache_max_bytes,
+    ttl_jitter=settings.cache_ttl_jitter,
 )
 
 _stats = UsageStats(started_at=STARTED_AT, max_tracked_models=settings.max_tracked_models)
