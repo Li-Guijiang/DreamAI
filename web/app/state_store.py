@@ -81,15 +81,15 @@ def save_snapshot(path: str | os.PathLike[str] | None, counters: dict[str, Any])
     if not path:
         return False
     target = Path(path)
-    payload = {
-        "version": SNAPSHOT_VERSION,
-        "savedAt": round(time.time(), 3),
-        "counters": counters,
-        "checksum": _checksum(counters),
-    }
     temporary = target.with_name(target.name + ".tmp")
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "version": SNAPSHOT_VERSION,
+            "savedAt": round(time.time(), 3),
+            "counters": counters,
+            "checksum": _checksum(counters),
+        }
         temporary.write_text(
             json.dumps(
                 payload,
