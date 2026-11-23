@@ -4,10 +4,11 @@
 
 ### Cache and snapshot integrity
 
-- `ResponseCache` now prunes expired entries before inserting, reports
+- `ResponseCache.put()` now prunes expired entries before inserting, reports
   `cache.pruned` and `cache.liveItems`, and includes `top_p` and
   `presence_penalty` in the answer key so a sampling change cannot replay an
-  old answer.
+  old answer. `DREAMAI_CACHE_TTL_JITTER` (default 0, max 0.5) can spread
+  expirations of answers written in the same burst.
 - Snapshot files carry a SHA-256 checksum of their counters. Pre-checksum files
   remain readable; a mismatch is reported as `tampered`. Files over 8 MiB and
   non-finite counters are rejected.
