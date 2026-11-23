@@ -59,7 +59,13 @@ def get_client() -> httpx.AsyncClient:
 async def close_client() -> None:
     global _client
     if _client is not None and not _client.is_closed:
-        await _client.aclose()
+        try:
+            await _client.aclose()
+        except RuntimeError:
+            # A client created on a loop that has already been torn down (for
+            # example by a short-lived test harness) cannot be closed on this
+            # one. Dropping the reference still prevents reuse.
+            logger.debug("http client was bound to a closed loop", exc_info=True)
     _client = None
 
 
