@@ -71,6 +71,7 @@ def test_the_health_and_usage_endpoints_honour_the_documented_fields():
     assert {"usagePersisted", "truncated", "truncatedByTier", "byFinish"} <= set(usage)
     assert {"retries", "retriesByStatus", "fallbacks"} <= set(usage)
     assert {"admissionWaitSamples", "admissionTimeouts"} <= set(usage)
+    assert "pruned" in usage["cache"]
     assert all(set(check) == {"code", "severity", "message"} for check in health["configChecks"])
 
 
