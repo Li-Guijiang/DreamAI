@@ -74,6 +74,7 @@ def test_the_health_and_usage_endpoints_honour_the_documented_fields():
     assert {"enabled", "loadStatus", "lastSaveAt", "saveFailures"} <= set(usage["usageState"])
     assert "pruned" in usage["cache"]
     assert "liveItems" in usage["cache"]
+    assert "ttlJitter" in usage["cache"]
     assert all(set(check) == {"code", "severity", "message"} for check in health["configChecks"])
 
 
