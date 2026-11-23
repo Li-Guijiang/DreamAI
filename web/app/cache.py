@@ -166,9 +166,14 @@ class ResponseCache:
     def stats(self) -> dict:
         """What both status endpoints report about the cache."""
         asked = self.hits + self.misses
+        now = self._clock()
+        live = sum(1 for _, expires_at in self._items.values() if now < expires_at)
         return {
             "enabled": self.enabled,
             "items": len(self._items),
+            # ``items`` still contains expired entries until the next put().
+            # This is what is actually available to answer a question now.
+            "liveItems": live,
             "capacity": self.max_items,
             "bytes": self._bytes,
             "maxBytes": self.max_bytes,
