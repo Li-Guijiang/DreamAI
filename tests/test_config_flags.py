@@ -140,7 +140,20 @@ def test_the_model_table_limit_is_clamped(monkeypatch, raw, expected):
     assert load_settings().max_tracked_models == expected
 
 
-def test_the_snapshot_interval_is_one_minute_by_default(monkeypatch):
+def test_the_cache_ttl_jitter_is_zero_by_default(monkeypatch):
+    monkeypatch.delenv("DREAMAI_CACHE_TTL_JITTER", raising=False)
+
+    assert load_settings().cache_ttl_jitter == 0.0
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [("-1", 0.0), ("0.2", 0.2), ("9", 0.5), ("bad", 0.0)],
+)
+def test_the_cache_ttl_jitter_is_clamped(monkeypatch, raw, expected):
+    monkeypatch.setenv("DREAMAI_CACHE_TTL_JITTER", raw)
+
+    assert load_settings().cache_ttl_jitter == expected
     monkeypatch.delenv("DREAMAI_USAGE_SAVE_INTERVAL", raising=False)
 
     assert load_settings().usage_save_interval == 60.0
