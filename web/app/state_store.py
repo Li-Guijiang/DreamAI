@@ -20,6 +20,7 @@ this module only guarantees that the file is a versioned JSON envelope.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import time
@@ -30,6 +31,14 @@ SNAPSHOT_VERSION = 1
 #: A counters file is a few kilobytes. Anything larger is not a snapshot we
 #: should parse into memory during startup.
 MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024
+
+
+def _checksum(counters: dict[str, Any]) -> str:
+    """Stable digest of the counters, independent of dict insertion order."""
+    payload = json.dumps(
+        counters, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def describe_snapshot(path: str | os.PathLike[str] | None) -> str:
@@ -54,7 +63,19 @@ def describe_snapshot(path: str | os.PathLike[str] | None) -> str:
             return "oversized"
     except OSError:
         return "unreadable"
-    return "valid" if load_snapshot(path) is not None else "corrupt"
+    if load_snapshot(path) is not None:
+        return "valid"
+    try:
+        payload = json.loads(Path(path).read_bytes())
+    except (OSError, ValueError):
+        return "corrupt"
+    if (
+        isinstance(payload, dict)
+        and isinstance(payload.get("counters"), dict)
+        and payload.get("checksum") is not None
+    ):
+        return "tampered"
+    return "corrupt"
 
 
 def save_snapshot(path: str | os.PathLike[str] | None, counters: dict[str, Any]) -> bool:
@@ -66,6 +87,7 @@ def save_snapshot(path: str | os.PathLike[str] | None, counters: dict[str, Any])
         "version": SNAPSHOT_VERSION,
         "savedAt": round(time.time(), 3),
         "counters": counters,
+        "checksum": _checksum(counters),
     }
     temporary = target.with_name(target.name + ".tmp")
     try:
@@ -106,4 +128,11 @@ def load_snapshot(path: str | os.PathLike[str] | None) -> dict[str, Any] | None:
     if payload.get("version") != SNAPSHOT_VERSION:
         return None
     counters = payload.get("counters")
-    return counters if isinstance(counters, dict) else None
+    if not isinstance(counters, dict):
+        return None
+    # Snapshots written before the checksum existed remain readable. When a
+    # checksum is present it must match, otherwise the envelope was edited.
+    expected = payload.get("checksum")
+    if expected is not None and expected != _checksum(counters):
+        return None
+    return counters
