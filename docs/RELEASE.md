@@ -93,3 +93,15 @@ after the first successful request:
    A checksum mismatch is reported as `tampered`, not silently accepted.
 5. `rejected` means the JSON envelope was intact but the counters failed
    validation; the previous in-memory counters continue from zero.
+
+## 7. Cache warm-up after a deployment
+
+A fresh process starts with an empty response cache. If the deployment sends a
+burst of identical questions, they all enter the cache at once and expire at
+once unless `DREAMAI_CACHE_TTL_JITTER` is set. For sites with scheduled traffic
+spikes, set it to roughly 0.1 and confirm `cache.ttlJitter` in `/api/health`.
+
+A sampling-setting change (`DREAMAI_TOP_P`, `DREAMAI_PRESENCE_PENALTY`) after
+deployment produces new cache keys by design. The first answer under the new
+settings is a miss; that is preferable to replaying an answer generated with
+different parameters.
