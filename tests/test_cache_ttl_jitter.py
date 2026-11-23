@@ -12,9 +12,7 @@ from app.cache import ResponseCache  # noqa: E402
 
 
 def make_cache(clock: list[float], **kwargs):
-    return ResponseCache(
-        clock=lambda: clock[0], rng=random.Random(7), **kwargs
-    )
+    return ResponseCache(clock=lambda: clock[0], rng=random.Random(7), **kwargs)
 
 
 def test_jitter_is_off_by_default():

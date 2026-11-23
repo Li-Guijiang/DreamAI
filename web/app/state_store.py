@@ -35,9 +35,7 @@ MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024
 
 def _checksum(counters: dict[str, Any]) -> str:
     """Stable digest of the counters, independent of dict insertion order."""
-    payload = json.dumps(
-        counters, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    )
+    payload = json.dumps(counters, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 

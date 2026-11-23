@@ -444,9 +444,7 @@ def load_settings() -> Settings:
         breaker_threshold=_env_int("DREAMAI_BREAKER_THRESHOLD", 3, 1),
         breaker_cooldown=_env_float("DREAMAI_BREAKER_COOLDOWN", 30.0),
         cache_ttl=_env_float("DREAMAI_CACHE_TTL", 300.0),
-        cache_ttl_jitter=min(
-            0.5, max(0.0, _env_float("DREAMAI_CACHE_TTL_JITTER", 0.0))
-        ),
+        cache_ttl_jitter=min(0.5, max(0.0, _env_float("DREAMAI_CACHE_TTL_JITTER", 0.0))),
         cache_max_items=_env_int("DREAMAI_CACHE_MAX_ITEMS", 128, 1),
         cache_max_bytes=min(
             64 * 1024 * 1024,
