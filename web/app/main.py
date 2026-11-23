@@ -54,7 +54,7 @@ from .quality import (
 )
 from .routing import choose_model, describe_routing, unknown_targets
 from .safety import classify_injection, harden_system_prompt
-from .state_store import load_snapshot, save_snapshot
+from .state_store import describe_snapshot, load_snapshot, save_snapshot
 from .stats import UsageStats
 from .telemetry import (
     format_breaker_log,
@@ -110,11 +110,16 @@ async def lifespan(app: FastAPI):
             "tier map names models this site does not serve: %s",
             ", ".join(f"{tier}={model}" for tier, model in sorted(unknown.items())),
         )
+    _snapshot_state["enabled"] = bool(settings.usage_state)
+    _snapshot_state["loadStatus"] = describe_snapshot(settings.usage_state)
     if settings.usage_state:
         restored = load_snapshot(settings.usage_state)
         if restored is None:
-            logger.info("usage snapshot: none at %s", settings.usage_state)
+            logger.info(
+                "usage snapshot: %s at %s", _snapshot_state["loadStatus"], settings.usage_state
+            )
         elif _stats.import_counters(restored):
+            _snapshot_state["loadStatus"] = "restored"
             logger.info("usage snapshot restored: %s requests", _stats.requests)
             if restore_daily_quota(restored):
                 logger.info(
@@ -123,10 +128,24 @@ async def lifespan(app: FastAPI):
                     settings.daily_limit,
                 )
         else:
+            _snapshot_state["loadStatus"] = "rejected"
             logger.warning("usage snapshot rejected: %s", settings.usage_state)
+
+    saver: asyncio.Task | None = None
+    if settings.usage_state and settings.usage_save_interval > 0:
+
+        async def _save_loop() -> None:
+            while True:
+                await asyncio.sleep(settings.usage_save_interval)
+                persist_snapshot()
+
+        saver = asyncio.create_task(_save_loop())
+
     yield
-    if settings.usage_state and not save_snapshot(settings.usage_state, snapshot_payload()):
-        logger.warning("usage snapshot could not be written: %s", settings.usage_state)
+    if saver is not None:
+        saver.cancel()
+        await asyncio.gather(saver, return_exceptions=True)
+    persist_snapshot()
     await llm.close_client()
 
 
@@ -267,6 +286,27 @@ _cache = ResponseCache(
 )
 
 _stats = UsageStats(started_at=STARTED_AT, max_tracked_models=settings.max_tracked_models)
+
+# Persisted counters are optional, so their health is reported rather than
+# assumed. A corrupt file and a fresh install look identical to the counters.
+_snapshot_state: dict[str, object] = {
+    "enabled": bool(settings.usage_state),
+    "loadStatus": "disabled" if not settings.usage_state else "pending",
+    "lastSaveAt": None,
+    "saveFailures": 0,
+}
+
+
+def persist_snapshot() -> bool:
+    """Flush the counters once and record the outcome for the status page."""
+    if not settings.usage_state:
+        return False
+    if save_snapshot(settings.usage_state, snapshot_payload()):
+        _snapshot_state["lastSaveAt"] = round(time.time(), 3)
+        return True
+    _snapshot_state["saveFailures"] = int(_snapshot_state["saveFailures"]) + 1
+    logger.warning("usage snapshot could not be written: %s", settings.usage_state)
+    return False
 
 
 class AdmissionTimeout(Exception):
@@ -818,6 +858,7 @@ async def usage() -> JSONResponse:
             "daily": _daily_state,
             "dailyLimit": settings.daily_limit,
             "usagePersisted": bool(settings.usage_state),
+            "usageState": dict(_snapshot_state),
         },
         headers={"Cache-Control": "no-store"},
     )
