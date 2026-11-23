@@ -30,13 +30,22 @@ def make_key(
     messages: Sequence[dict[str, str]],
     temperature: float,
     max_tokens: int,
+    top_p: float | None = 1.0,
+    presence_penalty: float | None = 0.0,
 ) -> str:
-    """Stable hash of everything that influences the answer."""
+    """Stable hash of everything that influences the answer.
+
+    Sampling settings are part of the key as well as temperature: two answers
+    generated with different ``top_p`` are different answers. The defaults keep
+    older callers producing the same key for the same request.
+    """
     payload = json.dumps(
         {
             "p": provider,
             "m": model,
             "t": round(temperature, 2),
+            "tp": round(top_p, 2) if top_p is not None else None,
+            "pp": round(presence_penalty, 2) if presence_penalty is not None else None,
             "n": max_tokens,
             "msg": [{"r": m.get("role"), "c": m.get("content")} for m in messages],
         },
