@@ -140,7 +140,20 @@ def test_the_model_table_limit_is_clamped(monkeypatch, raw, expected):
     assert load_settings().max_tracked_models == expected
 
 
-def test_admission_waits_ten_seconds_by_default(monkeypatch):
+def test_the_snapshot_interval_is_one_minute_by_default(monkeypatch):
+    monkeypatch.delenv("DREAMAI_USAGE_SAVE_INTERVAL", raising=False)
+
+    assert load_settings().usage_save_interval == 60.0
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [("0", 0.0), ("5", 5.0), ("99999", 3600.0), ("bad", 60.0)],
+)
+def test_the_snapshot_interval_is_clamped(monkeypatch, raw, expected):
+    monkeypatch.setenv("DREAMAI_USAGE_SAVE_INTERVAL", raw)
+
+    assert load_settings().usage_save_interval == expected
     monkeypatch.delenv("DREAMAI_ADMISSION_TIMEOUT", raising=False)
 
     assert load_settings().admission_timeout == 10.0
