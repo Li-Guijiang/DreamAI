@@ -128,6 +128,7 @@ done
 | `/api/health`, `/api/usage` | `cache.maxBytes`, `cache.byteEvictions`, `cache.byteFull` | 缓存字节预算、按字节淘汰数、当前是否达到预算 |
 | `/api/health`, `/api/usage` | `cache.pruned` | 写入前主动清理的过期条目数；`expired` 包含主动清理与取用时发现两类 |
 | `/api/health`, `/api/usage` | `cache.liveItems` | 当前仍可命中的条目数；`items` 可能还含等待清理的过期条目 |
+| `/api/health`, `/api/usage` | `cache.ttlJitter` | 写入时 TTL 的随机浮动比例，0 表示所有条目使用精确 TTL |
 | `/api/usage` | `admissionWaitAvg`, `admissionWaitSamples`, `admissionWaitMax`, `admissionTimeouts` | 等待并发槽位的时长与超时次数；与 TTFT 分开统计 |
 | `/api/usage` | `retries`, `retriesByStatus`, `fallbacks` | 上游重试次数（按 HTTP 状态分组）与切换备用模型的次数 |
 | `/api/usage` | `byModel.other` | 超出 `DREAMAI_MAX_TRACKED_MODELS` 的自定义模型名合并到该桶，计数与费用累加 |
