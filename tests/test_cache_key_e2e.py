@@ -39,7 +39,10 @@ def set_top_p(main, value: float) -> None:
 
 
 def post(main):
-    return TestClient(main.app).post("/api/chat", json=BODY)
+    # Close each client so its HTTP transport cannot be finalized after the
+    # event loop has been torn down by another test.
+    with TestClient(main.app) as client:
+        return client.post("/api/chat", json=BODY)
 
 
 def test_a_changed_top_p_does_not_hit_the_old_answer(harness):

@@ -115,7 +115,7 @@ def test_a_corrupt_snapshot_is_rejected_without_stopping_the_service(harness, ca
         with TestClient(main.app) as client:
             assert client.get("/api/usage").status_code == 200
 
-    assert "usage snapshot: none" in caplog.text
+    assert "usage snapshot: corrupt" in caplog.text
 
 
 def _busy_counters() -> dict:
