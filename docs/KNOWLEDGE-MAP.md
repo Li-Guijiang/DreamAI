@@ -737,3 +737,46 @@ CSS 里的 `url(%23n)` 看起来像路径，实际是 URL 编码后的 `#n`
 python -m pytest tests/test_assets_check.py tests/test_site_check.py -v
 python web/tools/check_site.py
 ```
+
+---
+
+## 20. 状态持久化要区分「没有」和「坏了」
+
+重启后计数归零是进程状态，不是历史事实。把计数写盘看似简单，
+真正难的是**失败分类**：文件不存在是首次运行，文件损坏是事故，
+文件被人改过是完整性事件。三者若都折叠成一个 `None`，
+运维就无法判断该不该紧张。
+
+因此持久化层需要两个独立概念：
+
+1. **加载状态**：`absent` / `valid` / `restored` / `corrupt` /
+   `oversized` / `unreadable` / `tampered` / `rejected`，发布到状态端点。
+2. **写入结果**：`lastSaveAt` 与 `saveFailures`，区分「从来没写成功」
+   与「刚失败一次」。
+
+`checksum` 不防恶意攻击者（他们能重算哈希），它防的是误编辑、
+半截断与手工改数后仍被当成真实历史。这是运维层校验，不是安全边界。
+
+### 20.1 惰性过期会偷走容量
+
+TTL 缓存若只在 `get()` 时检查过期，一个从未被再次请求的 key
+会一直占着槽位。等到缓存满，被淘汰的反而是仍然有效的答案。
+正确做法是**写入前先清理**：把过期条目释放掉，再决定是否需要淘汰。
+
+还有一个计数陷阱：`items` 是字典长度，可能包含等待清理的过期条目；
+真正可用的容量是 `liveItems`。仪表盘若只看前者，会误判缓存命中率为什么
+突然下降。
+
+### 20.2 缓存键要包含所有采样参数
+
+两个回答如果 `top_p` 不同，就不是同一个回答。缓存键里只放
+`temperature` 而漏掉 `top_p` / `presence_penalty`，在配置变更后会
+命中旧答案。参数来自全局配置时风险较低（重启会清空内存缓存），
+但键的语义应当自洽：把影响输出的参数全部纳入哈希。
+
+动手验证：
+
+```bash
+python -m pytest tests/test_snapshot_status.py tests/test_snapshot_publishing.py -v
+python -m pytest tests/test_cache_prune.py tests/test_cache_key_context.py -v
+```
