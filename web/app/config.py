@@ -269,7 +269,10 @@ class Settings:
     prompt_cache: bool = True
     # Optional file for /api/usage counters to survive a restart. Empty = off.
     # Only aggregate counters are ever written; no IP, message or request id.
+    # Optional on-disk usage snapshot: path, plus how often to flush it.
+    # 0 means only flush on shutdown.
     usage_state: str = ""
+    usage_save_interval: float = 60.0
     # Ceiling on distinct model names kept in the per-model table. One slot is
     # reserved for an "other" bucket that folds rare custom ids together.
     max_tracked_models: int = 64
@@ -429,6 +432,7 @@ def load_settings() -> Settings:
         stream_usage=_env_bool("DREAMAI_STREAM_USAGE", True),
         prompt_cache=_env_bool("DREAMAI_PROMPT_CACHE", True),
         usage_state=_env("DREAMAI_USAGE_STATE", ""),
+        usage_save_interval=min(3600.0, max(0.0, _env_float("DREAMAI_USAGE_SAVE_INTERVAL", 60.0))),
         max_tracked_models=min(512, _env_int("DREAMAI_MAX_TRACKED_MODELS", 64, 2)),
         upstream_read_timeout=max(
             10.0,
