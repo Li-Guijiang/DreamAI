@@ -55,6 +55,26 @@ def test_a_changed_top_p_does_not_hit_the_old_answer(harness):
     assert main._cache.stats()["misses"] == 2
 
 
+def test_the_configured_jitter_reaches_the_live_cache(monkeypatch):
+    main = importlib.import_module("app.main")
+    monkeypatch.setattr(
+        main,
+        "settings",
+        dataclasses.replace(main.settings, cache_ttl_jitter=0.25),
+    )
+
+    # The live cache is built at import time; rebuild it with the patched
+    # settings, which is exactly what a fresh process would do.
+    monkeypatch.setattr(
+        main,
+        "_cache",
+        ResponseCache(ttl_jitter=main.settings.cache_ttl_jitter),
+    )
+
+    with TestClient(main.app) as client:
+        assert client.get("/api/health").json()["cache"]["ttlJitter"] == 0.25
+
+
 def test_the_same_sampling_settings_still_hit_the_cache(harness):
     main = harness
     set_top_p(main, 0.5)
