@@ -80,3 +80,35 @@ def test_a_valid_file_with_a_huge_padding_is_rejected(tmp_path):
     path.write_text(valid + " " * (9 * 1024 * 1024), encoding="utf-8")
 
     assert describe_snapshot(path) == "oversized"
+
+
+def test_a_tampered_snapshot_is_rejected(tmp_path):
+    path = tmp_path / "usage.json"
+    assert save_snapshot(path, {"requests": 7}) is True
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["counters"]["requests"] = 999
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert load_snapshot(path) is None
+    assert describe_snapshot(path) == "tampered"
+
+
+def test_an_old_snapshot_without_a_checksum_still_loads(tmp_path):
+    path = tmp_path / "usage.json"
+    path.write_text(
+        json.dumps({"version": 1, "savedAt": 1.0, "counters": {"requests": 7}}),
+        encoding="utf-8",
+    )
+
+    assert load_snapshot(path) == {"requests": 7}
+    assert describe_snapshot(path) == "valid"
+
+
+def test_a_wrong_checksum_type_is_still_reported(tmp_path):
+    path = tmp_path / "usage.json"
+    path.write_text(
+        json.dumps({"version": 1, "counters": {}, "checksum": 123}),
+        encoding="utf-8",
+    )
+
+    assert describe_snapshot(path) == "tampered"
