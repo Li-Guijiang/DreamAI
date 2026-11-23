@@ -284,6 +284,9 @@ class Settings:
     breaker_threshold: int = 3
     breaker_cooldown: float = 30.0
     cache_ttl: float = 300.0
+    # Fraction of the TTL added/subtracted at random per entry. Non-zero
+    # values spread out a burst of writes so they do not all expire together.
+    cache_ttl_jitter: float = 0.0
     cache_max_items: int = 128
     # Byte ceiling for cached answers (UTF-8, not characters). 0 disables it.
     # Counting entries alone cannot bound memory: one long answer can outweigh
@@ -441,6 +444,9 @@ def load_settings() -> Settings:
         breaker_threshold=_env_int("DREAMAI_BREAKER_THRESHOLD", 3, 1),
         breaker_cooldown=_env_float("DREAMAI_BREAKER_COOLDOWN", 30.0),
         cache_ttl=_env_float("DREAMAI_CACHE_TTL", 300.0),
+        cache_ttl_jitter=min(
+            0.5, max(0.0, _env_float("DREAMAI_CACHE_TTL_JITTER", 0.0))
+        ),
         cache_max_items=_env_int("DREAMAI_CACHE_MAX_ITEMS", 128, 1),
         cache_max_bytes=min(
             64 * 1024 * 1024,
