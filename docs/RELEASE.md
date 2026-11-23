@@ -75,3 +75,21 @@ check verifies.
    otherwise hide a broken deployment.
 3. Verify the download link resolves to the version named in `latest.json`
    and that the file's SHA-256 matches the manifest.
+
+## 6. Usage snapshot on the server
+
+If `DREAMAI_USAGE_STATE` is configured, check `/api/usage.usageState`
+after the first successful request:
+
+1. A fresh install reports `loadStatus=absent` and a non-null `lastSaveAt`
+   after shutdown. A service that has run for a while should also have
+   periodic saves (default every 60 seconds).
+2. `corrupt`, `oversized`, `unreadable` or `tampered` means the file was not
+   trusted. Do not delete it during an incident: copy it aside first, since it
+   may still contain counters worth recovering manually.
+3. `saveFailures > 0` points at disk space or directory permissions. The chat
+   path is unaffected, but recent counters may be lost on restart.
+4. A snapshot written by an older build without a checksum remains readable.
+   A checksum mismatch is reported as `tampered`, not silently accepted.
+5. `rejected` means the JSON envelope was intact but the counters failed
+   validation; the previous in-memory counters continue from zero.
