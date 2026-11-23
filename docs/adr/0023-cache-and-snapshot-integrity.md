@@ -30,6 +30,12 @@ Rejected: pruning on every `get()`. That would add a full scan to the hot path
 for no benefit. Rejected: a background timer. The cache is small and writes
 already provide a natural point to reclaim.
 
+`DREAMAI_CACHE_TTL_JITTER` (default 0, clamped to 0..0.5) optionally adds a
+per-entry random offset to the TTL. It is off by default because exact TTLs
+are easier to reason about in tests and small deployments; it exists for
+bursty sites where a synchronised expiry would otherwise become an upstream
+spike. The active value is reported as `cache.ttlJitter`.
+
 ## Decision 2 — Hash every sampling parameter
 
 `make_key()` adds `top_p` and `presence_penalty`, with defaults that keep
