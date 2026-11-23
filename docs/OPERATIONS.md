@@ -583,5 +583,9 @@ service worker 缓存版本与下载清单。
    `cache.liveItems`；`cache.pruned` 是写入前主动清理的数量。
 4. 缓存键包含供应商、模型、消息、温度、`top_p`、`presence_penalty` 与预算；
    修改采样配置后不会命中旧答案。
+5. `DREAMAI_CACHE_TTL_JITTER`（默认 0，允许 0～0.5）给每条缓存的 TTL
+   加上随机浮动。若大量答案在同一时刻写入，默认值会让它们同时过期，
+   造成瞬时回源；设置 0.1 左右可把过期时刻分散开。该值在
+   `cache.ttlJitter` 中回显，便于确认配置已生效。
 
 
