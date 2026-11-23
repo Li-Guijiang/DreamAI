@@ -1070,7 +1070,15 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
     # already part of the key, but a private answer should not live in a shared
     # in-memory cache at all, and an edited dossier must never risk replay.
     if _cache.enabled and injection is None and not owner and temperature <= 0.3:
-        cache_key = make_key(upstream.provider.id, model, messages, temperature, budget)
+        cache_key = make_key(
+            upstream.provider.id,
+            model,
+            messages,
+            temperature,
+            budget,
+            top_p=settings.top_p,
+            presence_penalty=settings.presence_penalty,
+        )
         cached_text = _cache.get(cache_key)
 
     class _FallbackProvider:
