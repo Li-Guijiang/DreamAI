@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Configuration contracts
+
+- Added `docs/CONFIGURATION.md`: all 44 server environment variables with
+  defaults, ranges and their purpose. Client, desktop and owner variables are
+  explicitly listed as out of scope.
+- Added `web/tools/check_env_docs.py` and `web/tools/check_docs_index.py` to CI.
+  They fail when a new setting is undocumented or a new ADR/document is not
+  indexed.
+- Values clamped at load time are now reported as field names in
+  `/api/health.configClamped`. No values are published, and the list never
+  reaches `/api/config`.
+- Added a security contract test for `/api/config`: keys, upstream URLs,
+  snapshot paths, system prompts and fallback credentials must never appear
+  in the browser-facing payload.
+
 ### Cache and snapshot integrity
 
 - `ResponseCache.put()` now prunes expired entries before inserting, reports
