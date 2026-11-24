@@ -11,7 +11,12 @@
 启动时的建议项显示在 `/api/health.configChecks` 与启动日志中。
 
 `web/tools/check_env_docs.py` 检查本文是否覆盖代码里的每一个配置项，
-避免新增配置后文档漏写。
+并对表中写成纯数字（可带「秒」）的默认值与代码做等值比较。
+描述性默认值（如「内置人格文本」）不参与该比较。
+
+```bash
+python web/tools/check_env_docs.py
+```
 
 ## 1. 核心模型与输出
 
