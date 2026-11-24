@@ -82,6 +82,29 @@ def test_a_server_variable_only_in_the_final_section_is_reported(tmp_path):
     assert "DREAMAI_FREE_API_KEY" in check_env_docs.check(config, doc)["misplaced"]
 
 
+def test_a_changed_default_is_reported(tmp_path):
+    config, doc = make_files(
+        tmp_path,
+        'DREAMAI_CACHE_TTL = _env_float("DREAMAI_CACHE_TTL", 300.0)\n',
+        HEADER + "| `DREAMAI_CACHE_TTL` | `120` 秒 | old value |\n",
+    )
+
+    result = check_env_docs.check(config, doc)
+
+    assert result["ok"] is False
+    assert any("DREAMAI_CACHE_TTL" in item for item in result["defaultDrift"])
+
+
+def test_a_multiplication_default_matches_its_expanded_value(tmp_path):
+    config, doc = make_files(
+        tmp_path,
+        'DREAMAI_CACHE_MAX_BYTES = _env_int("DREAMAI_CACHE_MAX_BYTES", 4 * 1024 * 1024)\n',
+        HEADER + "| `DREAMAI_CACHE_MAX_BYTES` | `4194304` | bytes |\n",
+    )
+
+    assert check_env_docs.check(config, doc)["ok"] is True
+
+
 def test_missing_files_fail_closed(tmp_path):
     result = check_env_docs.check(tmp_path / "none.py", tmp_path / "none.md")
 
