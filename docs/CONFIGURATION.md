@@ -43,3 +43,12 @@
 | `DREAMAI_BYOK_MODELS` | 内置两项 | 自带密钥档可选模型列表 | JSON 数组，每项含 `id` / `label`；模型 id 不得含空白 |
 | `DREAMAI_MODEL_BY_TIER` | 空 | 难度档位到模型的映射 | 形如 `simple=模型,medium=模型,complex=模型`；未知档位会告警 |
 | `DREAMAI_PRICE_OVERRIDES` | 空 | 覆盖内置价格表 | JSON 对象，每项为正数价格；非有限数会被拒绝 |
+
+## 4. 备用上游与传输
+
+| 变量 | 默认值 | 作用 | 约束 |
+|---|---|---|---|
+| `DREAMAI_FALLBACK_BASE_URL` | 空 | 主用失败后切换的接口地址 | 必须与 `FALLBACK_API_KEY`、`FALLBACK_MODEL` 同时设置才生效 |
+| `DREAMAI_FALLBACK_API_KEY` | 空 | 备用上游密钥 | 不写入日志或公开配置 |
+| `DREAMAI_FALLBACK_MODEL` | 空 | 备用模型名 | 不得含空白或控制字符 |
+| `DREAMAI_UPSTREAM_READ_TIMEOUT` | `240` 秒 | 上游单次流读取超时 | 裁剪到不超过 900 秒；超时会按可重试错误处理 |
