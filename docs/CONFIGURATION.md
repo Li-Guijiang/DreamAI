@@ -22,3 +22,13 @@
 | `DREAMAI_SYSTEM_PROMPT` | 内置人格文本 | 追加到所有请求前的系统提示 | 不写入日志与公开配置 |
 | `DREAMAI_STREAM_USAGE` | `true` | 是否请求上游在流末返回 token 用量 | 关闭后 token 与成本统计不可用 |
 | `DREAMAI_PROMPT_CACHE` | `true` | 是否向上游发送提示词缓存标记 | 供应商不支持时会自动忽略 |
+
+## 2. 免费上游
+
+| 变量 | 默认值 | 作用 | 约束 |
+|---|---|---|---|
+| `DREAMAI_FREE_API_KEY` | 空 | 免费档供应商密钥 | 为空时免费聊天返回 503；密钥不会写入日志或公开配置 |
+| `DREAMAI_FREE_BASE_URL` | `https://open.bigmodel.cn/api/paas/v4` | 免费档接口地址 | 必须是 HTTP(S) URL，启动时会校验 |
+| `DREAMAI_FREE_MODEL` | `glm-4-flash` | 免费档模型名 | 会被原样发送给供应商，不得含空白或控制字符 |
+| `DREAMAI_FREE_LABEL` | `GLM-4-Flash` | 公开配置中展示的档位名称 | 仅用于界面显示 |
+| `DREAMAI_FREE_KEY_URL` | 智谱控制台地址 | 公开配置中引导用户申请密钥的链接 | 必须为 HTTP(S) URL |
