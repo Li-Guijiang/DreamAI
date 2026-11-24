@@ -83,3 +83,26 @@
 | `DREAMAI_HEARTBEAT_SECONDS` | `12` 秒 | 上游静默多久后发送 `: ping` | 裁剪到 1～120 秒；超过 60 秒会告警 |
 | `DREAMAI_ADMISSION_TIMEOUT` | `10` 秒 | 等待并发槽位的截止时间 | 裁剪到 0～120 秒；`0` 表示无限等待 |
 | `DREAMAI_STREAM_QUEUE_SIZE` | `64` | 单请求的有界事件队列容量 | 裁剪到 8～512；满队列会记录背压并丢弃最旧的非关键事件 |
+
+## 8. 站点展示与持久化
+
+| 变量 | 默认值 | 作用 | 约束 |
+|---|---|---|---|
+| `DREAMAI_SITE_TITLE` | `Dream AI` | 公开配置中的站点标题 | 仅展示 |
+| `DREAMAI_SITE_TAGLINE` | `让每一个想法，都被认真对待` | 公开配置中的标语 | 仅展示 |
+| `DREAMAI_REPO_URL` | 本项目 GitHub 地址 | 公开配置中的源码链接 | 必须为 HTTP(S) URL |
+| `DREAMAI_USAGE_STATE` | 空 | 用量快照文件路径 | 为空表示不启用；文件只含聚合计数 |
+| `DREAMAI_USAGE_SAVE_INTERVAL` | `60` 秒 | 快照周期性刷新间隔 | 裁剪到 0～3600 秒；`0` 表示仅关闭时写入 |
+| `DREAMAI_MAX_TRACKED_MODELS` | `64` | 统计表中保留的模型名数量 | 裁剪到 2～512；超出部分归入 `other` |
+
+## 9. 不属于本文的变量
+
+以下变量属于命令行客户端或桌面端，在 [SETUP.md](./SETUP.md) 说明：
+`DREAMAI_API_KEY`、`DREAMAI_MODEL`、`DREAMAI_PROVIDER`、`DREAMAI_DATA_DIR`、
+`DREAMAI_PERSISTENCE`、`DREAMAI_TOOLS_ENABLED`、`DREAMAI_FILE_ACCESS_ENABLED`、
+`DREAMAI_WEB_SEARCH_ENABLED`、`DREAMAI_WORKSPACE_DIR`、`DREAMAI_AUTONOMY_ENABLED`、
+`DREAMAI_MAX_STEPS`、`DREAMAI_MAX_RETRIES`、`DREAMAI_AUTONOMY_VERBOSE`、
+`DREAMAI_ANIMATIONS`、`DREAMAI_ANIMATION_SPEED`。
+
+所有者认证使用 `DREAMAI_OWNER_SECRET`、`DREAMAI_OWNER_TOKEN` 与
+`DREAMAI_OWNER_PROFILE`，详见 [OPERATIONS.md](./OPERATIONS.md)。
