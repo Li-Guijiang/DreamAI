@@ -323,6 +323,9 @@ class Settings:
     site_title: str = "Dream AI"
     site_tagline: str = "让每一个想法，都被认真对待"
     repo_url: str = "https://github.com/Li-Guijiang/DreamAI"
+    # Environment names whose supplied value was outside the supported range
+    # and therefore replaced by a boundary at load time.
+    clamped_fields: tuple[str, ...] = ()
 
     @property
     def fallback_configured(self) -> bool:
@@ -409,9 +412,18 @@ def _parse_byok_models() -> tuple[ModelOption, ...]:
     return tuple(options)
 
 
+def _clamp(value: float, low: float, high: float, name: str, clamped: list[str]) -> float:
+    """Apply a boundary and remember that the supplied value was replaced."""
+    result = min(high, max(low, value))
+    if result != value:
+        clamped.append(name)
+    return result
+
+
 def load_settings() -> Settings:
     _load_env_file()
-    temperature = min(2.0, max(0.0, _env_float("DREAMAI_TEMPERATURE", 0.7)))
+    clamped: list[str] = []
+    temperature = _clamp(_env_float("DREAMAI_TEMPERATURE", 0.7), 0.0, 2.0, "temperature", clamped)
 
     return Settings(
         free_api_key=_env("DREAMAI_FREE_API_KEY"),
@@ -435,7 +447,13 @@ def load_settings() -> Settings:
         stream_usage=_env_bool("DREAMAI_STREAM_USAGE", True),
         prompt_cache=_env_bool("DREAMAI_PROMPT_CACHE", True),
         usage_state=_env("DREAMAI_USAGE_STATE", ""),
-        usage_save_interval=min(3600.0, max(0.0, _env_float("DREAMAI_USAGE_SAVE_INTERVAL", 60.0))),
+        usage_save_interval=_clamp(
+            _env_float("DREAMAI_USAGE_SAVE_INTERVAL", 60.0),
+            0.0,
+            3600.0,
+            "usageSaveInterval",
+            clamped,
+        ),
         max_tracked_models=min(512, _env_int("DREAMAI_MAX_TRACKED_MODELS", 64, 2)),
         upstream_read_timeout=max(
             10.0,
@@ -444,7 +462,13 @@ def load_settings() -> Settings:
         breaker_threshold=_env_int("DREAMAI_BREAKER_THRESHOLD", 3, 1),
         breaker_cooldown=_env_float("DREAMAI_BREAKER_COOLDOWN", 30.0),
         cache_ttl=_env_float("DREAMAI_CACHE_TTL", 300.0),
-        cache_ttl_jitter=min(0.5, max(0.0, _env_float("DREAMAI_CACHE_TTL_JITTER", 0.0))),
+        cache_ttl_jitter=_clamp(
+            _env_float("DREAMAI_CACHE_TTL_JITTER", 0.0),
+            0.0,
+            0.5,
+            "cacheTtlJitter",
+            clamped,
+        ),
         cache_max_items=_env_int("DREAMAI_CACHE_MAX_ITEMS", 128, 1),
         cache_max_bytes=min(
             64 * 1024 * 1024,
@@ -459,9 +483,29 @@ def load_settings() -> Settings:
         rate_window=_env_int("DREAMAI_RATE_WINDOW", 600, 30),
         daily_limit=_env_int("DREAMAI_DAILY_LIMIT", 2000, 0),
         max_concurrency=_env_int("DREAMAI_MAX_CONCURRENCY", 6, 1),
-        stream_queue_size=min(512, max(8, _env_int("DREAMAI_STREAM_QUEUE_SIZE", 64, 8))),
-        heartbeat_seconds=min(120.0, max(1.0, _env_float("DREAMAI_HEARTBEAT_SECONDS", 12.0))),
-        admission_timeout=min(120.0, max(0.0, _env_float("DREAMAI_ADMISSION_TIMEOUT", 10.0))),
+        stream_queue_size=int(
+            _clamp(
+                _env_int("DREAMAI_STREAM_QUEUE_SIZE", 64, 8),
+                8,
+                512,
+                "streamQueueSize",
+                clamped,
+            )
+        ),
+        heartbeat_seconds=_clamp(
+            _env_float("DREAMAI_HEARTBEAT_SECONDS", 12.0),
+            1.0,
+            120.0,
+            "heartbeatSeconds",
+            clamped,
+        ),
+        admission_timeout=_clamp(
+            _env_float("DREAMAI_ADMISSION_TIMEOUT", 10.0),
+            0.0,
+            120.0,
+            "admissionTimeout",
+            clamped,
+        ),
         max_input_chars=_env_int("DREAMAI_MAX_INPUT_CHARS", 12000, 500),
         max_history_messages=_env_int("DREAMAI_MAX_HISTORY_MESSAGES", 30, 2),
         max_history_chars=_env_int("DREAMAI_MAX_HISTORY_CHARS", 60000, 2000),
@@ -470,4 +514,5 @@ def load_settings() -> Settings:
         or "让每一个想法，都被认真对待",
         repo_url=_env("DREAMAI_REPO_URL", "https://github.com/Li-Guijiang/DreamAI")
         or "https://github.com/Li-Guijiang/DreamAI",
+        clamped_fields=tuple(clamped),
     )
