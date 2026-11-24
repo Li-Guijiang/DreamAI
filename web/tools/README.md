@@ -16,6 +16,7 @@ the environment comes from `web/requirements.txt`, and some scripts additionally
 | `make_assets.py` | Generate the site icons (favicon, PWA icons, social card) from the brand assets | After a brand change, to rebuild `web/web/assets/img/` |
 | `check_assets.py` | Verify every local CSS/JS reference exists and all pages pin the same version | Before publishing; also runs in CI through `check_site.py` |
 | `check_site.py` | Check page links, `#anchor` targets, the download manifest and all asset references | Before publishing; also runs in CI |
+| `check_env_docs.py` | Verify that every server environment variable is documented | After adding a setting; also runs in CI |
 | `make_og.py` | Regenerate only the 1200×630 social card `web/web/assets/img/og.png` | After changing the tagline or the card layout |
 | `mock_upstream.py` | Local mock of an OpenAI-compatible streaming endpoint | Developing the UI without an API key |
 | `server_exec.py` | Generic SSH helper (`exec` / `put` / `get` / `shell`) | Running a command or moving a file on the server |
