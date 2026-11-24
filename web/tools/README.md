@@ -18,6 +18,9 @@ the environment comes from `web/requirements.txt`, and some scripts additionally
 | `check_site.py` | Check page links, `#anchor` targets, the download manifest and all asset references | Before publishing; also runs in CI |
 | `check_env_docs.py` | Verify that every server environment variable is documented | After adding a setting; also runs in CI |
 | `check_docs_index.py` | Verify that every ADR and top-level document appears in its index | After adding a document; also runs in CI |
+
+The index check also rejects gaps and duplicate numbers in the ADR sequence,
+so `0025` cannot be added while `0024` is missing.
 | `make_og.py` | Regenerate only the 1200×630 social card `web/web/assets/img/og.png` | After changing the tagline or the card layout |
 | `mock_upstream.py` | Local mock of an OpenAI-compatible streaming endpoint | Developing the UI without an API key |
 | `server_exec.py` | Generic SSH helper (`exec` / `put` / `get` / `shell`) | Running a command or moving a file on the server |
