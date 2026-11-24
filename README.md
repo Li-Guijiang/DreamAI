@@ -266,6 +266,7 @@ reaches the screen. Both are now explicit.
 | Cache integrity | Expired slots are reclaimed and sampling settings are part of the key | `ResponseCache.prune()`, `make_key()` |
 | Expiry jitter | Burst-written answers expire at spread-out times | `DREAMAI_CACHE_TTL_JITTER` |
 | Snapshot health | Load status and write failures are published, with periodic flushes | `DREAMAI_USAGE_STATE`, `/api/usage.usageState` |
+| Configuration contract | All 44 server settings documented and guarded in CI | `docs/CONFIGURATION.md`, `check_env_docs.py` |
 | Real usage | Token counts from all three wire formats, one usage event per stream | `usage_from_chunk()`, `DREAMAI_STREAM_USAGE` |
 | Price corrections | `DREAMAI_PRICE_OVERRIDES` fixes a stale price without a release | `pricing.configure_prices()` |
 | Provider view | `/api/usage` groups turns per vendor, not just per model | `byProvider` |
