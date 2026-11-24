@@ -128,6 +128,17 @@ def test_a_bad_url_is_published_without_echoing_the_value(main_module, monkeypat
     assert "SUPER-SECRET" not in str(checks)
 
 
+def test_clamped_configuration_names_are_published(main_module, monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "settings",
+        dataclasses.replace(main_module.settings, clamped_fields=("temperature",)),
+    )
+
+    with TestClient(main_module.app) as client:
+        assert client.get("/api/health").json()["configClamped"] == ["temperature"]
+
+
 def test_an_impossible_model_id_is_published_at_startup(main_module, monkeypatch):
     monkeypatch.setattr(
         main_module,
