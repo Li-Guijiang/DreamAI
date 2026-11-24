@@ -59,6 +59,31 @@ def test_a_broken_adr_link_is_reported(tmp_path):
     assert "9999-gone.md" in check_docs_index.check_adr_index(root)["broken"]
 
 
+def test_a_gap_in_adr_numbering_is_reported(tmp_path):
+    root = make_tree(tmp_path)
+    (root / "docs" / "adr" / "0003-third.md").write_text("# third", encoding="utf-8")
+
+    result = check_docs_index.check_adr_index(root)
+
+    assert 2 in result["gaps"]
+    assert result["ok"] is False
+
+
+def test_duplicate_adr_numbers_are_reported(tmp_path):
+    root = make_tree(tmp_path)
+    (root / "docs" / "adr" / "0001-also-first.md").write_text("# other", encoding="utf-8")
+
+    result = check_docs_index.check_adr_index(root)
+
+    assert 1 in result["duplicates"]
+    assert result["ok"] is False
+
+
+def test_the_published_adr_sequence_has_no_gaps():
+    assert check_docs_index.check_adr_index()["gaps"] == []
+    assert check_docs_index.check_adr_index()["duplicates"] == []
+
+
 def test_an_unindexed_document_is_reported(tmp_path):
     root = make_tree(tmp_path)
     (root / "docs" / "SETUP.md").write_text("# setup", encoding="utf-8")
