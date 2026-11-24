@@ -68,6 +68,7 @@ def test_the_health_and_usage_endpoints_honour_the_documented_fields():
     usage = client.get("/api/usage").json()
 
     assert set(("configChecks",)) <= set(health)
+    assert "configClamped" in health
     assert {"usagePersisted", "truncated", "truncatedByTier", "byFinish"} <= set(usage)
     assert {"retries", "retriesByStatus", "fallbacks"} <= set(usage)
     assert {"admissionWaitSamples", "admissionTimeouts"} <= set(usage)
