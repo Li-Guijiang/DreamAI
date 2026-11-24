@@ -6,6 +6,8 @@
 与本文的 Web 服务端变量不是同一套，具体名单见第 9 节。
 
 未设置时均使用表中默认值。数值经过上下限裁剪，超限不会报错而是取边界值。
+被裁剪的字段名出现在 `/api/health.configClamped`（camelCase），便于确认某个
+环境变量是否被静默修正；该列表不包含变量值，也不会进入 `/api/config`。
 启动时的建议项显示在 `/api/health.configChecks` 与启动日志中。
 
 `web/tools/check_env_docs.py` 检查本文是否覆盖代码里的每一个配置项，
