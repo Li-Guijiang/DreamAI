@@ -22,7 +22,7 @@ DOCUMENT = ROOT / "docs" / "CONFIGURATION.md"
 ENV_NAME = re.compile(r"DREAMAI_[A-Z0-9_]+")
 ENV_DEFAULT = re.compile(
     r'_env(?:_int|_float)?\(\s*"(DREAMAI_[A-Z0-9_]+)"\s*,\s*'
-    r'([0-9]+(?:\.[0-9]+)?(?:\s*\*\s*[0-9]+(?:\.[0-9]+)?)*)'
+    r"([0-9]+(?:\.[0-9]+)?(?:\s*\*\s*[0-9]+(?:\.[0-9]+)?)*)"
 )
 DOC_DEFAULT = re.compile(
     r"^\|\s*`(DREAMAI_[A-Z0-9_]+)`\s*\|\s*`?([0-9]+(?:\.[0-9]+)?)`?\s*(?:秒)?\s*\|",
@@ -52,6 +52,7 @@ def check(config: Path = CONFIG, document: Path = DOCUMENT) -> dict:
     after = set(ENV_NAME.findall(out_of_scope_text)) if separator else set()
 
     missing = sorted(code_names - documented)
+
     # Numeric defaults must match too. Descriptive cells ("empty", "built-in
     # prompt", a URL name) are deliberately left out of this comparison.
     def numeric(expression: str) -> float:
