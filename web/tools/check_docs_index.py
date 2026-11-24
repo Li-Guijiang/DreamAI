@@ -38,18 +38,26 @@ def check_adr_index(root: Path = ROOT) -> dict:
     adr = root / "docs" / "adr"
     index = adr / "README.md"
     if not index.is_file():
-        return {"missing": [], "broken": [], "files": 0, "ok": False}
+        return {"missing": [], "broken": [], "gaps": [], "duplicates": [], "files": 0, "ok": False}
     listed = {
         Path(target).name
         for target in links_in(index.read_text(encoding="utf-8"))
         if target.endswith(".md")
     }
     files = {p.name for p in adr.glob("*.md") if ADR_FILE.match(p.name)}
+    numbers = sorted(int(name[:4]) for name in files)
+    gaps = sorted(set(range(1, max(numbers) + 1)) - set(numbers)) if numbers else []
+    duplicates = sorted(number for number in set(numbers) if numbers.count(number) > 1)
     return {
         "files": len(files),
         "missing": sorted(files - listed),
         "broken": sorted(target for target in listed if not (adr / target).is_file()),
-        "ok": not (files - listed) and not any(not (adr / target).is_file() for target in listed),
+        "gaps": gaps,
+        "duplicates": duplicates,
+        "ok": not (files - listed)
+        and not any(not (adr / target).is_file() for target in listed)
+        and not gaps
+        and not duplicates,
     }
 
 
@@ -91,6 +99,10 @@ def _format(result: dict) -> str:
             lines.append(f"  NOT INDEXED ({key}): {name}")
         for name in result[group]["broken"]:
             lines.append(f"  BROKEN LINK ({key}): {name}")
+    for number in result["adr"]["gaps"]:
+        lines.append(f"  ADR GAP: {number:04d}")
+    for number in result["adr"]["duplicates"]:
+        lines.append(f"  DUPLICATE ADR: {number:04d}")
     lines.append("docs index: OK" if result["ok"] else "docs index: FAILED")
     return "\n".join(lines)
 
