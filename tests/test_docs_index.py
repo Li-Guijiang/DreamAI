@@ -127,3 +127,19 @@ def test_the_cli_emits_parseable_json(tmp_path):
     payload = json.loads(done.stdout)
     assert done.returncode == 0
     assert set(payload) == {"adr", "docs", "ok"}
+    assert {"gaps", "duplicates"} <= set(payload["adr"])
+
+
+def test_the_cli_rejects_an_incomplete_index(tmp_path):
+    root = make_tree(tmp_path)
+    (root / "docs" / "adr" / "0003-third.md").write_text("# third", encoding="utf-8")
+
+    done = subprocess.run(
+        [sys.executable, str(TOOL), "--root", str(root)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert done.returncode == 1
+    assert "ADR GAP" in done.stdout
