@@ -20,6 +20,14 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 CONFIG = ROOT / "web" / "app" / "config.py"
 DOCUMENT = ROOT / "docs" / "CONFIGURATION.md"
 ENV_NAME = re.compile(r"DREAMAI_[A-Z0-9_]+")
+ENV_DEFAULT = re.compile(
+    r'_env(?:_int|_float)?\(\s*"(DREAMAI_[A-Z0-9_]+)"\s*,\s*'
+    r'([0-9]+(?:\.[0-9]+)?(?:\s*\*\s*[0-9]+(?:\.[0-9]+)?)*)'
+)
+DOC_DEFAULT = re.compile(
+    r"^\|\s*`(DREAMAI_[A-Z0-9_]+)`\s*\|\s*`?([0-9]+(?:\.[0-9]+)?)`?\s*(?:秒)?\s*\|",
+    re.M,
+)
 OUT_OF_SCOPE = "## 9. 不属于本文的变量"
 
 
@@ -31,6 +39,7 @@ def check(config: Path = CONFIG, document: Path = DOCUMENT) -> dict:
             "document": str(document),
             "variables": 0,
             "missing": ["configuration files not found"],
+            "defaultDrift": [],
             "misplaced": [],
             "ok": False,
         }
@@ -43,6 +52,26 @@ def check(config: Path = CONFIG, document: Path = DOCUMENT) -> dict:
     after = set(ENV_NAME.findall(out_of_scope_text)) if separator else set()
 
     missing = sorted(code_names - documented)
+    # Numeric defaults must match too. Descriptive cells ("empty", "built-in
+    # prompt", a URL name) are deliberately left out of this comparison.
+    def numeric(expression: str) -> float:
+        # Only digits and multiplication signs reach this function via the
+        # regex above; no general expression evaluation is involved.
+        result = 1.0
+        for factor in expression.split("*"):
+            result *= float(factor.strip())
+        return result
+
+    code_defaults = {
+        name: numeric(value)
+        for name, value in ENV_DEFAULT.findall(config.read_text(encoding="utf-8"))
+    }
+    doc_defaults = {name: float(value) for name, value in DOC_DEFAULT.findall(main_text)}
+    drifted = sorted(
+        f"{name}: code={code_defaults[name]:g}, docs={doc_defaults[name]:g}"
+        for name in code_defaults.keys() & doc_defaults.keys()
+        if code_defaults[name] != doc_defaults[name]
+    )
     # A name listed before the boundary looks like a server setting but has no
     # counterpart in config.py. The boundary section exists for those names.
     misplaced = sorted(before - code_names)
@@ -56,8 +85,9 @@ def check(config: Path = CONFIG, document: Path = DOCUMENT) -> dict:
         "documented": len(documented),
         "outOfScope": len(after),
         "missing": missing,
+        "defaultDrift": drifted,
         "misplaced": sorted(set(misplaced)),
-        "ok": not missing and not misplaced,
+        "ok": not missing and not misplaced and not drifted,
     }
 
 
@@ -68,6 +98,8 @@ def _format(result: dict) -> str:
     ]
     for name in result["missing"]:
         lines.append(f"  UNDOCUMENTED: {name}")
+    for item in result["defaultDrift"]:
+        lines.append(f"  DEFAULT DRIFT: {item}")
     for name in result["misplaced"]:
         lines.append(f"  OUT OF PLACE: {name}")
     lines.append("env docs: OK" if result["ok"] else "env docs: FAILED")
