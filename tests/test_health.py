@@ -31,3 +31,12 @@ def test_health_reports_breaker_state_and_cache_counters(client):
     assert body["breaker"]["threshold"] >= 1
     assert {"items", "capacity", "ttl", "hits", "misses"} <= set(body["cache"])
     assert body["cache"]["items"] >= 0
+    assert isinstance(body["configClamped"], list)
+
+
+def test_health_reports_clamped_fields_as_names_only(client):
+    body = client.get("/api/health").json()
+
+    for name in body["configClamped"]:
+        assert isinstance(name, str)
+        assert "DREAMAI_" not in name
