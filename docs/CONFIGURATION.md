@@ -32,3 +32,14 @@
 | `DREAMAI_FREE_MODEL` | `glm-4-flash` | 免费档模型名 | 会被原样发送给供应商，不得含空白或控制字符 |
 | `DREAMAI_FREE_LABEL` | `GLM-4-Flash` | 公开配置中展示的档位名称 | 仅用于界面显示 |
 | `DREAMAI_FREE_KEY_URL` | 智谱控制台地址 | 公开配置中引导用户申请密钥的链接 | 必须为 HTTP(S) URL |
+
+## 3. BYOK、模型表与价格覆盖
+
+| 变量 | 默认值 | 作用 | 约束 |
+|---|---|---|---|
+| `DREAMAI_BYOK_BASE_URL` | `https://api.deepseek.com/v1` | 自带密钥档的接口地址 | 必须为 HTTP(S) URL |
+| `DREAMAI_BYOK_KEY_URL` | DeepSeek 控制台地址 | 申请自带密钥的引导链接 | 必须为 HTTP(S) URL |
+| `DREAMAI_BYOK_LABEL` | `DeepSeek` | 自带密钥档的展示名称 | 仅用于界面显示 |
+| `DREAMAI_BYOK_MODELS` | 内置两项 | 自带密钥档可选模型列表 | JSON 数组，每项含 `id` / `label`；模型 id 不得含空白 |
+| `DREAMAI_MODEL_BY_TIER` | 空 | 难度档位到模型的映射 | 形如 `simple=模型,medium=模型,complex=模型`；未知档位会告警 |
+| `DREAMAI_PRICE_OVERRIDES` | 空 | 覆盖内置价格表 | JSON 对象，每项为正数价格；非有限数会被拒绝 |
