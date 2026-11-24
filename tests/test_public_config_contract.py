@@ -107,6 +107,22 @@ def test_public_config_is_not_cached():
     assert response.headers.get("Cache-Control") == "no-store"
 
 
+def test_clamped_field_names_do_not_reach_the_browser(monkeypatch):
+    main = importlib.import_module("app.main")
+    monkeypatch.setattr(
+        main,
+        "settings",
+        dataclasses.replace(main.settings, clamped_fields=("temperature",)),
+    )
+
+    with TestClient(main.app) as client:
+        public = client.get("/api/config").json()
+        health = client.get("/api/health").json()
+
+    assert "configClamped" not in public
+    assert health["configClamped"] == ["temperature"]
+
+
 def test_limits_expose_only_client_relevant_numbers():
     main = importlib.import_module("app.main")
 
