@@ -68,5 +68,8 @@ jobs:
       - name: Check site assets, links and download manifest
         run: python web/tools/check_site.py
 
+      - name: Check the configuration reference
+        run: python web/tools/check_env_docs.py
+
       - name: Run tests with pytest
         run: pytest
