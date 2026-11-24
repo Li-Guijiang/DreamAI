@@ -37,8 +37,9 @@ cannot be mistaken for server settings.
 ## Decision 2 — Indexes are checked too
 
 `web/tools/check_docs_index.py` verifies that each numbered ADR appears in
-`docs/adr/README.md` and each top-level document in `docs/README.md`. Both
-tools run in CI before pytest.
+`docs/adr/README.md` and each top-level document in `docs/README.md`. It also
+rejects gaps and duplicate numbers in the ADR sequence, so a record cannot be
+added as `0025` while `0024` is missing. Both tools run in CI before pytest.
 
 ## Decision 3 — Report clamping without leaking values
 
