@@ -64,3 +64,14 @@
 | `DREAMAI_MAX_INPUT_CHARS` | `12000` | 单轮用户输入的字符上限 | 最小 500；超限返回 400 |
 | `DREAMAI_MAX_HISTORY_MESSAGES` | `30` | 参与提示词构建的历史消息数 | 最小 2 |
 | `DREAMAI_MAX_HISTORY_CHARS` | `60000` | 参与提示词构建的历史字符数 | 最小 2000 |
+
+## 6. 缓存与熔断
+
+| 变量 | 默认值 | 作用 | 约束 |
+|---|---|---|---|
+| `DREAMAI_CACHE_TTL` | `300` 秒 | 答案缓存有效期；`0` 关闭缓存 | 关闭后 `get()` / `put()` 为空操作 |
+| `DREAMAI_CACHE_TTL_JITTER` | `0` | TTL 的随机浮动比例 | 裁剪到 0～0.5；非 0 时同批写入不会同时过期 |
+| `DREAMAI_CACHE_MAX_ITEMS` | `128` | 缓存条目数上限 | 最小 1 |
+| `DREAMAI_CACHE_MAX_BYTES` | `4194304` | 缓存 UTF-8 字节预算 | `0` 表示不按字节限制 |
+| `DREAMAI_BREAKER_THRESHOLD` | `3` | 连续失败多少次后打开熔断 | 最小 1 |
+| `DREAMAI_BREAKER_COOLDOWN` | `30` 秒 | 熔断打开后的冷却时间 | 正数 |
