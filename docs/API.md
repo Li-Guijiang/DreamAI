@@ -141,6 +141,8 @@ done
 `byModel` 的条目数有上限，超出部分的请求计入 `other` 行；
 `requests` 是总量，不应按 `byModel` 各行重新求和来推算。
 
+| `/api/health` | `configClamped` | 启动时被裁剪到边界值的配置字段名（ camelCase ） |
+
 `configChecks` 中不包含任何密钥、URL 凭据或系统提示词内容。
 
 ### 6.1 `configChecks` 的 code 取值
