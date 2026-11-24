@@ -75,3 +75,11 @@
 | `DREAMAI_CACHE_MAX_BYTES` | `4194304` | 缓存 UTF-8 字节预算 | `0` 表示不按字节限制 |
 | `DREAMAI_BREAKER_THRESHOLD` | `3` | 连续失败多少次后打开熔断 | 最小 1 |
 | `DREAMAI_BREAKER_COOLDOWN` | `30` 秒 | 熔断打开后的冷却时间 | 正数 |
+
+## 7. 流时序与背压
+
+| 变量 | 默认值 | 作用 | 约束 |
+|---|---|---|---|
+| `DREAMAI_HEARTBEAT_SECONDS` | `12` 秒 | 上游静默多久后发送 `: ping` | 裁剪到 1～120 秒；超过 60 秒会告警 |
+| `DREAMAI_ADMISSION_TIMEOUT` | `10` 秒 | 等待并发槽位的截止时间 | 裁剪到 0～120 秒；`0` 表示无限等待 |
+| `DREAMAI_STREAM_QUEUE_SIZE` | `64` | 单请求的有界事件队列容量 | 裁剪到 8～512；满队列会记录背压并丢弃最旧的非关键事件 |
