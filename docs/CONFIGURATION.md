@@ -2,8 +2,8 @@
 
 本文列出 Web 服务读取的全部 `DREAMAI_*` 环境变量。它们由
 `web/app/config.py` 的 `load_settings()` 解析，启动即固定，修改后须重启服务。
-命令行版本的配置见 [SETUP.md](./SETUP.md)，其中 `DREAMAI_API_KEY`、
-`DREAMAI_MODEL` 等变量属于本地客户端，与本文的 Web 服务端变量不是同一套。
+命令行版本的配置见 [SETUP.md](./SETUP.md)；该文档中的变量属于本地客户端，
+与本文的 Web 服务端变量不是同一套，具体名单见第 9 节。
 
 未设置时均使用表中默认值。数值经过上下限裁剪，超限不会报错而是取边界值。
 启动时的建议项显示在 `/api/health.configChecks` 与启动日志中。
