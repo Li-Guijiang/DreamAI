@@ -143,6 +143,9 @@ done
 
 | `/api/health` | `configClamped` | 启动时被裁剪到边界值的配置字段名（ camelCase ） |
 
+示例：`{"configClamped": ["temperature", "heartbeatSeconds"]}`。
+列表只含字段名，不含值；它不会出现在 `/api/config`。
+
 `configChecks` 中不包含任何密钥、URL 凭据或系统提示词内容。
 
 ### 6.1 `configChecks` 的 code 取值
