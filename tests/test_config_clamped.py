@@ -61,6 +61,26 @@ def test_multiple_corrections_are_recorded_together(monkeypatch):
     assert {"temperature", "cacheTtlJitter", "admissionTimeout", "streamQueueSize"} <= set(fields)
 
 
+def test_the_snapshot_interval_above_its_ceiling_is_recorded(monkeypatch):
+    clean(monkeypatch, ("DREAMAI_TEMPERATURE", "DREAMAI_CACHE_TTL_JITTER"))
+    monkeypatch.setenv("DREAMAI_USAGE_SAVE_INTERVAL", "99999")
+
+    settings = load_settings()
+    assert settings.usage_save_interval == 3600.0
+    assert "usageSaveInterval" in settings.clamped_fields
+
+
+def test_upper_and_lower_bounds_both_count_as_clamping(monkeypatch):
+    clean(monkeypatch, ("DREAMAI_TEMPERATURE", "DREAMAI_CACHE_TTL_JITTER"))
+    monkeypatch.setenv("DREAMAI_TEMPERATURE", "9")
+    monkeypatch.delenv("DREAMAI_TEMPERATURE")
+    monkeypatch.setenv("DREAMAI_TEMPERATURE", "-1")
+
+    settings = load_settings()
+    assert settings.temperature == 0.0
+    assert "temperature" in settings.clamped_fields
+
+
 def test_valid_values_are_not_recorded(monkeypatch):
     clean(monkeypatch, ("DREAMAI_TEMPERATURE", "DREAMAI_HEARTBEAT_SECONDS"))
     monkeypatch.setenv("DREAMAI_CACHE_TTL_JITTER", "0.2")
