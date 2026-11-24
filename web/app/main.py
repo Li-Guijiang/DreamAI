@@ -809,6 +809,7 @@ async def health() -> JSONResponse:
             "maxConcurrency": settings.max_concurrency,
             "features": ["memory", "knowledge", "canvas", "reader"],
             "configChecks": _config_checks,
+            "configClamped": list(settings.clamped_fields),
         },
         headers={"Cache-Control": "no-store"},
     )
