@@ -96,3 +96,21 @@ def test_public_models_never_carry_credentials():
         assert set(provider) <= {"id", "label", "keyUrl", "hint", "models"}
         for model in provider["models"]:
             assert set(model) <= {"id", "label", "reasoning"}
+
+
+def test_public_config_is_not_cached():
+    main = importlib.import_module("app.main")
+
+    with TestClient(main.app) as client:
+        response = client.get("/api/config")
+
+    assert response.headers.get("Cache-Control") == "no-store"
+
+
+def test_limits_expose_only_client_relevant_numbers():
+    main = importlib.import_module("app.main")
+
+    with TestClient(main.app) as client:
+        limits = client.get("/api/config").json()["limits"]
+
+    assert set(limits) == {"maxInputChars", "maxTokens", "rateLimit", "rateWindow"}
