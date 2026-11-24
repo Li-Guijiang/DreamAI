@@ -11,6 +11,8 @@ From the repository root:
 ```bash
 python web/tools/check_assets.py        # asset files and ?v= versions
 python web/tools/check_site.py          # assets, links, anchors, markup, manifest, service worker
+python web/tools/check_env_docs.py      # environment reference and numeric defaults
+python web/tools/check_docs_index.py    # ADR and document indexes
 python web/tools/make_downloads.py --check
 ruff check dream_ai tests examples web/app web/tools
 ruff format --check dream_ai tests examples web/app web/tools
