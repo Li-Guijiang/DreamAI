@@ -573,6 +573,11 @@ service worker 缓存版本与下载清单。
    `usageSaveInterval`。其它配置由 `_env_int` 等工具在解析阶段裁剪，
    不在该列表中。
 
+文档本身也有守卫：`python web/tools/check_env_docs.py` 会检查
+`docs/CONFIGURATION.md` 是否覆盖全部 44 个变量，并核对表中写成纯数字的
+默认值；`python web/tools/check_docs_index.py` 会检查 ADR 与文档索引，
+以及 ADR 编号是否连续、是否重复。两者均在 CI 中运行。
+
 ## 18. 用量快照的健康状态
 
 `/api/usage.usageState` 是快照持久化的状态，不再只能靠日志判断：
