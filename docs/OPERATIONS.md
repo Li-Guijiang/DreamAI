@@ -552,6 +552,27 @@ service worker 缓存版本与下载清单。
 
 完整的发布顺序、三个版本号的关系与发布后验证见 `docs/RELEASE.md`。
 
+## 19. 配置项被裁剪时如何发现
+
+服务端配置在加载时对数值设定了上下限。超出范围的输入不会导致启动失败，
+而是取边界值并记入 `/api/health.configClamped`：
+
+```json
+{"configClamped": ["temperature", "cacheTtlJitter", "heartbeatSeconds"]}
+```
+
+判据：
+
+1. 列表为空表示所有环境变量都在支持范围内。
+2. 出现字段名说明该变量的实际生效值与设置值不同。先核对
+   `docs/CONFIGURATION.md` 中该变量的约束，再修正环境变量。
+3. `configClamped` 只发布字段名，不发布变量值；它不会出现在
+   `/api/config` 中。
+4. 目前记录裁剪的字段：`temperature`、`cacheTtlJitter`、
+   `heartbeatSeconds`、`admissionTimeout`、`streamQueueSize`、
+   `usageSaveInterval`。其它配置由 `_env_int` 等工具在解析阶段裁剪，
+   不在该列表中。
+
 ## 18. 用量快照的健康状态
 
 `/api/usage.usageState` 是快照持久化的状态，不再只能靠日志判断：
