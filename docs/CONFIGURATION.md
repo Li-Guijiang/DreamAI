@@ -52,3 +52,15 @@
 | `DREAMAI_FALLBACK_API_KEY` | 空 | 备用上游密钥 | 不写入日志或公开配置 |
 | `DREAMAI_FALLBACK_MODEL` | 空 | 备用模型名 | 不得含空白或控制字符 |
 | `DREAMAI_UPSTREAM_READ_TIMEOUT` | `240` 秒 | 上游单次流读取超时 | 裁剪到不超过 900 秒；超时会按可重试错误处理 |
+
+## 5. 限流、配额与输入边界
+
+| 变量 | 默认值 | 作用 | 约束 |
+|---|---|---|---|
+| `DREAMAI_RATE_LIMIT` | `30` | 每个客户端在窗口内的请求数 | 最小 1 |
+| `DREAMAI_RATE_WINDOW` | `600` 秒 | 限流窗口长度 | 最小 30 秒 |
+| `DREAMAI_DAILY_LIMIT` | `2000` | 全站每日免费请求上限 | `0` 表示不限 |
+| `DREAMAI_MAX_CONCURRENCY` | `6` | 同时处理的最大请求数 | 最小 1；超出后按 `ADMISSION_TIMEOUT` 等待 |
+| `DREAMAI_MAX_INPUT_CHARS` | `12000` | 单轮用户输入的字符上限 | 最小 500；超限返回 400 |
+| `DREAMAI_MAX_HISTORY_MESSAGES` | `30` | 参与提示词构建的历史消息数 | 最小 2 |
+| `DREAMAI_MAX_HISTORY_CHARS` | `60000` | 参与提示词构建的历史字符数 | 最小 2000 |
