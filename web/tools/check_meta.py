@@ -68,8 +68,14 @@ def icon_hrefs(text: str) -> dict[str, list[str]]:
     return result
 
 
-def check_page(path: Path, origin: str = PUBLIC_ORIGIN, image: str = DEFAULT_IMAGE) -> dict:
+def check_page(
+    path: Path,
+    origin: str = PUBLIC_ORIGIN,
+    image: str = DEFAULT_IMAGE,
+    site: Path | None = None,
+) -> dict:
     """Validate one HTML page's head metadata."""
+    root = site if site is not None else path.parent
     text = path.read_text(encoding="utf-8")
     named = named_pairs(text)
     og = meta_pairs(text)
@@ -98,7 +104,7 @@ def check_page(path: Path, origin: str = PUBLIC_ORIGIN, image: str = DEFAULT_IMA
         issues.append("missing rel=apple-touch-icon")
     for hrefs in icons.values():
         for href in hrefs:
-            if href.startswith("/") and not (SITE / href.lstrip("/").split("?")[0]).is_file():
+            if href.startswith("/") and not (root / href.lstrip("/").split("?")[0]).is_file():
                 issues.append(f"icon not found: {href}")
 
     if not is_noindex(named):
@@ -113,7 +119,7 @@ def check_page(path: Path, origin: str = PUBLIC_ORIGIN, image: str = DEFAULT_IMA
         if og.get("og:image"):
             image_value = og["og:image"]
             if image_value.startswith("/"):
-                if not (SITE / image_value.lstrip("/")).is_file():
+                if not (root / image_value.lstrip("/")).is_file():
                     issues.append(f"og:image not found: {image_value}")
             elif not image_value.startswith(origin):
                 issues.append(f"og:image is not a public origin URL: {image_value}")
