@@ -36,8 +36,12 @@ SW_CACHE = re.compile(r'dreamai-shell-v(\d+\.\d+\.\d+)')
 
 
 def segments(version: str) -> tuple[int, int, int]:
-    major, minor, patch = version.split(".")
-    return int(major), int(minor), int(patch)
+    """Numeric version parts for ordering; callers validate SEMVER first."""
+    try:
+        major, minor, patch = version.split(".")
+        return int(major), int(minor), int(patch)
+    except (ValueError, TypeError):
+        return 0, 0, 0
 
 
 def read_versions(root: Path = ROOT) -> dict[str, str | None]:
@@ -86,12 +90,18 @@ def check(root: Path = ROOT) -> dict:
     versions = read_versions(root)
     issues: list[str] = []
 
+    # CLI and the optional changelog pin are informational when absent: not
+    # every checkout carries pyproject.toml, and latest.json predates that
+    # field. The release-critical artefacts must always be present.
+    always = ("server", "serviceWorker", "installer", "desktopPackage", "changelog")
     for name, value in versions.items():
         if name == "changelogLatest":
             continue
         if value is None:
-            issues.append(f"{name}: version missing")
-        elif not SEMVER.match(value):
+            if name in always:
+                issues.append(f"{name}: version missing")
+            continue
+        if not SEMVER.match(value):
             issues.append(f"{name}: not a semantic version ({value})")
 
     server = versions["server"]
@@ -112,10 +122,11 @@ def check(root: Path = ROOT) -> dict:
     # The changelog records whole-product milestones, which are not the same
     # scale as the installer build number. It only has to mention the server
     # release so a deployed version has matching release notes.
-    if server and versions["changelog"]:
-        if segments(versions["changelog"]) < segments(server):
+    changelog = versions["changelog"]
+    if server and changelog and SEMVER.match(server) and SEMVER.match(changelog):
+        if segments(changelog) < segments(server):
             issues.append(
-                f"changelog latest v{versions['changelog']} is older than server {server}"
+                f"changelog latest v{changelog} is older than server {server}"
             )
 
     return {"versions": versions, "issues": sorted(issues), "ok": not issues}
