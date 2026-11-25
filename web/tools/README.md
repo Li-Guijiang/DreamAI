@@ -18,6 +18,7 @@ the environment comes from `web/requirements.txt`, and some scripts additionally
 | `check_site.py` | Check page links, `#anchor` targets, the download manifest and all asset references | Before publishing; also runs in CI |
 | `check_env_docs.py` | Verify that every server environment variable is documented | After adding a setting; also runs in CI |
 | `check_docs_index.py` | Verify that every ADR and top-level document appears in its index | After adding a document; also runs in CI |
+| `check_meta.py` | Verify head metadata and Open Graph tags on every page | After editing a page head; also runs in CI |
 
 The index check also rejects gaps and duplicate numbers in the ADR sequence,
 so `0025` cannot be added while `0024` is missing.
