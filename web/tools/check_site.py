@@ -31,6 +31,9 @@ BLANK_LINK = re.compile(r"<a\b[^>]*target=\"_blank\"[^>]*>", re.I)
 NOOPENER = re.compile(r"\brel=\"[^\"]*\bnoopener\b", re.I)
 SW_CACHE = re.compile(r'const\s+CACHE\s*=\s*["\']dreamai-shell-v(\d+\.\d+\.\d+)["\']')
 APP_VERSION = re.compile(r'^VERSION\s*=\s*"([^"]+)"', re.M)
+PINNED_ASSET = re.compile(r'(?:"|\')(/[^"\']+\?v=\d+\.\d+\.\d+)(?:"|\')')
+SHELL_LIST = re.compile(r'const\s+SHELL\s*=\s*\[(.*?)\]', re.S)
+PAGE_PIN = re.compile(r'(?:href|src)="(/[^"?]+\?v=\d+\.\d+\.\d+)"')
 SEMVER = re.compile(r"\d+\.\d+\.\d+")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 
@@ -144,6 +147,44 @@ def sw_issues(root: Path) -> list[str]:
     return []
 
 
+def sw_pin_issues(root: Path) -> list[str]:
+    """Pre-cached asset pins must match the version served to browsers.
+
+    A stale pin in sw.js installs the old file into the offline cache. Because
+    the browser then answers from that cache, the mismatch is invisible in
+    normal online testing and only shows up offline or after a bad deploy.
+    """
+    sw_path = root / "sw.js"
+    if not sw_path.is_file():
+        return []
+    shell = SHELL_LIST.search(sw_path.read_text(encoding="utf-8"))
+    if not shell:
+        return []
+    sw_pins: dict[str, set[str]] = {}
+    for entry in PINNED_ASSET.findall(shell.group(1)):
+        path, version = entry.split("?v=")
+        sw_pins.setdefault(path, set()).add(version)
+
+    page_pins: dict[str, set[str]] = {}
+    for page in root.glob("*.html"):
+        for entry in PAGE_PIN.findall(page.read_text(encoding="utf-8")):
+            path, version = entry.split("?v=")
+            page_pins.setdefault(path, set()).add(version)
+
+    issues: list[str] = []
+    for path, sw_versions in sorted(sw_pins.items()):
+        served = page_pins.get(path)
+        if not served:
+            # Vendor files and images may be cached without being embedded in
+            # a top-level page; only shared, pinned assets are comparable.
+            continue
+        if not (sw_versions & served):
+            issues.append(
+                f"sw.js: {path} pinned v{sorted(sw_versions)} but pages serve v{sorted(served)}"
+            )
+    return issues
+
+
 def manifest_issues(root: Path) -> list[str]:
     """A download manifest that cannot describe a real, complete artefact.
 
@@ -191,6 +232,7 @@ def check_site(root: Path) -> dict:
         "metadata": metadata_issues(root),
         "markup": markup_issues(root),
         "serviceWorker": sw_issues(root),
+        "serviceWorkerPins": sw_pin_issues(root),
         "manifest": manifest_issues(root),
     }
     hard = (
@@ -202,6 +244,7 @@ def check_site(root: Path) -> dict:
         "metadata",
         "markup",
         "serviceWorker",
+        "serviceWorkerPins",
         "manifest",
     )
     return {
@@ -227,6 +270,7 @@ def _format(result: dict) -> str:
         ("metadata", "MISSING METADATA"),
         ("markup", "BAD MARKUP"),
         ("serviceWorker", "STALE SERVICE WORKER"),
+        ("serviceWorkerPins", "SERVICE WORKER PIN DRIFT"),
         ("manifest", "BAD MANIFEST"),
         ("unversioned", "unversioned (warning)"),
     ):
