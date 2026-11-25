@@ -582,8 +582,9 @@ service worker 缓存版本与下载清单。
 
 ```bash
 python web/tools/check_meta.py        # head 元数据、Open Graph、图标、manifest
-python web/tools/check_versions.py    # 四个版本号的关系
+python web/tools/check_versions.py    # 四个版本号的关系、预缓存目标存在性
 python web/tools/check_site.py        # 含 serviceWorkerPins 预缓存版本比对
+python web/tools/check_dom_refs.py    # JS 中的 id 选择器是否有对应节点
 ```
 
 `check_meta.py` 判读：
@@ -603,6 +604,10 @@ python web/tools/check_site.py        # 含 serviceWorkerPins 预缓存版本比
    这类问题在线上几乎不可见，因为浏览器命中旧缓存后拿到的就是旧资源。
 
 四个版本各自的含义与发布顺序见 `docs/VERSIONS.md`。
+
+`check_dom_refs.py` 报告 `UNRESOLVED: 脚本 #id` 时，表示脚本查询的节点
+不存在，相关功能会静默失效。若该节点由桌面外壳在运行时注入，
+须在工具的 `DESKTOP_INJECTED` 白名单中登记并写明原因，不能删除检查。
 
 ## 18. 用量快照的健康状态
 
