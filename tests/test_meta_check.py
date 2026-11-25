@@ -21,6 +21,8 @@ BASE = """<!DOCTYPE html>
 <title>Dream AI</title>
 <meta name="description" content="a demo page">
 <meta name="theme-color" content="#08090d">
+<link rel="icon" href="/assets/img/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
 {meta}
 </head>
 <body></body>
@@ -125,6 +127,40 @@ def test_noindex_pages_must_not_declare_og(tmp_path):
     result = check_meta.check_page(page)
 
     assert any("noindex page declares" in item for item in result["issues"])
+
+
+def test_a_missing_apple_touch_icon_is_reported(tmp_path):
+    page = make_page(tmp_path)
+    text = page.read_text(encoding="utf-8").replace(
+        '<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">\n', ""
+    )
+    page.write_text(text, encoding="utf-8")
+
+    assert "missing rel=apple-touch-icon" in check_meta.check_page(page)["issues"]
+
+
+def test_a_missing_primary_icon_is_reported(tmp_path):
+    page = make_page(tmp_path)
+    text = page.read_text(encoding="utf-8").replace(
+        '<link rel="icon" href="/assets/img/favicon.ico" sizes="any">\n', ""
+    )
+    page.write_text(text, encoding="utf-8")
+
+    assert "missing rel=icon" in check_meta.check_page(page)["issues"]
+
+
+def test_an_icon_link_with_reversed_attributes_is_recognised(tmp_path):
+    page = make_page(tmp_path)
+    text = page.read_text(encoding="utf-8").replace(
+        '<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">',
+        '<link href="/assets/img/apple-touch-icon.png" rel="apple-touch-icon">',
+    )
+    page.write_text(text, encoding="utf-8")
+
+    result = check_meta.check_page(page)
+
+    assert result["icons"]["apple-touch-icon"] == ["/assets/img/apple-touch-icon.png"]
+    assert result["ok"] is True
 
 
 def test_the_cli_passes_for_the_published_site():
