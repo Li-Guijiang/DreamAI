@@ -822,6 +822,45 @@ python -m pytest tests/test_env_docs.py tests/test_config_clamped.py -v
 python web/tools/check_env_docs.py
 ```
 
+---
+
+## 22. 只在浏览器之外出现的缺陷
+
+有一类缺陷在正常浏览中完全不可见：社交分享卡片是空白、添加到主屏是通用
+图标、离线时用旧样式。它们不需要修运行时逻辑，只需要检查**跨文件的
+一致性**——因为每个文件单独看都合法。
+
+`og:title` 与 `<title>` 可以不同而不报错，但分享出去的标题会与页面不符；
+`manifest.theme_color` 与页面 `theme-color` 可以不同而不报错，但安装后的
+状态栏颜色会跳变。这类「能运行但不一致」的状态，正是静态守卫最擅长的。
+
+### 22.1 缓存让错误延迟显现
+
+Service Worker 的预缓存列表里有 `app.css?v=2.0.8`，而页面引用 `2.1.0`。
+在线时浏览器命中旧缓存，拿到的正好是旧文件——看起来一切正常。
+用户换设备、清缓存或断网时才暴露。修复不仅要把版本号对齐，
+还必须提升 `CACHE` 名，否则已经安装的 worker 不会重新拉取列表。
+
+这揭示了一个通用规律：**缓存一致性问题不会在引入它的那次部署中出现**，
+它会在下一次部署后出现，且症状看起来像「用户没刷新」。
+
+### 22.2 版本不需要相等，但关系需要
+
+服务端、worker、安装包、CLI 各自发版，强行要求四个数字相等是错的。
+正确的做法是把「哪些可以不同、哪些必须有序」写成显式规则：
+worker 不得低于服务端、清单与桌面包必须相等、发布说明不得低于服务端。
+一次把 changelog 最新版与安装包号强制相等的尝试立刻失败——
+前者是产品里程碑，后者是构建号，二者不同尺度。规则要服从语义，
+不是反过来。
+
+动手验证：
+
+```bash
+python -m pytest tests/test_meta_check.py tests/test_version_map.py -v
+python web/tools/check_meta.py
+python web/tools/check_versions.py
+```
+
 动手验证：
 
 ```bash
