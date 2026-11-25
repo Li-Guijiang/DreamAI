@@ -152,6 +152,13 @@ def test_existing_precache_targets_pass(tmp_path):
     assert check_versions.check(root)["ok"] is True
 
 
+def test_an_empty_tree_reports_missing_files_without_crashing(tmp_path):
+    result = check_versions.check(tmp_path)
+
+    assert result["ok"] is False
+    assert any("missing file" in item for item in result["issues"])
+
+
 def test_the_cli_passes_for_the_published_tree():
     done = subprocess.run([sys.executable, str(TOOL)], capture_output=True, text=True, check=False)
 
