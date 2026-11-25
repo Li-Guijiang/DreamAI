@@ -40,6 +40,11 @@ OG = """<meta property="og:type" content="website">
 def make_page(tmp_path: Path, meta: str = OG, name: str = "index.html") -> Path:
     path = tmp_path / name
     path.write_text(BASE.format(meta=meta), encoding="utf-8")
+    for asset in ("favicon.ico", "apple-touch-icon.png"):
+        target = tmp_path / "assets" / "img" / asset
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if not target.exists():
+            target.write_bytes(b"fake")
     if not (tmp_path / "manifest.webmanifest").exists():
         (tmp_path / "manifest.webmanifest").write_text(
             json.dumps(
@@ -181,6 +186,21 @@ def test_an_icon_link_with_reversed_attributes_is_recognised(tmp_path):
 
     assert result["icons"]["apple-touch-icon"] == ["/assets/img/apple-touch-icon.png"]
     assert result["ok"] is True
+
+
+def test_a_missing_local_og_image_is_reported(tmp_path):
+    page = make_page(tmp_path)
+    text = page.read_text(encoding="utf-8").replace(
+        'content="https://liguijiang.com/assets/img/og.png"',
+        'content="/assets/img/never-created.png"',
+    )
+    page.write_text(text, encoding="utf-8")
+
+    # A local image path is resolved against this site's root, not the
+    # repository's published site.
+    result = check_meta.check_page(page, site=tmp_path)
+
+    assert any("og:image not found" in item for item in result["issues"])
 
 
 def test_a_manifest_theme_that_disagrees_with_pages_is_reported(tmp_path):
