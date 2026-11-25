@@ -82,6 +82,11 @@ def check_page(path: Path, origin: str = PUBLIC_ORIGIN, image: str = DEFAULT_IMA
         issues.append("missing html lang")
     if not title:
         issues.append("missing <title>")
+    if len(title) > 60:
+        issues.append(f"<title> is {len(title)} chars (recommended <= 60)")
+    description = named.get("description", "")
+    if description and len(description) > 160:
+        issues.append(f"description is {len(description)} chars (recommended <= 160)")
     for name in REQUIRED_NAMED:
         if not named.get(name):
             issues.append(f"missing meta name={name}")
