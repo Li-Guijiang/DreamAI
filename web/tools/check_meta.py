@@ -28,6 +28,9 @@ DEFAULT_IMAGE = "/assets/img/og.png"
 OG = re.compile(r'<meta[^>]*property="(og:[^"]+)"[^>]*content="([^"]*)"', re.I)
 OG_ALT = re.compile(r'<meta[^>]*content="([^"]*)"[^>]*property="(og:[^"]+)"', re.I)
 META_NAME = re.compile(r'<meta[^>]*name="([^"]+)"[^>]*content="([^"]*)"', re.I)
+LINK_REL = re.compile(r'<link[^>]*rel="([^"]+)"[^>]*>', re.I)
+LINK_REL_ALT = re.compile(r'<link[^>]*>', re.I)
+HREF = re.compile(r'href="([^"]+)"')
 TITLE = re.compile(r"<title>([^<]*)</title>", re.I)
 LANG = re.compile(r'<html[^>]*\blang="([^"]+)"', re.I)
 
@@ -51,6 +54,20 @@ def is_noindex(named: dict[str, str]) -> bool:
     return "noindex" in named.get("robots", "").lower()
 
 
+def icon_hrefs(text: str) -> dict[str, list[str]]:
+    """Collect icon links by rel, tolerating attribute order."""
+    result: dict[str, list[str]] = {}
+    for tag in LINK_REL_ALT.findall(text):
+        rel_match = re.search(r'rel="([^"]+)"', tag, re.I)
+        href_match = HREF.search(tag)
+        if not rel_match or not href_match:
+            continue
+        for rel in rel_match.group(1).split():
+            if rel in ("icon", "apple-touch-icon"):
+                result.setdefault(rel, []).append(href_match.group(1))
+    return result
+
+
 def check_page(path: Path, origin: str = PUBLIC_ORIGIN, image: str = DEFAULT_IMAGE) -> dict:
     """Validate one HTML page's head metadata."""
     text = path.read_text(encoding="utf-8")
@@ -68,6 +85,16 @@ def check_page(path: Path, origin: str = PUBLIC_ORIGIN, image: str = DEFAULT_IMA
     for name in REQUIRED_NAMED:
         if not named.get(name):
             issues.append(f"missing meta name={name}")
+
+    icons = icon_hrefs(text)
+    if not icons.get("icon"):
+        issues.append("missing rel=icon")
+    if not icons.get("apple-touch-icon"):
+        issues.append("missing rel=apple-touch-icon")
+    for hrefs in icons.values():
+        for href in hrefs:
+            if href.startswith("/") and not (SITE / href.lstrip("/").split("?")[0]).is_file():
+                issues.append(f"icon not found: {href}")
 
     if not is_noindex(named):
         for key in REQUIRED_OG:
@@ -94,6 +121,7 @@ def check_page(path: Path, origin: str = PUBLIC_ORIGIN, image: str = DEFAULT_IMA
         "page": path.name,
         "noindex": is_noindex(named),
         "title": title,
+        "icons": icons,
         "og": og,
         "issues": sorted(issues),
         "ok": not issues,
