@@ -144,8 +144,7 @@ def test_existing_precache_targets_pass(tmp_path):
     (assets / "app.js").write_text("ok", encoding="utf-8")
     sw = root / "web" / "web" / "sw.js"
     sw.write_text(
-        sw.read_text(encoding="utf-8")
-        + 'const SHELL = ["/assets/js/app.js?v=1.0.0"];\n',
+        sw.read_text(encoding="utf-8") + 'const SHELL = ["/assets/js/app.js?v=1.0.0"];\n',
         encoding="utf-8",
     )
 

@@ -81,19 +81,14 @@ def check(site: Path = SITE, extra: dict[str, str] | None = None) -> dict:
     unresolved: list[str] = []
     by_script: dict[str, list[str]] = {}
     for name, ids in refs.items():
-        missing = sorted(
-            item for item in ids if item not in declared and item not in allowed
-        )
+        missing = sorted(item for item in ids if item not in declared and item not in allowed)
         if missing:
             by_script[name] = missing
             for item in missing:
                 unresolved.append(f"{name}: #{item}")
 
     constrained = sorted(
-        name
-        for ids in refs.values()
-        for name in ids
-        if name in allowed and name not in declared
+        name for ids in refs.values() for name in ids if name in allowed and name not in declared
     )
     return {
         "declaredIds": len(declared),

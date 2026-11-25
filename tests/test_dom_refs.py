@@ -14,14 +14,14 @@ sys.path.insert(0, str(TOOL.parent))
 import check_dom_refs  # noqa: E402
 
 
-def make_tree(tmp_path: Path, page_ids: list[str], script_refs: list[str], script_body: str = "") -> Path:
+def make_tree(
+    tmp_path: Path, page_ids: list[str], script_refs: list[str], script_body: str = ""
+) -> Path:
     scripts = tmp_path / "assets" / "js"
     scripts.mkdir(parents=True)
     ids = "".join(f'<div id="{item}"></div>\n' for item in page_ids)
     (tmp_path / "index.html").write_text(f"<body>{ids}</body>", encoding="utf-8")
-    refs = "".join(
-        f'document.querySelector("#{item}");\n' for item in script_refs
-    )
+    refs = "".join(f'document.querySelector("#{item}");\n' for item in script_refs)
     (scripts / "app.js").write_text(refs + script_body, encoding="utf-8")
     return tmp_path
 
@@ -58,7 +58,7 @@ def test_an_id_created_by_script_is_accepted(tmp_path):
         tmp_path,
         [],
         ["dynamic"],
-        'container.innerHTML = \'<div id="dynamic"></div>\';',
+        "container.innerHTML = '<div id=\"dynamic\"></div>';",
     )
 
     assert check_dom_refs.check(site)["ok"] is True
@@ -90,9 +90,7 @@ def test_extra_allowlist_entries_can_be_supplied(tmp_path):
 
 
 def test_the_cli_passes_for_the_published_site():
-    done = subprocess.run(
-        [sys.executable, str(TOOL)], capture_output=True, text=True, check=False
-    )
+    done = subprocess.run([sys.executable, str(TOOL)], capture_output=True, text=True, check=False)
 
     assert done.returncode == 0
     assert "dom refs: OK" in done.stdout
