@@ -112,6 +112,46 @@ def test_version_comparison_is_numeric_not_lexical(tmp_path):
     assert any("older than server" in item for item in result["issues"])
 
 
+def test_a_missing_precache_target_is_reported(tmp_path):
+    root = make_tree(tmp_path)
+    sw = root / "web" / "web" / "sw.js"
+    sw.write_text(
+        sw.read_text(encoding="utf-8")
+        + 'const SHELL = ["/index.html", "/assets/js/gone.js?v=1.0.0"];\n',
+        encoding="utf-8",
+    )
+
+    result = check_versions.check(root)
+
+    assert any("gone.js" in item for item in result["issues"])
+
+
+def test_a_root_entry_is_not_treated_as_a_missing_file(tmp_path):
+    root = make_tree(tmp_path)
+    sw = root / "web" / "web" / "sw.js"
+    sw.write_text(
+        sw.read_text(encoding="utf-8") + 'const SHELL = ["/"];\n',
+        encoding="utf-8",
+    )
+
+    assert check_versions.check(root)["ok"] is True
+
+
+def test_existing_precache_targets_pass(tmp_path):
+    root = make_tree(tmp_path)
+    assets = root / "web" / "web" / "assets" / "js"
+    assets.mkdir(parents=True)
+    (assets / "app.js").write_text("ok", encoding="utf-8")
+    sw = root / "web" / "web" / "sw.js"
+    sw.write_text(
+        sw.read_text(encoding="utf-8")
+        + 'const SHELL = ["/assets/js/app.js?v=1.0.0"];\n',
+        encoding="utf-8",
+    )
+
+    assert check_versions.check(root)["ok"] is True
+
+
 def test_the_cli_passes_for_the_published_tree():
     done = subprocess.run([sys.executable, str(TOOL)], capture_output=True, text=True, check=False)
 
