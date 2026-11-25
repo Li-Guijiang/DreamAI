@@ -88,9 +88,33 @@ def read_versions(root: Path = ROOT) -> dict[str, str | None]:
     return result
 
 
+def read_versions_safe(root: Path) -> dict[str, str | None]:
+    """Best-effort read used to report which files are missing."""
+    try:
+        return read_versions(root)
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
 def check(root: Path = ROOT) -> dict:
-    versions = read_versions(root)
     issues: list[str] = []
+
+    required = (
+        root / "web" / "app" / "config.py",
+        root / "web" / "web" / "sw.js",
+        root / "web" / "web" / "downloads" / "latest.json",
+        root / "desktop" / "package.json",
+        root / "web" / "web" / "changelog.html",
+    )
+    missing_files = [str(path.relative_to(root)) for path in required if not path.is_file()]
+    if missing_files:
+        return {
+            "versions": read_versions_safe(root),
+            "issues": [f"missing file: {name}" for name in missing_files],
+            "ok": False,
+        }
+
+    versions = read_versions(root)
 
     # CLI and the optional changelog pin are informational when absent: not
     # every checkout carries pyproject.toml, and latest.json predates that
