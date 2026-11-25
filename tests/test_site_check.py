@@ -15,7 +15,13 @@ sys.path.insert(0, str(TOOL.parent))
 import check_site  # noqa: E402
 
 
-def make_site(tmp_path: Path, page: str, manifest: dict | None = None) -> Path:
+def make_site(
+    tmp_path: Path,
+    page: str,
+    manifest: dict | None = None,
+    sw_cache: str = "2.0.0",
+    shell: list[str] | None = None,
+) -> Path:
     (tmp_path / "a.html").write_text(page, encoding="utf-8")
     downloads = tmp_path / "downloads"
     downloads.mkdir()
@@ -33,7 +39,12 @@ def make_site(tmp_path: Path, page: str, manifest: dict | None = None) -> Path:
         encoding="utf-8",
     )
     (tmp_path / "here.html").write_text("ok", encoding="utf-8")
-    (tmp_path / "sw.js").write_text('const CACHE = "dreamai-shell-v2.0.0";', encoding="utf-8")
+    shell_lines = "".join(f'  "{item}",\n' for item in (shell or []))
+    (tmp_path / "sw.js").write_text(
+        f'const CACHE = "dreamai-shell-v{sw_cache}";\n'
+        f"const SHELL = [\n{shell_lines}];\n",
+        encoding="utf-8",
+    )
     app = tmp_path / "app"
     app.mkdir()
     (app / "config.py").write_text('VERSION = "1.0.0"\n', encoding="utf-8")
@@ -246,8 +257,33 @@ def test_the_json_result_has_a_stable_shape():
         "metadata",
         "markup",
         "serviceWorker",
+        "serviceWorkerPins",
         "manifest",
     }
+
+
+def test_a_stale_service_worker_asset_pin_is_reported(tmp_path):
+    site = make_site(
+        tmp_path,
+        '<link rel="stylesheet" href="/assets/css/app.css?v=2.1.0">',
+        sw_cache="1.5.7",
+        shell=['/assets/css/app.css?v=2.0.8'],
+    )
+
+    issues = check_site.check_site(site)["issues"]["serviceWorkerPins"]
+
+    assert any("app.css" in item and "2.0.8" in item for item in issues)
+
+
+def test_matching_service_worker_pins_pass(tmp_path):
+    site = make_site(
+        tmp_path,
+        '<link rel="stylesheet" href="/assets/css/app.css?v=2.1.0">',
+        sw_cache="1.5.7",
+        shell=['/assets/css/app.css?v=2.1.0'],
+    )
+
+    assert check_site.check_site(site)["issues"]["serviceWorkerPins"] == []
 
 
 def test_the_published_service_worker_matches_the_app():
