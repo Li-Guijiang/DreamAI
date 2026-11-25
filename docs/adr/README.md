@@ -37,3 +37,4 @@ New decisions should be added as numbered Markdown files, e.g.
 | [0023](./0023-cache-and-snapshot-integrity.md) | Cache and snapshot integrity |
 | [0024](./0024-configuration-contracts.md) | Configuration contracts |
 | [0025](./0025-metadata-and-version-integrity.md) | Metadata and version integrity |
+| [0026](./0026-dom-selector-integrity.md) | DOM selector integrity |
