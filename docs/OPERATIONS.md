@@ -578,6 +578,32 @@ service worker 缓存版本与下载清单。
 默认值；`python web/tools/check_docs_index.py` 会检查 ADR 与文档索引，
 以及 ADR 编号是否连续、是否重复。两者均在 CI 中运行。
 
+## 20. 元数据与版本的发布前检查
+
+```bash
+python web/tools/check_meta.py        # head 元数据、Open Graph、图标、manifest
+python web/tools/check_versions.py    # 四个版本号的关系
+python web/tools/check_site.py        # 含 serviceWorkerPins 预缓存版本比对
+```
+
+`check_meta.py` 判读：
+
+1. `missing og:*`：公开页面缺少社交预览标签，分享时卡片为空白。`noindex`
+   页面（如 `offline.html`）豁免此检查，但必须有基础 head 字段。
+2. `missing rel=apple-touch-icon`：添加到主屏时使用通用图标。
+3. `og:title ... != <title>`：分享标题与页面标题不一致。
+4. `manifest theme_color differs`：PWA 安装后的状态栏颜色与页面不一致。
+
+`check_versions.py` 只检查必须成立的关系，不要求四个版本相等：
+
+1. SW 缓存版本不得低于服务端 `VERSION`；
+2. `latest.json` 与 `desktop/package.json` 版本必须相同；
+3. changelog 最新里程碑不得低于服务端版本；
+4. `check_site.py` 的 `serviceWorkerPins` 会抓出 SW 预缓存里过时的 `?v=`——
+   这类问题在线上几乎不可见，因为浏览器命中旧缓存后拿到的就是旧资源。
+
+四个版本各自的含义与发布顺序见 `docs/VERSIONS.md`。
+
 ## 18. 用量快照的健康状态
 
 `/api/usage.usageState` 是快照持久化的状态，不再只能靠日志判断：
