@@ -29,6 +29,8 @@ LATEST = ROOT / "web" / "web" / "downloads" / "latest.json"
 DESKTOP_PKG = ROOT / "desktop" / "package.json"
 CLI_PYPROJECT = ROOT / "pyproject.toml"
 CHANGELOG_PAGE = ROOT / "web" / "web" / "changelog.html"
+SHELL_LIST = re.compile(r"const\s+SHELL\s*=\s*\[(.*?)\]", re.S)
+SHELL_ENTRY = re.compile(r'"([^"]+)"')
 
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 APP_VERSION = re.compile(r'^VERSION\s*=\s*"([^"]+)"', re.M)
@@ -122,6 +124,20 @@ def check(root: Path = ROOT) -> dict:
     if server and changelog and SEMVER.match(server) and SEMVER.match(changelog):
         if segments(changelog) < segments(server):
             issues.append(f"changelog latest v{changelog} is older than server {server}")
+
+    # Every pre-cached file must exist. A missing entry makes the install step
+    # reject the whole cache write, so the offline shell never becomes ready.
+    sw_path = root / "web" / "web" / "sw.js"
+    site = sw_path.parent
+    if sw_path.is_file():
+        shell = SHELL_LIST.search(sw_path.read_text(encoding="utf-8"))
+        if shell:
+            for entry in SHELL_ENTRY.findall(shell.group(1)):
+                if entry in ("/", ""):
+                    continue  # the origin root is served by index.html
+                target = site / entry.split("?")[0].lstrip("/")
+                if not target.is_file():
+                    issues.append(f"service worker pre-cache target missing: {entry}")
 
     return {"versions": versions, "issues": sorted(issues), "ok": not issues}
 
