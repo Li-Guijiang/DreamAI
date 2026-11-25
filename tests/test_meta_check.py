@@ -40,6 +40,24 @@ OG = """<meta property="og:type" content="website">
 def make_page(tmp_path: Path, meta: str = OG, name: str = "index.html") -> Path:
     path = tmp_path / name
     path.write_text(BASE.format(meta=meta), encoding="utf-8")
+    if not (tmp_path / "manifest.webmanifest").exists():
+        (tmp_path / "manifest.webmanifest").write_text(
+            json.dumps(
+                {
+                    "name": "Dream AI",
+                    "short_name": "Dream AI",
+                    "description": "demo",
+                    "lang": "zh-CN",
+                    "start_url": "/",
+                    "scope": "/",
+                    "display": "standalone",
+                    "theme_color": "#08090d",
+                    "background_color": "#08090d",
+                    "icons": [],
+                }
+            ),
+            encoding="utf-8",
+        )
     return path
 
 
@@ -161,6 +179,37 @@ def test_an_icon_link_with_reversed_attributes_is_recognised(tmp_path):
 
     assert result["icons"]["apple-touch-icon"] == ["/assets/img/apple-touch-icon.png"]
     assert result["ok"] is True
+
+
+def test_a_manifest_theme_that_disagrees_with_pages_is_reported(tmp_path):
+    make_page(tmp_path)
+    manifest_path = tmp_path / "manifest.webmanifest"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["theme_color"] = "#ffffff"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = check_meta.check_manifest(tmp_path)
+
+    assert any("theme_color" in item for item in result["issues"])
+
+
+def test_a_missing_manifest_field_is_reported(tmp_path):
+    make_page(tmp_path)
+    manifest_path = tmp_path / "manifest.webmanifest"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    del manifest["start_url"]
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = check_meta.check_manifest(tmp_path)
+
+    assert any("missing start_url" in item for item in result["issues"])
+
+
+def test_a_missing_manifest_is_reported(tmp_path):
+    make_page(tmp_path)
+    (tmp_path / "manifest.webmanifest").unlink()
+
+    assert check_meta.check_manifest(tmp_path)["ok"] is False
 
 
 def test_the_cli_passes_for_the_published_site():
