@@ -853,12 +853,22 @@ worker 不得低于服务端、清单与桌面包必须相等、发布说明不�
 前者是产品里程碑，后者是构建号，二者不同尺度。规则要服从语义，
 不是反过来。
 
-动手验证：
+### 22.3 脚本查询的节点也可能不存在
+
+脚本里 `document.querySelector("#x")` 返回 `null` 不会抛错——只要代码有
+`if (!node) return` 守卫，功能就静默失效，页面看起来完全正常。
+`download-motion.js` 想给标题加打字机效果，但页面标题没有对应 id，
+动画从未运行过。静态检查把「脚本字面量 id」与「HTML/运行时创建的 id」
+做集合差，就能抓出这类问题。
+
+桌面外壳在运行时注入的节点是合法例外，但必须显式登记在带理由的
+白名单里，并打印出来——否则「例外」会变成逃避检查的捷径。
+
+动手验证（续）：
 
 ```bash
-python -m pytest tests/test_meta_check.py tests/test_version_map.py -v
-python web/tools/check_meta.py
-python web/tools/check_versions.py
+python -m pytest tests/test_dom_refs.py -v
+python web/tools/check_dom_refs.py
 ```
 
 动手验证：
