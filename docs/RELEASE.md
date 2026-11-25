@@ -15,6 +15,7 @@ python web/tools/check_env_docs.py      # environment reference and numeric defa
 python web/tools/check_docs_index.py    # ADR and document indexes
 python web/tools/check_meta.py          # head metadata, icons and manifest
 python web/tools/check_versions.py      # the four-version relationship map
+python web/tools/check_dom_refs.py      # JS id selectors resolve to real nodes
 python web/tools/make_downloads.py --check
 ruff check dream_ai tests examples web/app web/tools
 ruff format --check dream_ai tests examples web/app web/tools
