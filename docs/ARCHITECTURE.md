@@ -248,6 +248,7 @@ SSE。pump 捕获的异常会作为一条数据放入同一队列，由主协程
 `check_docs_index.py` 核对 ADR 与文档索引。页面交付层还有
 `check_meta.py`（head 元数据、Open Graph、图标、manifest）与
 `check_versions.py`（服务端 / SW / 安装包 / CLI 的版本关系），
+`check_dom_refs.py`（脚本 id 选择器与页面节点对应，桌面注入节点有白名单），
 `check_site.py` 另比对 SW 预缓存的资源版本与页面实际引用。
 以上检查在 CI 中先于 pytest 运行。
 
