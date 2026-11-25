@@ -245,7 +245,11 @@ SSE。pump 捕获的异常会作为一条数据放入同一队列，由主协程
 扫描所有页面的 `?v=` 版本，`check_site.py` 复用它并检查页面链接、锚点、
 标记、元信息、CSS 本地引用、service worker 缓存版本与下载清单。
 `check_env_docs.py` 核对服务端 44 个环境变量的文档覆盖与数值默认值，
-`check_docs_index.py` 核对 ADR 与文档索引。四者在 CI 中先于 pytest 运行。
+`check_docs_index.py` 核对 ADR 与文档索引。页面交付层还有
+`check_meta.py`（head 元数据、Open Graph、图标、manifest）与
+`check_versions.py`（服务端 / SW / 安装包 / CLI 的版本关系），
+`check_site.py` 另比对 SW 预缓存的资源版本与页面实际引用。
+以上检查在 CI 中先于 pytest 运行。
 
 配置加载阶段记录被裁剪到边界的字段名，`/api/health.configClamped`
 只发布字段名不发布值；`/api/config` 的形状与敏感字段缺席由契约测试锁定。
