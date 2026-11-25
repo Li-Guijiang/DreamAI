@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Metadata and version consistency
+
+- Fixed three pages (`changelog.html`, `download.html`, `offline.html`) that
+  were missing Open Graph tags and the apple-touch-icon; `offline.html` also
+  gained a theme colour.
+- Fixed a real pre-cache drift: `sw.js` cached `app.css?v=2.0.8` and
+  `app.js?v=2.1.0` while the pages served `2.1.0` and `2.2.2`. Offline visitors
+  would have received stale assets. The worker cache was bumped to `v1.5.7`.
+- Added `web/tools/check_meta.py` (head metadata, Open Graph, icons, with a
+  `noindex` exemption) and `web/tools/check_versions.py` (server, worker,
+  installer, desktop package and changelog relationships), both in CI.
+- Extended `check_site.py` with `serviceWorkerPins` to catch stale pins in the
+  worker pre-cache list.
+- Added `docs/VERSIONS.md` explaining which versions may differ and which
+  relationships must hold.
+
 ### Configuration contracts
 
 - Added `docs/CONFIGURATION.md`: all 44 server environment variables with
