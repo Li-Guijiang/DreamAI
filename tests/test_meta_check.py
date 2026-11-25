@@ -212,6 +212,26 @@ def test_a_missing_manifest_is_reported(tmp_path):
     assert check_meta.check_manifest(tmp_path)["ok"] is False
 
 
+def test_an_overlong_title_is_reported(tmp_path):
+    page = make_page(tmp_path)
+    text = page.read_text(encoding="utf-8").replace(
+        "<title>Dream AI</title>", "<title>" + "x" * 61 + "</title>"
+    )
+    page.write_text(text, encoding="utf-8")
+
+    assert any("<title> is 61" in item for item in check_meta.check_page(page)["issues"])
+
+
+def test_an_overlong_description_is_reported(tmp_path):
+    page = make_page(tmp_path)
+    text = page.read_text(encoding="utf-8").replace(
+        'content="a demo page"', f'content="{"d" * 161}"', 1
+    )
+    page.write_text(text, encoding="utf-8")
+
+    assert any("description is 161" in item for item in check_meta.check_page(page)["issues"])
+
+
 def test_the_cli_passes_for_the_published_site():
     done = subprocess.run(
         [sys.executable, str(TOOL)], capture_output=True, text=True, check=False
