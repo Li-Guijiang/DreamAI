@@ -128,9 +128,40 @@ def check_page(path: Path, origin: str = PUBLIC_ORIGIN, image: str = DEFAULT_IMA
     }
 
 
+def check_manifest(site: Path) -> dict:
+    """The installable app must agree with the pages on colours and identity."""
+    path = site / "manifest.webmanifest"
+    if not path.is_file():
+        return {"issues": ["manifest.webmanifest: missing"], "ok": False}
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as exc:
+        return {"issues": [f"manifest.webmanifest: unreadable ({type(exc).__name__})"], "ok": False}
+    issues: list[str] = []
+    for field in ("name", "short_name", "description", "lang", "start_url", "scope", "display", "theme_color", "background_color", "icons"):
+        if field not in manifest:
+            issues.append(f"manifest: missing {field}")
+    pages = [named_pairs(p.read_text(encoding="utf-8")) for p in site.glob("*.html")]
+    page_themes = {p.get("theme-color") for p in pages if p.get("theme-color")}
+    if page_themes and manifest.get("theme_color") not in page_themes:
+        issues.append(
+            f"manifest theme_color {manifest.get('theme_color')!r} differs from pages {sorted(page_themes)}"
+        )
+    for icon in manifest.get("icons", []) if isinstance(manifest.get("icons"), list) else []:
+        src = icon.get("src", "") if isinstance(icon, dict) else ""
+        if src.startswith("/") and not (site / src.lstrip("/")).is_file():
+            issues.append(f"manifest icon not found: {src}")
+    return {"issues": sorted(issues), "ok": not issues}
+
+
 def check(site: Path = SITE) -> dict:
     pages = [check_page(path) for path in sorted(site.glob("*.html"))]
-    return {"pages": pages, "ok": all(page["ok"] for page in pages)}
+    manifest = check_manifest(site)
+    return {
+        "pages": pages,
+        "manifest": manifest,
+        "ok": all(page["ok"] for page in pages) and manifest["ok"],
+    }
 
 
 def _format(result: dict) -> str:
@@ -141,6 +172,8 @@ def _format(result: dict) -> str:
         lines.append(f"  {page['page']}:")
         for issue in page["issues"]:
             lines.append(f"    {issue}")
+    for issue in result["manifest"]["issues"]:
+        lines.append(f"  manifest: {issue}")
     lines.append("meta: OK" if result["ok"] else "meta: FAILED")
     return "\n".join(lines)
 
