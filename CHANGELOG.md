@@ -17,6 +17,15 @@
   worker pre-cache list.
 - Added `docs/VERSIONS.md` explaining which versions may differ and which
   relationships must hold.
+- Fixed a silent failure on the download page: `download-motion.js` queried
+  `#downloadTyped`, but the heading had no such id, so the typewriter effect
+  never ran. The heading now carries the id, with the static text as fallback.
+- Added `web/tools/check_dom_refs.py` to verify that literal id selectors in
+  site scripts have matching nodes (native desktop-injected ids are allowlisted
+  with a reason), plus `check_meta.py` manifest checks and title/description
+  length warnings.
+- Hardened `check_versions.py` against missing files and verified all
+  service-worker pre-cache targets exist.
 
 ### Configuration contracts
 
