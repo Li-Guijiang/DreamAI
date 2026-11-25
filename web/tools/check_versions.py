@@ -32,7 +32,7 @@ CHANGELOG_PAGE = ROOT / "web" / "web" / "changelog.html"
 
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 APP_VERSION = re.compile(r'^VERSION\s*=\s*"([^"]+)"', re.M)
-SW_CACHE = re.compile(r'dreamai-shell-v(\d+\.\d+\.\d+)')
+SW_CACHE = re.compile(r"dreamai-shell-v(\d+\.\d+\.\d+)")
 
 
 def segments(version: str) -> tuple[int, int, int]:
@@ -108,16 +108,12 @@ def check(root: Path = ROOT) -> dict:
     worker = versions["serviceWorker"]
     if server and worker and SEMVER.match(server) and SEMVER.match(worker):
         if segments(worker) < segments(server):
-            issues.append(
-                f"service worker cache {worker} is older than server {server}"
-            )
+            issues.append(f"service worker cache {worker} is older than server {server}")
 
     installer = versions["installer"]
     package = versions["desktopPackage"]
     if installer and package and installer != package:
-        issues.append(
-            f"installer manifest {installer} differs from desktop package {package}"
-        )
+        issues.append(f"installer manifest {installer} differs from desktop package {package}")
 
     # The changelog records whole-product milestones, which are not the same
     # scale as the installer build number. It only has to mention the server
@@ -125,9 +121,7 @@ def check(root: Path = ROOT) -> dict:
     changelog = versions["changelog"]
     if server and changelog and SEMVER.match(server) and SEMVER.match(changelog):
         if segments(changelog) < segments(server):
-            issues.append(
-                f"changelog latest v{changelog} is older than server {server}"
-            )
+            issues.append(f"changelog latest v{changelog} is older than server {server}")
 
     return {"versions": versions, "issues": sorted(issues), "ok": not issues}
 

@@ -14,13 +14,19 @@ sys.path.insert(0, str(TOOL.parent))
 import check_versions  # noqa: E402
 
 
-def make_tree(root: Path, *, server="1.5.0", worker="1.5.6", installer="1.3.0", package="1.3.0", changelog="1.5.0") -> Path:
+def make_tree(
+    root: Path,
+    *,
+    server="1.5.0",
+    worker="1.5.6",
+    installer="1.3.0",
+    package="1.3.0",
+    changelog="1.5.0",
+) -> Path:
     (root / "web" / "app").mkdir(parents=True, exist_ok=True)
     (root / "web" / "web" / "downloads").mkdir(parents=True, exist_ok=True)
     (root / "desktop").mkdir(parents=True, exist_ok=True)
-    (root / "web" / "app" / "config.py").write_text(
-        f'VERSION = "{server}"\n', encoding="utf-8"
-    )
+    (root / "web" / "app" / "config.py").write_text(f'VERSION = "{server}"\n', encoding="utf-8")
     (root / "web" / "web" / "sw.js").write_text(
         f'const CACHE = "dreamai-shell-v{worker}";\n', encoding="utf-8"
     )
@@ -107,9 +113,7 @@ def test_version_comparison_is_numeric_not_lexical(tmp_path):
 
 
 def test_the_cli_passes_for_the_published_tree():
-    done = subprocess.run(
-        [sys.executable, str(TOOL)], capture_output=True, text=True, check=False
-    )
+    done = subprocess.run([sys.executable, str(TOOL)], capture_output=True, text=True, check=False)
 
     assert done.returncode == 0
     assert "versions: OK" in done.stdout

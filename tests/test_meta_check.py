@@ -75,7 +75,9 @@ def test_a_complete_public_page_passes(tmp_path):
 
 
 def test_a_missing_og_image_is_reported(tmp_path):
-    meta = OG.replace('<meta property="og:image" content="https://liguijiang.com/assets/img/og.png">', "")
+    meta = OG.replace(
+        '<meta property="og:image" content="https://liguijiang.com/assets/img/og.png">', ""
+    )
     page = make_page(tmp_path, meta)
 
     result = check_meta.check_page(page)
@@ -233,9 +235,7 @@ def test_an_overlong_description_is_reported(tmp_path):
 
 
 def test_the_cli_passes_for_the_published_site():
-    done = subprocess.run(
-        [sys.executable, str(TOOL)], capture_output=True, text=True, check=False
-    )
+    done = subprocess.run([sys.executable, str(TOOL)], capture_output=True, text=True, check=False)
 
     assert done.returncode == 0
     assert "meta: OK" in done.stdout

@@ -41,8 +41,7 @@ def make_site(
     (tmp_path / "here.html").write_text("ok", encoding="utf-8")
     shell_lines = "".join(f'  "{item}",\n' for item in (shell or []))
     (tmp_path / "sw.js").write_text(
-        f'const CACHE = "dreamai-shell-v{sw_cache}";\n'
-        f"const SHELL = [\n{shell_lines}];\n",
+        f'const CACHE = "dreamai-shell-v{sw_cache}";\nconst SHELL = [\n{shell_lines}];\n',
         encoding="utf-8",
     )
     app = tmp_path / "app"
@@ -267,7 +266,7 @@ def test_a_stale_service_worker_asset_pin_is_reported(tmp_path):
         tmp_path,
         '<link rel="stylesheet" href="/assets/css/app.css?v=2.1.0">',
         sw_cache="1.5.7",
-        shell=['/assets/css/app.css?v=2.0.8'],
+        shell=["/assets/css/app.css?v=2.0.8"],
     )
 
     issues = check_site.check_site(site)["issues"]["serviceWorkerPins"]
@@ -280,7 +279,7 @@ def test_matching_service_worker_pins_pass(tmp_path):
         tmp_path,
         '<link rel="stylesheet" href="/assets/css/app.css?v=2.1.0">',
         sw_cache="1.5.7",
-        shell=['/assets/css/app.css?v=2.1.0'],
+        shell=["/assets/css/app.css?v=2.1.0"],
     )
 
     assert check_site.check_site(site)["issues"]["serviceWorkerPins"] == []

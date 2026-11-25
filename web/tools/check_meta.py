@@ -29,7 +29,7 @@ OG = re.compile(r'<meta[^>]*property="(og:[^"]+)"[^>]*content="([^"]*)"', re.I)
 OG_ALT = re.compile(r'<meta[^>]*content="([^"]*)"[^>]*property="(og:[^"]+)"', re.I)
 META_NAME = re.compile(r'<meta[^>]*name="([^"]+)"[^>]*content="([^"]*)"', re.I)
 LINK_REL = re.compile(r'<link[^>]*rel="([^"]+)"[^>]*>', re.I)
-LINK_REL_ALT = re.compile(r'<link[^>]*>', re.I)
+LINK_REL_ALT = re.compile(r"<link[^>]*>", re.I)
 HREF = re.compile(r'href="([^"]+)"')
 TITLE = re.compile(r"<title>([^<]*)</title>", re.I)
 LANG = re.compile(r'<html[^>]*\blang="([^"]+)"', re.I)
@@ -143,7 +143,18 @@ def check_manifest(site: Path) -> dict:
     except (ValueError, OSError) as exc:
         return {"issues": [f"manifest.webmanifest: unreadable ({type(exc).__name__})"], "ok": False}
     issues: list[str] = []
-    for field in ("name", "short_name", "description", "lang", "start_url", "scope", "display", "theme_color", "background_color", "icons"):
+    for field in (
+        "name",
+        "short_name",
+        "description",
+        "lang",
+        "start_url",
+        "scope",
+        "display",
+        "theme_color",
+        "background_color",
+        "icons",
+    ):
         if field not in manifest:
             issues.append(f"manifest: missing {field}")
     pages = [named_pairs(p.read_text(encoding="utf-8")) for p in site.glob("*.html")]
