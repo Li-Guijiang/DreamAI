@@ -80,5 +80,8 @@ jobs:
       - name: Check the version map
         run: python web/tools/check_versions.py
 
+      - name: Check JavaScript DOM selectors
+        run: python web/tools/check_dom_refs.py
+
       - name: Run tests with pytest
         run: pytest
