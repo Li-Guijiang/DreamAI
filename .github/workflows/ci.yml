@@ -77,5 +77,8 @@ jobs:
       - name: Check page head metadata
         run: python web/tools/check_meta.py
 
+      - name: Check the version map
+        run: python web/tools/check_versions.py
+
       - name: Run tests with pytest
         run: pytest
