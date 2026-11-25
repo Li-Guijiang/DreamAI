@@ -74,5 +74,8 @@ jobs:
       - name: Check the documentation indexes
         run: python web/tools/check_docs_index.py
 
+      - name: Check page head metadata
+        run: python web/tools/check_meta.py
+
       - name: Run tests with pytest
         run: pytest
