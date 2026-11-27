@@ -1532,7 +1532,9 @@ async def bad_request(request: Request, exc: RequestValidationError) -> JSONResp
 @app.exception_handler(404)
 async def not_found(request: Request, exc):  # noqa: ANN001
     if request.url.path.startswith("/api/"):
-        return JSONResponse({"error": "接口不存在"}, status_code=404)
+        return JSONResponse(
+            {"error": "接口不存在", "code": "not_found"}, status_code=404
+        )
     return FileResponse(
         WEB_DIR / "index.html", status_code=404, headers={"Cache-Control": "no-cache"}
     )
