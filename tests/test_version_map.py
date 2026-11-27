@@ -151,6 +151,48 @@ def test_existing_precache_targets_pass(tmp_path):
     assert check_versions.check(root)["ok"] is True
 
 
+def test_a_stale_download_page_fallback_is_reported(tmp_path):
+    root = make_tree(tmp_path)
+    latest = root / "web" / "web" / "downloads" / "latest.json"
+    data = json.loads(latest.read_text(encoding="utf-8"))
+    data.update({"sha256": "a" * 64, "date": "2026-10-31", "size": 1048576})
+    latest.write_text(json.dumps(data), encoding="utf-8")
+    page = root / "web" / "web" / "download.html"
+    page.write_text(
+        '<a href="/downloads/DreamAI-Setup-9.9.9.exe">v9.9.9</a> 1.0 MB 2020-01-01 deadbeef',
+        encoding="utf-8",
+    )
+
+    result = check_versions.check(root)
+
+    assert any("fallback link" in item for item in result["issues"])
+    assert any("fallback sha256" in item for item in result["issues"])
+    assert any("fallback date" in item for item in result["issues"])
+
+
+def test_a_matching_download_page_fallback_passes(tmp_path):
+    root = make_tree(tmp_path)
+    latest = root / "web" / "web" / "downloads" / "latest.json"
+    data = json.loads(latest.read_text(encoding="utf-8"))
+    data.update(
+        {
+            "file": "DreamAI-Setup-1.3.0.exe",
+            "sha256": "a" * 64,
+            "date": "2026-10-31",
+            "size": 1048576,
+        }
+    )
+    latest.write_text(json.dumps(data), encoding="utf-8")
+    (root / "web" / "web" / "download.html").write_text(
+        'href="/downloads/DreamAI-Setup-1.3.0.exe" v1.3.0 '
+        + "a" * 64
+        + " 2026-10-31 1.0 MB",
+        encoding="utf-8",
+    )
+
+    assert check_versions.check(root)["ok"] is True
+
+
 def test_an_empty_tree_reports_missing_files_without_crashing(tmp_path):
     result = check_versions.check(tmp_path)
 
