@@ -148,6 +148,15 @@ def test_a_hardcoded_sitemap_route_is_reported(tmp_path):
     assert any("hard-codes" in item for item in result["issues"])
 
 
+def test_a_robots_file_without_api_disallow_is_reported(tmp_path):
+    site = make_site(tmp_path, {"index.html": ""}, [f"{ORIGIN}/"])
+    (site / "robots.txt").write_text("User-agent: *\nAllow: /\n", encoding="utf-8")
+
+    result = check_sitemap.check(site, site / "main.py")
+
+    assert any("does not disallow" in item for item in result["issues"])
+
+
 def test_the_cli_passes_for_the_published_site():
     done = subprocess.run([sys.executable, str(TOOL)], capture_output=True, text=True, check=False)
 
