@@ -93,9 +93,7 @@ def test_an_http_request_does_not_set_the_secure_flag(monkeypatch):
 def test_a_forged_forwarded_proto_cannot_strip_secure(monkeypatch):
     monkeypatch.setenv(owner_auth.SECRET_ENV, "test-secret")
 
-    header = owner_auth.cookie_header(
-        _request("https", headers={"X-Forwarded-Proto": "http"})
-    )
+    header = owner_auth.cookie_header(_request("https", headers={"X-Forwarded-Proto": "http"}))
 
     assert "Secure" in header
 

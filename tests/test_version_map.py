@@ -184,9 +184,7 @@ def test_a_matching_download_page_fallback_passes(tmp_path):
     )
     latest.write_text(json.dumps(data), encoding="utf-8")
     (root / "web" / "web" / "download.html").write_text(
-        'href="/downloads/DreamAI-Setup-1.3.0.exe" v1.3.0 '
-        + "a" * 64
-        + " 2026-10-31 1.0 MB",
+        'href="/downloads/DreamAI-Setup-1.3.0.exe" v1.3.0 ' + "a" * 64 + " 2026-10-31 1.0 MB",
         encoding="utf-8",
     )
 

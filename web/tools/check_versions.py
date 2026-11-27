@@ -173,7 +173,9 @@ def check(root: Path = ROOT) -> dict:
         if isinstance(size, int) and size > 0:
             expected = f"{size / (1024 * 1024):.1f} MB"
             if expected not in page:
-                issues.append(f"download.html: fallback size differs from the manifest ({expected})")
+                issues.append(
+                    f"download.html: fallback size differs from the manifest ({expected})"
+                )
 
     # Every pre-cached file must exist. A missing entry makes the install step
     # reject the whole cache write, so the offline shell never becomes ready.

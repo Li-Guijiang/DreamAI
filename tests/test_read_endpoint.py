@@ -56,9 +56,7 @@ def test_a_nonstandard_port_is_refused(main_module):
 
 def test_a_url_with_credentials_is_refused(main_module):
     with TestClient(main_module.app) as client:
-        response = client.get(
-            "/api/read", params={"url": "https://user:pass@example.com/"}
-        )
+        response = client.get("/api/read", params={"url": "https://user:pass@example.com/"})
 
     assert response.status_code == 400
     assert "账号" in response.json()["error"]

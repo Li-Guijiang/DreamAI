@@ -520,9 +520,7 @@ def load_settings() -> Settings:
         repo_url=_env("DREAMAI_REPO_URL", "https://github.com/Li-Guijiang/DreamAI")
         or "https://github.com/Li-Guijiang/DreamAI",
         trusted_proxies=tuple(
-            item.strip()
-            for item in _env("DREAMAI_TRUSTED_PROXIES", "").split(",")
-            if item.strip()
+            item.strip() for item in _env("DREAMAI_TRUSTED_PROXIES", "").split(",") if item.strip()
         ),
         clamped_fields=tuple(clamped),
     )

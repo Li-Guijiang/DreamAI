@@ -34,7 +34,9 @@ def peer_is_trusted(peer: str, trusted_proxies: tuple[str, ...]) -> bool:
     return False
 
 
-def forwarded_ip(peer: str, headers: dict[str, str], trusted_proxies: tuple[str, ...]) -> str | None:
+def forwarded_ip(
+    peer: str, headers: dict[str, str], trusted_proxies: tuple[str, ...]
+) -> str | None:
     """The client IP from headers, only when the peer is a trusted proxy."""
     if not peer_is_trusted(peer, trusted_proxies):
         return None
@@ -47,7 +49,9 @@ def forwarded_ip(peer: str, headers: dict[str, str], trusted_proxies: tuple[str,
     return None
 
 
-def forwarded_proto(peer: str, headers: dict[str, str], trusted_proxies: tuple[str, ...]) -> str | None:
+def forwarded_proto(
+    peer: str, headers: dict[str, str], trusted_proxies: tuple[str, ...]
+) -> str | None:
     """The forwarded scheme, only when the peer is a trusted proxy."""
     if not peer_is_trusted(peer, trusted_proxies):
         return None

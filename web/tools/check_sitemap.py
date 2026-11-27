@@ -57,7 +57,9 @@ def check_robots(site: Path, main: Path) -> list[str]:
         issues.append(f"robots.txt: does not reference {sitemap_ref}")
     if main.is_file():
         source = main.read_text(encoding="utf-8")
-        route = re.search(r'@app\.get\("/robots\.txt"\)\s*\nasync def robots.*?(?=\n@app\.|\Z)', source, re.S)
+        route = re.search(
+            r'@app\.get\("/robots\.txt"\)\s*\nasync def robots.*?(?=\n@app\.|\Z)', source, re.S
+        )
         if route and "robots.txt" not in route.group(0):
             issues.append("main.py: robots route does not read the static file")
     return issues
@@ -67,14 +69,8 @@ def check(site: Path = SITE, main: Path = MAIN) -> dict:
     pages = indexable_pages(site)
     urls = sitemap_urls(site)
     # index.html is served at the origin root; both spellings are valid.
-    expected = {
-        f"{ORIGIN}/" if name == "index.html" else f"{ORIGIN}/{name}"
-        for name in pages
-    }
-    listed = {
-        f"{ORIGIN}/" if url.rstrip("/") == ORIGIN else url
-        for url in urls
-    }
+    expected = {f"{ORIGIN}/" if name == "index.html" else f"{ORIGIN}/{name}" for name in pages}
+    listed = {f"{ORIGIN}/" if url.rstrip("/") == ORIGIN else url for url in urls}
     issues: list[str] = []
 
     if not urls:
@@ -88,7 +84,9 @@ def check(site: Path = SITE, main: Path = MAIN) -> dict:
 
     if main.is_file():
         source = main.read_text(encoding="utf-8")
-        route = re.search(r'@app\.get\("/sitemap\.xml"\)\s*\nasync def sitemap.*?(?=\n@app\.|\Z)', source, re.S)
+        route = re.search(
+            r'@app\.get\("/sitemap\.xml"\)\s*\nasync def sitemap.*?(?=\n@app\.|\Z)', source, re.S
+        )
         if route:
             body = route.group(0)
             if "<urlset" in body:

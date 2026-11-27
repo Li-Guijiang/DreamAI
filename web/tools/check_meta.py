@@ -191,10 +191,7 @@ def check_favicon(site: Path) -> dict:
         if not path.is_file():
             issues.append(f"favicon missing: {path.relative_to(site)}")
     if not issues:
-        digests = {
-            hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in (root_icon, linked)
-        }
+        digests = {hashlib.sha256(path.read_bytes()).hexdigest() for path in (root_icon, linked)}
         if len(digests) > 1:
             issues.append("root favicon.ico differs from assets/img/favicon.ico")
     return {"issues": issues, "ok": not issues}

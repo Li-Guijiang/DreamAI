@@ -27,7 +27,7 @@ ORIGIN = "https://liguijiang.com"
 def make_site(tmp_path: Path, pages: dict[str, str], urls: list[str]) -> Path:
     for name, extra in pages.items():
         (tmp_path / name).write_text(
-            f'<html><head><title>t</title>{extra}</head><body></body></html>',
+            f"<html><head><title>t</title>{extra}</head><body></body></html>",
             encoding="utf-8",
         )
     entries = "".join(f"<url><loc>{url}</loc></url>\n" for url in urls)
@@ -149,9 +149,7 @@ def test_a_hardcoded_sitemap_route_is_reported(tmp_path):
 
 
 def test_the_cli_passes_for_the_published_site():
-    done = subprocess.run(
-        [sys.executable, str(TOOL)], capture_output=True, text=True, check=False
-    )
+    done = subprocess.run([sys.executable, str(TOOL)], capture_output=True, text=True, check=False)
 
     assert done.returncode == 0
     assert "sitemap: OK" in done.stdout

@@ -57,9 +57,7 @@ def test_a_forged_forwarded_for_header_is_ignored(main_module):
 
 def test_many_forged_identities_do_not_bypass_the_limiter(main_module):
     seen = {
-        main_module.client_ip(
-            make_request("203.0.113.7", {"X-Forwarded-For": f"198.51.100.{n}"})
-        )
+        main_module.client_ip(make_request("203.0.113.7", {"X-Forwarded-For": f"198.51.100.{n}"}))
         for n in range(1, 40)
     }
 
