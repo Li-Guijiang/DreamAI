@@ -374,14 +374,39 @@ async def consume_daily_budget() -> bool:
         return True
 
 
+def _peer_is_trusted(peer: str) -> bool:
+    """Whether the direct connection comes from a configured reverse proxy."""
+    if not peer or not settings.trusted_proxies:
+        return False
+    try:
+        address = ipaddress.ip_address(peer)
+    except ValueError:
+        return False
+    for entry in settings.trusted_proxies:
+        try:
+            if address in ipaddress.ip_network(entry, strict=False):
+                return True
+        except ValueError:
+            logger.warning("invalid trusted proxy entry: %s", entry)
+    return False
+
+
 def client_ip(request: Request) -> str:
-    real = request.headers.get("x-real-ip")
-    if real:
-        return real.strip()
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    """Client address for rate limiting.
+
+    Forwarding headers are only meaningful when the peer that sent them is a
+    trusted reverse proxy. Trusting them unconditionally lets any caller pick
+    a fresh identity per request and bypass both limiters.
+    """
+    peer = request.client.host if request.client else ""
+    if peer and _peer_is_trusted(peer):
+        real = request.headers.get("x-real-ip")
+        if real:
+            return real.strip()
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+    return peer or "unknown"
 
 
 # ---------------------------------------------------------------------------
