@@ -35,7 +35,8 @@ def make_site(tmp_path: Path, pages: dict[str, str], urls: list[str]) -> Path:
         f'<?xml version="1.0"?><urlset>{entries}</urlset>', encoding="utf-8"
     )
     (tmp_path / "robots.txt").write_text(
-        f"User-agent: *\nAllow: /\nSitemap: {ORIGIN}/sitemap.xml\n", encoding="utf-8"
+        f"User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: {ORIGIN}/sitemap.xml\n",
+        encoding="utf-8",
     )
     return tmp_path
 
@@ -113,7 +114,8 @@ def test_a_noindex_page_that_is_listed_is_reported(tmp_path):
 def test_a_missing_sitemap_is_reported(tmp_path):
     (tmp_path / "index.html").write_text("<title>t</title>", encoding="utf-8")
     (tmp_path / "robots.txt").write_text(
-        f"User-agent: *\nSitemap: {ORIGIN}/sitemap.xml\n", encoding="utf-8"
+        f"User-agent: *\nDisallow: /api/\nSitemap: {ORIGIN}/sitemap.xml\n",
+        encoding="utf-8",
     )
 
     result = check_sitemap.check(tmp_path, tmp_path / "main.py")
