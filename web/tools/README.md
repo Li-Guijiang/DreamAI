@@ -21,6 +21,7 @@ the environment comes from `web/requirements.txt`, and some scripts additionally
 | `check_meta.py` | Verify head metadata and Open Graph tags on every page | After editing a page head; also runs in CI |
 | `check_versions.py` | Keep server, service worker, installer and changelog versions coherent | Before a release; also runs in CI |
 | `check_dom_refs.py` | Verify that literal id selectors in site scripts have matching nodes | After editing JS or page markup; also runs in CI |
+| `check_sitemap.py` | Verify the sitemap lists every indexable page and the server serves the published file | After adding a page; also runs in CI |
 
 The index check also rejects gaps and duplicate numbers in the ADR sequence,
 so `0025` cannot be added while `0024` is missing.
