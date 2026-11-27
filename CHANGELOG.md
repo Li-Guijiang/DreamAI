@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Crawler files, identity and link reader
+
+- Fixed `/api/read`, which returned 502 for every request because the
+  three-field limiter result was unpacked into two names. Invalid URLs now
+  return the intended 400.
+- Fixed rate-limit bypass: forwarding headers are no longer trusted from
+  arbitrary clients. Added `DREAMAI_TRUSTED_PROXIES` (IP/CIDR allowlist, empty
+  by default) and shared trust logic between the limiter and owner cookie, so
+  a forged `X-Forwarded-Proto` cannot strip the cookie's `Secure` flag.
+- Fixed `/sitemap.xml` and `/robots.txt`: the server hand-wrote shorter copies
+  instead of serving the published files. Crawlers saw only the home page.
+  Added `docs.html` to the sitemap and `check_sitemap.py` to guard both files.
+- Added `check_sitemap.py` to CI and favicon-copy consistency to `check_meta.py`.
+
 ### Metadata and version consistency
 
 - Fixed three pages (`changelog.html`, `download.html`, `offline.html`) that
