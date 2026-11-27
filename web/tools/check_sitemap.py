@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -43,7 +44,14 @@ def sitemap_urls(site: Path) -> list[str]:
     path = site / "sitemap.xml"
     if not path.is_file():
         return []
-    return LOC.findall(path.read_text(encoding="utf-8"))
+    text = path.read_text(encoding="utf-8")
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError:
+        return []
+    if not root.tag.endswith("urlset"):
+        return []
+    return LOC.findall(text)
 
 
 def check_robots(site: Path, main: Path) -> list[str]:
@@ -78,7 +86,11 @@ def check(site: Path = SITE, main: Path = MAIN) -> dict:
     issues: list[str] = []
 
     if not urls:
-        issues.append("sitemap.xml: missing or has no <loc> entries")
+        path = site / "sitemap.xml"
+        if path.is_file():
+            issues.append("sitemap.xml: invalid XML or no <loc> entries")
+        else:
+            issues.append("sitemap.xml: missing")
     for url in sorted(expected - listed):
         issues.append(f"sitemap.xml: missing indexable page {url}")
     for url in sorted(listed - expected):
