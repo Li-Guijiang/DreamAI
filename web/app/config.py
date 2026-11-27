@@ -323,6 +323,11 @@ class Settings:
     site_title: str = "Dream AI"
     site_tagline: str = "让每一个想法，都被认真对待"
     repo_url: str = "https://github.com/Li-Guijiang/DreamAI"
+    # IPs or CIDR ranges of reverse proxies allowed to set X-Forwarded-For /
+    # X-Real-IP. Empty means no header is trusted, which is the safe default
+    # for a directly exposed server: a client could otherwise invent a new
+    # address on every request and bypass both rate limiters.
+    trusted_proxies: tuple[str, ...] = ()
     # Environment names whose supplied value was outside the supported range
     # and therefore replaced by a boundary at load time.
     clamped_fields: tuple[str, ...] = ()
@@ -514,5 +519,10 @@ def load_settings() -> Settings:
         or "让每一个想法，都被认真对待",
         repo_url=_env("DREAMAI_REPO_URL", "https://github.com/Li-Guijiang/DreamAI")
         or "https://github.com/Li-Guijiang/DreamAI",
+        trusted_proxies=tuple(
+            item.strip()
+            for item in _env("DREAMAI_TRUSTED_PROXIES", "").split(",")
+            if item.strip()
+        ),
         clamped_fields=tuple(clamped),
     )
