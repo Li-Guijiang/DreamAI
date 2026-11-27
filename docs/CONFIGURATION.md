@@ -105,6 +105,7 @@ python web/tools/check_env_docs.py
 | `DREAMAI_USAGE_STATE` | 空 | 用量快照文件路径 | 为空表示不启用；文件只含聚合计数 |
 | `DREAMAI_USAGE_SAVE_INTERVAL` | `60` 秒 | 快照周期性刷新间隔 | 裁剪到 0～3600 秒；`0` 表示仅关闭时写入 |
 | `DREAMAI_MAX_TRACKED_MODELS` | `64` | 统计表中保留的模型名数量 | 裁剪到 2～512；超出部分归入 `other` |
+| `DREAMAI_TRUSTED_PROXIES` | 空 | 允许设置 `X-Forwarded-For` / `X-Real-IP` / `X-Forwarded-Proto` 的代理地址 | 逗号分隔的 IP 或 CIDR；为空表示不信任任何转发头（直连部署的安全默认） |
 
 ## 9. 不属于本文的变量
 
