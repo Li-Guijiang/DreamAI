@@ -24,6 +24,24 @@ desktop app can only touch what the user explicitly selected.
 - Per-IP sliding-window rate limit, global daily free budget, input size limits.
 - Request bodies over 512 KB are rejected before parsing.
 
+## Forwarding headers and rate limits
+
+`X-Forwarded-For`, `X-Real-IP` and `X-Forwarded-Proto` are ignored unless the
+peer that opened the connection is listed in `DREAMAI_TRUSTED_PROXIES`. The
+default is empty, which is correct for a directly exposed server: a caller
+cannot invent a new identity per request to escape the limiters, or forge
+`X-Forwarded-Proto: http` to strip the `Secure` flag from the owner cookie.
+
+Deployments behind a reverse proxy must set the proxy's address or CIDR range:
+
+```bash
+DREAMAI_TRUSTED_PROXIES=127.0.0.1,10.0.0.0/8
+```
+
+Only the proxy's own address belongs here, not the addresses of visitors.
+When unset behind a proxy, all visitors share the proxy's single rate-limit
+bucket.
+
 ## Desktop boundaries
 
 - `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`.
