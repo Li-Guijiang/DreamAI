@@ -15,6 +15,10 @@
   instead of serving the published files. Crawlers saw only the home page.
   Added `docs.html` to the sitemap and `check_sitemap.py` to guard both files.
 - Added `check_sitemap.py` to CI and favicon-copy consistency to `check_meta.py`.
+- The download page's fallback version, file name, size, date and SHA-256 are
+  now checked against `latest.json`; a failed JSON fetch no longer shows stale
+  download information.
+- The API 404 response now includes a `code` field like every other error.
 
 ### Metadata and version consistency
 
