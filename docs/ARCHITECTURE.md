@@ -249,7 +249,14 @@ SSE。pump 捕获的异常会作为一条数据放入同一队列，由主协程
 `check_meta.py`（head 元数据、Open Graph、图标、manifest）与
 `check_versions.py`（服务端 / SW / 安装包 / CLI 的版本关系），
 `check_dom_refs.py`（脚本 id 选择器与页面节点对应，桌面注入节点有白名单），
-`check_site.py` 另比对 SW 预缓存的资源版本与页面实际引用。
+`check_sitemap.py`（爬虫文件与可索引页面一致）。`check_site.py` 另比对 SW
+预缓存的资源版本与页面实际引用。
+
+转发头的可信范围由 `web/app/peer.py` 单点定义：限流器与 owner cookie
+共用它，只有直连对端位于 `DREAMAI_TRUSTED_PROXIES` 时才采信
+`X-Forwarded-For` / `X-Real-IP` / `X-Forwarded-Proto`。
+`robots.txt` 与 `sitemap.xml` 由路由读取静态文件返回，不再在 Python
+中维护第二份副本。
 以上检查在 CI 中先于 pytest 运行。
 
 配置加载阶段记录被裁剪到边界的字段名，`/api/health.configClamped`
