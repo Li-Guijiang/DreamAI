@@ -80,11 +80,18 @@ def is_owner(request) -> bool:
     return verify_cookie(value)
 
 
-def cookie_header(request) -> str | None:
+def cookie_header(request, trusted_proxies: tuple[str, ...] = ()) -> str | None:
     value = issue_cookie()
     if not value:
         return None
-    secure = request.headers.get("x-forwarded-proto", request.url.scheme) == "https"
+    # A caller can forge X-Forwarded-Proto to strip the Secure flag from the
+    # owner cookie. Only honour it when the peer is a configured proxy.
+    from .peer import forwarded_proto
+
+    direct = request.client.host if request.client else ""
+    headers = {key.lower(): item for key, item in request.headers.items()}
+    proto = forwarded_proto(direct, headers, trusted_proxies) or request.url.scheme
+    secure = proto == "https"
     parts = [
         f"{COOKIE_NAME}={value}",
         "Path=/",

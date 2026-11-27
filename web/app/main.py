@@ -28,7 +28,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from . import llm, owner_auth, owner_store
+from . import llm, owner_auth, owner_store, peer
 from .adapters import FINISH_LENGTH
 from .cache import ResponseCache, make_key
 from .config import IDENTITY_ANSWER, VERSION, WEB_DIR, is_identity_question, load_settings
@@ -374,23 +374,6 @@ async def consume_daily_budget() -> bool:
         return True
 
 
-def _peer_is_trusted(peer: str) -> bool:
-    """Whether the direct connection comes from a configured reverse proxy."""
-    if not peer or not settings.trusted_proxies:
-        return False
-    try:
-        address = ipaddress.ip_address(peer)
-    except ValueError:
-        return False
-    for entry in settings.trusted_proxies:
-        try:
-            if address in ipaddress.ip_network(entry, strict=False):
-                return True
-        except ValueError:
-            logger.warning("invalid trusted proxy entry: %s", entry)
-    return False
-
-
 def client_ip(request: Request) -> str:
     """Client address for rate limiting.
 
@@ -398,15 +381,10 @@ def client_ip(request: Request) -> str:
     trusted reverse proxy. Trusting them unconditionally lets any caller pick
     a fresh identity per request and bypass both limiters.
     """
-    peer = request.client.host if request.client else ""
-    if peer and _peer_is_trusted(peer):
-        real = request.headers.get("x-real-ip")
-        if real:
-            return real.strip()
-        forwarded = request.headers.get("x-forwarded-for")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
-    return peer or "unknown"
+    direct = request.client.host if request.client else ""
+    headers = {key.lower(): value for key, value in request.headers.items()}
+    result = peer.forwarded_ip(direct, headers, settings.trusted_proxies)
+    return result or direct or "unknown"
 
 
 # ---------------------------------------------------------------------------
@@ -790,7 +768,7 @@ def resolve_upstream(payload: ChatRequest) -> Upstream:
 @app.get("/api/read")
 async def read_link(request: Request, url: str = "") -> JSONResponse:
     ip = client_ip(request)
-    allowed, retry_after = await reader_limiter.hit(ip)
+    allowed, retry_after, _remaining = await reader_limiter.hit(ip)
     if not allowed:
         return JSONResponse(
             {"error": f"读取太频繁了，请 {retry_after} 秒后再试。", "code": "rate_limited"},
@@ -989,7 +967,7 @@ async def chat(payload: ChatRequest, request: Request) -> Response:
             return _local("主人验证尚未启用。请在服务器配置私有验证口令后重试。")
         if not owner_auth.verify_token(token):
             return _local("验证失败。")
-        cookie = owner_auth.cookie_header(request)
+        cookie = owner_auth.cookie_header(request, settings.trusted_proxies)
         return _local(
             "主人验证通过。私有档案已解锁 30 天，可以发送【查看我的全部档案】。",
             extra={"Set-Cookie": cookie} if cookie else None,
