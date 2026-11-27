@@ -269,6 +269,7 @@ reaches the screen. Both are now explicit.
 | Configuration contract | All 44 server settings documented and guarded in CI | `docs/CONFIGURATION.md`, `check_env_docs.py` |
 | Metadata guard | Open Graph tags, icons and the four-version map checked in CI | `check_meta.py`, `check_versions.py` |
 | Crawler consistency | Sitemap lists every indexable page and is served from one source | `check_sitemap.py`, `docs/VERSIONS.md` |
+| Identity boundary | Forwarding headers trusted only from configured proxies | `DREAMAI_TRUSTED_PROXIES`, `docs/SECURITY.md` |
 | Real usage | Token counts from all three wire formats, one usage event per stream | `usage_from_chunk()`, `DREAMAI_STREAM_USAGE` |
 | Price corrections | `DREAMAI_PRICE_OVERRIDES` fixes a stale price without a release | `pricing.configure_prices()` |
 | Provider view | `/api/usage` groups turns per vendor, not just per model | `byProvider` |
