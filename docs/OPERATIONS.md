@@ -615,6 +615,13 @@ python web/tools/check_sitemap.py     # sitemap 覆盖全部可索引页面、ro
 `robots.txt` 与 `sitemap.xml` 都由服务端读取静态文件返回，不要再在 Python
 里维护第二份副本。
 
+`check_versions.py` 还会比对 `download.html` 的降级显示值与
+`downloads/latest.json`：版本号、文件名、大小、日期与 SHA-256。
+若 `download.js` 的动态加载失败，访客看到的就是这些降级值，必须与清单一致。
+
+API 错误响应统一为 `{"error": "...", "code": "..."}`。前端按 `error`
+显示文案；`code` 供客户端分支判断，新增错误路径时须保持该结构。
+
 ## 18. 用量快照的健康状态
 
 `/api/usage.usageState` 是快照持久化的状态，不再只能靠日志判断：
