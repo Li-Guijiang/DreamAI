@@ -108,5 +108,22 @@ def test_manifest_is_json(client):
     assert data["start_url"] == "/"
 
 
-def test_unknown_routes_return_404(client):
-    assert client.get("/api/does-not-exist").status_code == 404
+def test_unknown_api_routes_return_a_structured_404(client):
+    response = client.get("/api/does-not-exist")
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "not_found"
+
+
+def test_every_api_error_has_a_code(client):
+    cases = [
+        client.get("/api/read", params={"url": ""}),
+        client.get("/api/does-not-exist"),
+        client.post("/api/chat", json={"messages": []}),
+    ]
+
+    for response in cases:
+        assert response.status_code >= 400
+        body = response.json()
+        assert isinstance(body.get("error"), str), response.text
+        assert isinstance(body.get("code"), str), response.text
