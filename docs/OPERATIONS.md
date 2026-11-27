@@ -585,6 +585,7 @@ python web/tools/check_meta.py        # head 元数据、Open Graph、图标、m
 python web/tools/check_versions.py    # 四个版本号的关系、预缓存目标存在性
 python web/tools/check_site.py        # 含 serviceWorkerPins 预缓存版本比对
 python web/tools/check_dom_refs.py    # JS 中的 id 选择器是否有对应节点
+python web/tools/check_sitemap.py     # sitemap 覆盖全部可索引页面、robots 与静态文件一致
 ```
 
 `check_meta.py` 判读：
@@ -608,6 +609,11 @@ python web/tools/check_dom_refs.py    # JS 中的 id 选择器是否有对应节
 `check_dom_refs.py` 报告 `UNRESOLVED: 脚本 #id` 时，表示脚本查询的节点
 不存在，相关功能会静默失效。若该节点由桌面外壳在运行时注入，
 须在工具的 `DESKTOP_INJECTED` 白名单中登记并写明原因，不能删除检查。
+
+`check_sitemap.py` 报告 `missing indexable page` 时，说明新增了公开页面
+却没有加入 `web/web/sitemap.xml`。`offline.html` 带 `noindex`，不应加入。
+`robots.txt` 与 `sitemap.xml` 都由服务端读取静态文件返回，不要再在 Python
+里维护第二份副本。
 
 ## 18. 用量快照的健康状态
 
