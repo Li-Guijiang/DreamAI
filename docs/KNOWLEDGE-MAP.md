@@ -914,6 +914,15 @@ python -m pytest tests/test_client_ip.py tests/test_read_endpoint.py -v
 python web/tools/check_sitemap.py
 ```
 
+### 23.3 降级显示也要对齐
+
+`download.js` 在运行时用 `latest.json` 覆盖版本号、文件名、大小、日期与
+哈希。HTML 中保留的静态值不是废代码——JSON 请求失败时它们就是访客看到
+的内容。若发版只更新清单而忘了改页面，降级状态会指向旧安装包。
+
+「运行时会覆盖」不等于「静态值可以随意」。检查工具同时验证两份数据，
+代价很小，却避免了一种只在弱网下出现的错误。
+
 动手验证：
 
 ```bash
