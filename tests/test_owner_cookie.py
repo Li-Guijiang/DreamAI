@@ -67,6 +67,9 @@ def _request(scheme: str, peer: str = "203.0.113.7", headers: dict | None = None
             "headers": raw,
             "scheme": scheme,
             "server": ("example.com", 443),
+            "path": "/",
+            "query_string": b"",
+            "root_path": "",
         }
     )
 
