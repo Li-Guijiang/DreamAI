@@ -116,17 +116,13 @@ def test_unknown_api_routes_return_a_structured_404(client):
 
 
 def test_documented_error_codes_are_all_implemented():
-    docs = (Path(__file__).resolve().parent.parent / "docs" / "API.md").read_text(
-        encoding="utf-8"
-    )
+    docs = (Path(__file__).resolve().parent.parent / "docs" / "API.md").read_text(encoding="utf-8")
     source = (Path(__file__).resolve().parent.parent / "web" / "app" / "main.py").read_text(
         encoding="utf-8"
     )
     import re
 
-    documented = {
-        item for item in re.findall(r"`([a-z_]+)`", docs) if "_" in item
-    }
+    documented = {item for item in re.findall(r"`([a-z_]+)`", docs) if "_" in item}
     implemented = set(re.findall(r'"code": "([a-z_]+)"', source))
 
     for code in implemented:
