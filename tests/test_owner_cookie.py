@@ -54,3 +54,55 @@ def test_a_cookie_without_a_secret_cannot_be_verified(monkeypatch):
     monkeypatch.delenv(owner_auth.SECRET_ENV, raising=False)
 
     assert not owner_auth.verify_cookie(_signed(9999999999))
+
+
+def _request(scheme: str, peer: str = "203.0.113.7", headers: dict | None = None):
+    from fastapi import Request
+
+    raw = [(key.lower().encode(), value.encode()) for key, value in (headers or {}).items()]
+    return Request(
+        {
+            "type": "http",
+            "client": (peer, 1234),
+            "headers": raw,
+            "scheme": scheme,
+            "server": ("example.com", 443),
+        }
+    )
+
+
+def test_an_https_request_sets_the_secure_flag(monkeypatch):
+    monkeypatch.setenv(owner_auth.SECRET_ENV, "test-secret")
+
+    header = owner_auth.cookie_header(_request("https"))
+
+    assert "Secure" in header
+
+
+def test_an_http_request_does_not_set_the_secure_flag(monkeypatch):
+    monkeypatch.setenv(owner_auth.SECRET_ENV, "test-secret")
+
+    header = owner_auth.cookie_header(_request("http"))
+
+    assert "Secure" not in header
+
+
+def test_a_forged_forwarded_proto_cannot_strip_secure(monkeypatch):
+    monkeypatch.setenv(owner_auth.SECRET_ENV, "test-secret")
+
+    header = owner_auth.cookie_header(
+        _request("https", headers={"X-Forwarded-Proto": "http"})
+    )
+
+    assert "Secure" in header
+
+
+def test_a_trusted_proxy_can_declare_https(monkeypatch):
+    monkeypatch.setenv(owner_auth.SECRET_ENV, "test-secret")
+
+    header = owner_auth.cookie_header(
+        _request("http", peer="127.0.0.1", headers={"X-Forwarded-Proto": "https"}),
+        trusted_proxies=("127.0.0.1",),
+    )
+
+    assert "Secure" in header
