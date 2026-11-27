@@ -16,6 +16,7 @@ Read-only. Exits non-zero when a public page is missing required metadata.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -176,13 +177,38 @@ def check_manifest(site: Path) -> dict:
     return {"issues": sorted(issues), "ok": not issues}
 
 
+def check_favicon(site: Path) -> dict:
+    """The root favicon and the one pages link to must be identical.
+
+    The server serves /favicon.ico from the site root while pages reference
+    /assets/img/favicon.ico. Updating only one silently gives browsers and
+    crawlers different icons.
+    """
+    root_icon = site / "favicon.ico"
+    linked = site / "assets" / "img" / "favicon.ico"
+    issues: list[str] = []
+    for path in (root_icon, linked):
+        if not path.is_file():
+            issues.append(f"favicon missing: {path.relative_to(site)}")
+    if not issues:
+        digests = {
+            hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in (root_icon, linked)
+        }
+        if len(digests) > 1:
+            issues.append("root favicon.ico differs from assets/img/favicon.ico")
+    return {"issues": issues, "ok": not issues}
+
+
 def check(site: Path = SITE) -> dict:
     pages = [check_page(path) for path in sorted(site.glob("*.html"))]
     manifest = check_manifest(site)
+    favicon = check_favicon(site)
     return {
         "pages": pages,
         "manifest": manifest,
-        "ok": all(page["ok"] for page in pages) and manifest["ok"],
+        "favicon": favicon,
+        "ok": all(page["ok"] for page in pages) and manifest["ok"] and favicon["ok"],
     }
 
 
@@ -196,6 +222,8 @@ def _format(result: dict) -> str:
             lines.append(f"    {issue}")
     for issue in result["manifest"]["issues"]:
         lines.append(f"  manifest: {issue}")
+    for issue in result["favicon"]["issues"]:
+        lines.append(f"  favicon: {issue}")
     lines.append("meta: OK" if result["ok"] else "meta: FAILED")
     return "\n".join(lines)
 
