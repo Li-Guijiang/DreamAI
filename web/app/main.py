@@ -1493,14 +1493,13 @@ async def robots() -> Response:
 
 @app.get("/sitemap.xml")
 async def sitemap() -> Response:
-    body = (
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        "  <url><loc>https://liguijiang.com/</loc><changefreq>weekly</changefreq>"
-        "<priority>1.0</priority></url>\n"
-        "</urlset>\n"
+    # The static file is the single source of truth. A hand-written second
+    # copy here used to serve only the home page while the published file
+    # listed three URLs, so crawlers saw a different site than visitors.
+    return Response(
+        (WEB_DIR / "sitemap.xml").read_text(encoding="utf-8"),
+        media_type="application/xml",
     )
-    return Response(body, media_type="application/xml")
 
 
 app.mount("/assets", StaticFiles(directory=str(WEB_DIR / "assets")), name="assets")
