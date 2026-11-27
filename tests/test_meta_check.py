@@ -45,6 +45,9 @@ def make_page(tmp_path: Path, meta: str = OG, name: str = "index.html") -> Path:
         target.parent.mkdir(parents=True, exist_ok=True)
         if not target.exists():
             target.write_bytes(b"fake")
+    root_icon = tmp_path / "favicon.ico"
+    if not root_icon.exists():
+        root_icon.write_bytes(b"fake")
     if not (tmp_path / "manifest.webmanifest").exists():
         (tmp_path / "manifest.webmanifest").write_text(
             json.dumps(
@@ -252,6 +255,24 @@ def test_an_overlong_description_is_reported(tmp_path):
     page.write_text(text, encoding="utf-8")
 
     assert any("description is 161" in item for item in check_meta.check_page(page)["issues"])
+
+
+def test_divergent_favicon_copies_are_reported(tmp_path):
+    make_page(tmp_path)
+    (tmp_path / "favicon.ico").write_bytes(b"different")
+
+    result = check_meta.check_favicon(tmp_path)
+
+    assert any("differs" in item for item in result["issues"])
+
+
+def test_a_missing_root_favicon_is_reported(tmp_path):
+    make_page(tmp_path)
+    (tmp_path / "favicon.ico").unlink()
+
+    result = check_meta.check_favicon(tmp_path)
+
+    assert any("missing" in item for item in result["issues"])
 
 
 def test_the_cli_passes_for_the_published_site():
