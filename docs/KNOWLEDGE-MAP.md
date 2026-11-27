@@ -871,6 +871,49 @@ python -m pytest tests/test_dom_refs.py -v
 python web/tools/check_dom_refs.py
 ```
 
+---
+
+## 23. 默认值就是安全边界
+
+`client_ip()` 最初无条件信任 `X-Real-IP` 与 `X-Forwarded-For`。
+只要每次请求换一个头，就能拿到一个新的限流桶——这个漏洞不需要
+绕过任何校验，因为代码在**主动相信调用方提供的身份**。
+同类问题还有 `X-Forwarded-Proto`：伪造 `http` 能让 owner cookie
+失去 `Secure` 标志。
+
+正确做法是把「是否信任转发头」与「转发头说了什么」分开：
+只有直连对端在配置的可信代理列表里，才读取转发头。默认列表为空，
+即直连部署不信任任何转发头。这是**安全默认值**——不配置也能正确，
+配置错了会退化为共享一个限流桶，而不是敞开绕过。
+
+### 23.1 两处定义必然漂移
+
+`/sitemap.xml` 曾同时在 Python 里拼字符串、在构建目录里放文件。
+静态文件列了三个 URL，路由只列首页；测试检查的是静态文件，
+线上返回的却是路由。浏览器用户看不出问题，只有爬虫拿到残缺列表。
+
+`robots.txt` 也有同样的双份定义。修复不是「同步两份内容」，
+而是让路由读取静态文件，把**事实来源减少到一个**。
+`check_sitemap.py` 随即检查：可索引页面是否都在、路由是否还在
+手写副本、两份 favicon 是否一致。
+
+### 23.2 解包长度是隐含契约
+
+`RateLimiter.hit()` 从二元组改成三元组后，`/api/read` 仍按两个值
+解包。每次调用都抛 `ValueError`，被兜底处理器变成 502——
+一个完全正常的接口对所有输入返回服务器错误。该端点此前没有
+专门测试，所以改动没有被发现。
+
+教训：返回值形状变化要靠测试锁定，而不是靠调用方记得改。
+`/api/read` 现在有测试断言元组长度，也覆盖校验与限流路径。
+
+动手验证：
+
+```bash
+python -m pytest tests/test_client_ip.py tests/test_read_endpoint.py -v
+python web/tools/check_sitemap.py
+```
+
 动手验证：
 
 ```bash
