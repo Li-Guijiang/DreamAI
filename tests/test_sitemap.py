@@ -121,7 +121,7 @@ def test_a_missing_sitemap_is_reported(tmp_path):
     result = check_sitemap.check(tmp_path, tmp_path / "main.py")
 
     assert result["ok"] is False
-    assert any("no <loc>" in item for item in result["issues"])
+    assert any("missing" in item for item in result["issues"])
 
 
 def test_a_duplicate_url_is_reported(tmp_path):
@@ -148,6 +148,15 @@ def test_a_hardcoded_sitemap_route_is_reported(tmp_path):
     result = check_sitemap.check(site, main)
 
     assert any("hard-codes" in item for item in result["issues"])
+
+
+def test_malformed_xml_is_reported(tmp_path):
+    site = make_site(tmp_path, {"index.html": ""}, [f"{ORIGIN}/"])
+    (site / "sitemap.xml").write_text("<urlset><url>", encoding="utf-8")
+
+    result = check_sitemap.check(site, site / "main.py")
+
+    assert any("invalid XML" in item for item in result["issues"])
 
 
 def test_a_robots_file_without_api_disallow_is_reported(tmp_path):
