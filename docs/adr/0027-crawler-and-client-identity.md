@@ -48,6 +48,17 @@ The three-value return of `RateLimiter.hit()` is now unpacked at every call
 site. Tests assert the tuple length and cover the validation and rate-limit
 paths of `/api/read`, which previously had no dedicated tests.
 
+All API error responses now carry a `code` field, including the previously
+inconsistent 404 handler. The browser reads `error` for display, but a stable
+`code` keeps the contract uniform for any client that branches on it.
+
+## Decision 4 — Fallback values on the download page
+
+`download.js` replaces the version, file name, size, date and SHA-256 from
+`downloads/latest.json` at runtime. The HTML keeps static copies so the page
+still makes sense if that fetch fails. Those copies must match the manifest;
+`check_versions.py` now verifies the link, hash, date and formatted size.
+
 ## Consequences
 
 - Adding a public page requires adding it to the sitemap; CI enforces this.
