@@ -54,7 +54,8 @@ def test_usage_reports_the_daily_budget(client):
     assert isinstance(data.get("daily"), dict)
     assert isinstance(data.get("dailyLimit"), int)
     assert isinstance(data.get("requests"), int)
-    assert isinstance(data.get("usageState"), str)
+    assert isinstance(data.get("usageState"), dict)
+    assert "loadStatus" in data["usageState"]
 
 
 def test_config_reports_client_limits(client):
