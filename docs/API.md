@@ -25,7 +25,8 @@
 
 所有 API 错误响应形如 `{"error": "人类可读文案", "code": "机器可读代码"}`。
 已定义的 `code`：`rate_limited`、`read_failed`、`daily_limit`、`invalid_body`、
-`not_found`、`context_too_long`、`input_too_long` 及各 UpstreamError 的代码。
+`not_found`、`context_too_long`、`input_too_long`、`payload_too_large` 及各
+UpstreamError 的代码。
 新增错误路径必须遵循该结构。
 
 客户端 IP 由直连对端决定；仅当对端位于 `DREAMAI_TRUSTED_PROXIES` 时，

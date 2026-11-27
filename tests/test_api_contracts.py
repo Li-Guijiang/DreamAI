@@ -115,6 +115,24 @@ def test_unknown_api_routes_return_a_structured_404(client):
     assert response.json()["code"] == "not_found"
 
 
+def test_documented_error_codes_are_all_implemented():
+    docs = (Path(__file__).resolve().parent.parent / "docs" / "API.md").read_text(
+        encoding="utf-8"
+    )
+    source = (Path(__file__).resolve().parent.parent / "web" / "app" / "main.py").read_text(
+        encoding="utf-8"
+    )
+    import re
+
+    documented = {
+        item for item in re.findall(r"`([a-z_]+)`", docs) if "_" in item
+    }
+    implemented = set(re.findall(r'"code": "([a-z_]+)"', source))
+
+    for code in implemented:
+        assert code in documented or code.startswith("upstream_"), code
+
+
 def test_every_api_error_has_a_code(client):
     cases = [
         client.get("/api/read", params={"url": ""}),
