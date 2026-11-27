@@ -149,6 +149,32 @@ def check(root: Path = ROOT) -> dict:
         if segments(changelog) < segments(server):
             issues.append(f"changelog latest v{changelog} is older than server {server}")
 
+    # The download page shows fallback values before download.js replaces them
+    # from latest.json. If the JSON fetch fails, those fallbacks are what the
+    # visitor sees, so they must agree with the manifest.
+    latest_path = root / "web" / "web" / "downloads" / "latest.json"
+    page_path = root / "web" / "web" / "download.html"
+    if latest_path.is_file() and page_path.is_file():
+        try:
+            manifest = json.loads(latest_path.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            manifest = {}
+        page = page_path.read_text(encoding="utf-8")
+        version = str(manifest.get("version", ""))
+        if version and f"DreamAI-Setup-{version}.exe" not in page:
+            issues.append(f"download.html: fallback link does not match installer {version}")
+        sha = str(manifest.get("sha256", ""))
+        if sha and sha not in page:
+            issues.append("download.html: fallback sha256 differs from the manifest")
+        date = str(manifest.get("date", ""))
+        if date and date not in page:
+            issues.append(f"download.html: fallback date differs from the manifest ({date})")
+        size = manifest.get("size")
+        if isinstance(size, int) and size > 0:
+            expected = f"{size / (1024 * 1024):.1f} MB"
+            if expected not in page:
+                issues.append(f"download.html: fallback size differs from the manifest ({expected})")
+
     # Every pre-cached file must exist. A missing entry makes the install step
     # reject the whole cache write, so the offline shell never becomes ready.
     sw_path = root / "web" / "web" / "sw.js"
