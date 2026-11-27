@@ -1490,8 +1490,11 @@ async def manifest() -> FileResponse:
 
 @app.get("/robots.txt")
 async def robots() -> Response:
-    body = "User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: https://liguijiang.com/sitemap.xml\n"
-    return Response(body, media_type="text/plain")
+    # Serve the published file so crawler rules have one source of truth.
+    return Response(
+        (WEB_DIR / "robots.txt").read_text(encoding="utf-8"),
+        media_type="text/plain",
+    )
 
 
 @app.get("/sitemap.xml")

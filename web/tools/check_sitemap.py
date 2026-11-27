@@ -46,6 +46,23 @@ def sitemap_urls(site: Path) -> list[str]:
     return LOC.findall(path.read_text(encoding="utf-8"))
 
 
+def check_robots(site: Path, main: Path) -> list[str]:
+    """Crawler rules must have one source of truth."""
+    issues: list[str] = []
+    robots = site / "robots.txt"
+    if not robots.is_file():
+        issues.append("robots.txt: missing")
+    sitemap_ref = f"Sitemap: {ORIGIN}/sitemap.xml"
+    if robots.is_file() and sitemap_ref not in robots.read_text(encoding="utf-8"):
+        issues.append(f"robots.txt: does not reference {sitemap_ref}")
+    if main.is_file():
+        source = main.read_text(encoding="utf-8")
+        route = re.search(r'@app\.get\("/robots\.txt"\)\s*\nasync def robots.*?(?=\n@app\.|\Z)', source, re.S)
+        if route and "robots.txt" not in route.group(0):
+            issues.append("main.py: robots route does not read the static file")
+    return issues
+
+
 def check(site: Path = SITE, main: Path = MAIN) -> dict:
     pages = indexable_pages(site)
     urls = sitemap_urls(site)
@@ -78,6 +95,8 @@ def check(site: Path = SITE, main: Path = MAIN) -> dict:
                 issues.append("main.py: sitemap route hard-codes XML instead of serving the file")
             if "sitemap.xml" not in body:
                 issues.append("main.py: sitemap route does not read the static sitemap.xml")
+
+    issues.extend(check_robots(site, main))
 
     return {
         "pages": pages,
