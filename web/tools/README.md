@@ -25,6 +25,10 @@ the environment comes from `web/requirements.txt`, and some scripts additionally
 
 The index check also rejects gaps and duplicate numbers in the ADR sequence,
 so `0025` cannot be added while `0024` is missing.
+
+`check_sitemap.py` additionally checks `robots.txt` (the API tree must stay
+disallowed and the sitemap must be referenced) and that the root favicon
+matches the copy the pages link to.
 | `make_og.py` | Regenerate only the 1200×630 social card `web/web/assets/img/og.png` | After changing the tagline or the card layout |
 | `mock_upstream.py` | Local mock of an OpenAI-compatible streaming endpoint | Developing the UI without an API key |
 | `server_exec.py` | Generic SSH helper (`exec` / `put` / `get` / `shell`) | Running a command or moving a file on the server |
