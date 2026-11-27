@@ -53,8 +53,12 @@ def check_robots(site: Path, main: Path) -> list[str]:
     if not robots.is_file():
         issues.append("robots.txt: missing")
     sitemap_ref = f"Sitemap: {ORIGIN}/sitemap.xml"
-    if robots.is_file() and sitemap_ref not in robots.read_text(encoding="utf-8"):
-        issues.append(f"robots.txt: does not reference {sitemap_ref}")
+    if robots.is_file():
+        text = robots.read_text(encoding="utf-8")
+        if sitemap_ref not in text:
+            issues.append(f"robots.txt: does not reference {sitemap_ref}")
+        if "Disallow: /api/" not in text:
+            issues.append("robots.txt: does not disallow /api/")
     if main.is_file():
         source = main.read_text(encoding="utf-8")
         route = re.search(
