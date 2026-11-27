@@ -17,7 +17,19 @@
 | POST | `/api/chat` | 流式对话，返回 `text/event-stream` |
 | GET | `/api/health` | 服务状态、模型清单、限流与配置自检结果 |
 | GET | `/api/usage` | 请求数、token、成本、缓存与截断统计 |
-| GET | `/api/download/*` | 静态下载资源 |
+| GET | `/api/config` | 浏览器可见的模型、供应商、站点信息与输入限制 |
+| GET | `/api/read?url=` | 读取公网网页正文，返回标题与文本 |
+| GET | `/robots.txt` | 爬虫规则，读取静态文件 |
+| GET | `/sitemap.xml` | 站点地图，读取静态文件 |
+| GET | `/download/*` | 静态下载资源 |
+
+所有 API 错误响应形如 `{"error": "人类可读文案", "code": "机器可读代码"}`。
+已定义的 `code`：`rate_limited`、`read_failed`、`daily_limit`、`invalid_body`、
+`not_found`、`context_too_long`、`input_too_long` 及各 UpstreamError 的代码。
+新增错误路径必须遵循该结构。
+
+客户端 IP 由直连对端决定；仅当对端位于 `DREAMAI_TRUSTED_PROXIES` 时，
+才采信 `X-Forwarded-For` / `X-Real-IP`。详见 `docs/SECURITY.md`。
 
 `/api/chat` 的响应头：`X-Request-Id`、`X-Cache`（`HIT` / `MISS`）、
 `X-RateLimit-Remaining`、`Cache-Control: no-store, no-transform`（禁止缓存，
