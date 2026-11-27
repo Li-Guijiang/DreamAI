@@ -83,5 +83,8 @@ jobs:
       - name: Check JavaScript DOM selectors
         run: python web/tools/check_dom_refs.py
 
+      - name: Check the sitemap
+        run: python web/tools/check_sitemap.py
+
       - name: Run tests with pytest
         run: pytest
