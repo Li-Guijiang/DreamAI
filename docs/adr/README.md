@@ -38,3 +38,4 @@ New decisions should be added as numbered Markdown files, e.g.
 | [0024](./0024-configuration-contracts.md) | Configuration contracts |
 | [0025](./0025-metadata-and-version-integrity.md) | Metadata and version integrity |
 | [0026](./0026-dom-selector-integrity.md) | DOM selector integrity |
+| [0027](./0027-crawler-and-client-identity.md) | Crawler files and client identity |
