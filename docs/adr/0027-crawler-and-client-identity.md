@@ -26,9 +26,10 @@ Both `/robots.txt` and `/sitemap.xml` now read the published files from
 `WEB_DIR`. No XML or crawler rules are embedded in Python. `docs.html` was
 added to the sitemap; `offline.html` stays out because it is `noindex`.
 
-`check_sitemap.py` verifies that the sitemap lists exactly the indexable
-pages, that the routes read the static files, and that the root favicon
-matches the one referenced by pages.
+`check_sitemap.py` verifies that the sitemap is well-formed XML, lists exactly
+the indexable pages, and has no duplicate `<loc>` entries. It also checks that
+the routes read the static files, that `robots.txt` still disallows `/api/`,
+and that the root favicon matches the one referenced by pages.
 
 ## Decision 2 — Trust forwarding headers only from configured proxies
 
